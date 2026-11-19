@@ -162,7 +162,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-C（去背、遮罩、混合、背景模糊）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-D（動畫關鍵幀、特效包）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -199,6 +199,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tb" data-a="auto"><i>✨</i>幻燈片</button>
     <button class="tb" data-a="fx"><i>🎛</i>調整</button>
     <button class="tb" data-a="ly"><i>🧩</i>拼貼</button>
+    <button class="tb" data-a="kf"><i>🎞</i>動畫</button>
+    <button class="tb" data-a="ef"><i>🌈</i>特效包</button>
     <button class="tb" data-a="split"><i>✂️</i>分割</button>
     <button class="tb" data-a="trimL"><i>⇤</i>裁左邊</button>
     <button class="tb" data-a="trimR"><i>⇥</i>裁右邊</button>
@@ -244,9 +246,10 @@ const assets = new Map();           // id -> {id,kind,file,url,el,img,w,h,dur,na
 let uid = 1;
 let state = { ratio: '9:16', clips: [], layers: [], texts: [], music: null, kb: false, vol: { video: 1, music: 0.6 } };
 let history = [], redoStack = [], lastTouch = null;
+let showEf = false, showKf = false, kfMode = 'clip', kfLyId = null, kfIdx = -1;
 let showFx = false, fxTab = 'f', fxIdx = -1, showLy = false, selLy = null, lyTab = 'p', pendingTpl = null;
 let cur = 0, playing = false, pps = 80, selText = null, selMusic = false, selTr = null, showAuto = false, dirty = true;
-function clearSel() { showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
+function clearSel() { showEf = false; showKf = false; showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
 let L = [], total = 0;               // 排版結果
 const FXP = {
   none: { n: '原圖', b: 0, ct: 1, sa: 1, r: 1, g: 1, bl: 1 },
@@ -451,11 +454,100 @@ function applyKey(l, rx, ry, rw, rh) {
   }
   fxg.putImageData(im, rx, ry);
 }
+
+/* ===== 關鍵幀（動畫）===== */
+const KF0 = { x: 0, y: 0, s: 1, r: 0, o: 1 };
+function kfAt(it, t) {
+  const kf = it && it.kf; if (!kf || !kf.length) return null;
+  const a = kf[0], b = kf[kf.length - 1]; if (t <= a.t) return { ...KF0, ...a }; if (t >= b.t) return { ...KF0, ...b };
+  for (let i = 0; i < kf.length - 1; i++) if (t < kf[i + 1].t) {
+    const p = (t - kf[i].t) / Math.max(1e-6, kf[i + 1].t - kf[i].t), A = { ...KF0, ...kf[i] }, B = { ...KF0, ...kf[i + 1] }, o = {};
+    for (const k in KF0) o[k] = A[k] + (B[k] - A[k]) * p; return o;
+  }
+  return { ...KF0, ...b };
+}
+const kfIdent = k => !k || (Math.abs(k.x) < 1e-4 && Math.abs(k.y) < 1e-4 && Math.abs(k.s - 1) < 1e-4 && Math.abs(k.r) < 1e-3 && Math.abs(k.o - 1) < 1e-3);
+function applyTf(ctx, cx, cy, k, W, H) { ctx.translate(cx + k.x * W, cy + k.y * H); ctx.rotate(k.r * Math.PI / 180); ctx.scale(k.s, k.s); ctx.translate(-cx, -cy); }
+function kfExpr(kf, key, mul, base, tv) {
+  const P = kf.map(k => [k.t + base, (k[key] == null ? KF0[key] : k[key]) * mul]), f = n => String(+n.toFixed(4));
+  let e = f(P[P.length - 1][1]);
+  for (let i = P.length - 2; i >= 0; i--) { const [t0, v0] = P[i], [t1, v1] = P[i + 1], dt = Math.max(t1 - t0, 0.001); e = `if(lt(${tv},${f(t1)}),${f(v0)}+(${f(v1 - v0)})*(${tv}-${f(t0)})/${f(dt)},${e})`; }
+  return P.length > 1 ? `if(lt(${tv},${f(P[0][0])}),${f(P[0][1])},${e})` : e;
+}
+// 做出動畫用的濾鏡鏈（chain 作用在格子影像上）和 overlay 的 x/y 運算式；base＝關鍵幀時間換成該串流時間要加的秒數
+function kfBuild(kf, cw, ch, W, H, base, cx, cy) {
+  const vary = key => kf.some(k => Math.abs((k[key] == null ? KF0[key] : k[key]) - KF0[key]) > 0.001), E = (key, mul, tv) => kfExpr(kf, key, mul, base, tv), c = [];
+  const e2 = n => { n = Math.round(n); return n % 2 ? n + 1 : n; };
+  if (vary('o')) c.push('format=yuva420p', `geq=lum='lum(X,Y)':cb='cb(X,Y)':cr='cr(X,Y)':a='alpha(X,Y)*clip(${E('o', 1, 'T')},0,1)'`);
+  if (vary('r')) { const D = e2(Math.ceil(Math.hypot(cw, ch))); c.push('format=yuva420p', `rotate=a='${E('r', Math.PI / 180, 't')}':ow=${D}:oh=${D}:c=black@0`); }
+  if (vary('s')) { const S = `clip(${E('s', 1, 't')},0.05,8)`; c.push(`scale=w='max(2,trunc(iw*${S}/2)*2)':h='max(2,trunc(ih*${S}/2)*2)':eval=frame`); }
+  return { chain: c.join(','), ox: `x='${cx}+(${E('x', W, 't')})-overlay_w/2'`, oy: `y='${cy}+(${E('y', H, 't')})-overlay_h/2'` };
+}
+
+/* ===== 特效包（整個畫面）===== */
+const EFX = [['blur', '模糊'], ['sketch', '線稿描邊'], ['mirror', '鏡像分身'], ['chroma', '色差'], ['glitch', '故障閃動'], ['vig', '暗角'], ['grain', '顆粒雜訊']];
+const hasEf = ef => !!ef && EFX.some(([k]) => (ef[k] || 0) > 0.001);
+const glOn = t => (t % 1.4) < 0.18;
+function rgbShiftPrev(rn, bn, gv) {
+  const W = cv.width, H = cv.height; rn = Math.round(rn); bn = Math.round(bn); gv = Math.round(gv);
+  fxg.clearRect(0, 0, W, H); fxg.drawImage(cv, 0, 0); const im = fxg.getImageData(0, 0, W, H), s = im.data, o = new Uint8ClampedArray(s);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = (y * W + x) * 4, xr = Math.min(W - 1, Math.max(0, x - rn)), xb = Math.min(W - 1, Math.max(0, x - bn)), yg = Math.min(H - 1, Math.max(0, y - gv));
+    o[i] = s[(y * W + xr) * 4]; o[i + 1] = s[(yg * W + x) * 4 + 1]; o[i + 2] = s[(y * W + xb) * 4 + 2];
+  }
+  im.data.set(o); g.putImageData(im, 0, 0);
+}
+function applyEf(ef, t) {
+  const W = cv.width, H = cv.height, sc = W / 360;
+  if (fxc.width !== W || fxc.height !== H) { fxc.width = W; fxc.height = H; }
+  if (ef.blur > 0.001) { const f = 1 + ef.blur * 10, w = Math.max(4, Math.round(W / f)), h = Math.max(4, Math.round(H / f)); blc.width = w; blc.height = h; blg.drawImage(cv, 0, 0, w, h); g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(blc, 0, 0, W, H); g.restore(); }
+  if (ef.sketch > 0.001) {
+    fxg.clearRect(0, 0, W, H); fxg.drawImage(cv, 0, 0); const im = fxg.getImageData(0, 0, W, H), d = im.data, lu = new Float32Array(W * H);
+    for (let i = 0, j = 0; i < d.length; i += 4, j++) lu[j] = .299 * d[i] + .587 * d[i + 1] + .114 * d[i + 2];
+    const m = new Uint8Array(W * H);
+    for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+      const j = y * W + x, gx = lu[j - W + 1] + 2 * lu[j + 1] + lu[j + W + 1] - lu[j - W - 1] - 2 * lu[j - 1] - lu[j + W - 1], gy = lu[j + W - 1] + 2 * lu[j + W] + lu[j + W + 1] - lu[j - W - 1] - 2 * lu[j - W] - lu[j - W + 1];
+      if (Math.abs(gx) + Math.abs(gy) > 150) m[j] = 1;
+    }
+    const k = 1 - ef.sketch; for (let i = 0, j = 0; i < d.length; i += 4, j++) if (m[j]) { d[i] *= k; d[i + 1] *= k; d[i + 2] *= k; }
+    g.putImageData(im, 0, 0);
+  }
+  if (ef.mirror > 0.001) { fxg.clearRect(0, 0, W, H); fxg.drawImage(cv, 0, 0); g.save(); g.globalAlpha = ef.mirror * 0.6; g.translate(W, 0); g.scale(-1, 1); g.drawImage(fxc, 0, 0); g.restore(); }
+  if (ef.chroma > 0.001) { const n = ef.chroma * 10 * sc; rgbShiftPrev(-n, n, 0); }
+  if (ef.glitch > 0.001 && glOn(t)) { const n = ef.glitch * 18 * sc; rgbShiftPrev(-n, n, n / 3); }
+  if (ef.vig > 0.001) {
+    const A = .15 + ef.vig * 1.2, R = Math.hypot(W, H) / 2, gr = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, R);
+    for (let i = 0; i <= 10; i++) { const p = i / 10; gr.addColorStop(p, `rgba(0,0,0,${(1 - Math.pow(Math.cos(Math.min(A * p, 1.5707)), 4)).toFixed(3)})`); }
+    g.save(); g.fillStyle = gr; g.fillRect(0, 0, W, H); g.restore();
+  }
+  if (ef.grain > 0.001) {
+    const im = g.getImageData(0, 0, W, H), d = im.data, N = ef.grain * 30;
+    const bs = Math.max(2, Math.round(2 * sc)), nb = Math.ceil(W / bs), rn = new Float32Array(nb * Math.ceil(H / bs)); for (let i = 0; i < rn.length; i++) rn[i] = (Math.random() * 2 - 1) * N;
+    for (let y = 0, i = 0; y < H; y++) for (let x = 0; x < W; x++, i += 4) { const r = rn[((y / bs) | 0) * nb + ((x / bs) | 0)]; d[i] += r; d[i + 1] += r; d[i + 2] += r; }
+    g.putImageData(im, 0, 0);
+  }
+}
+// 匯出用：把特效串接到 filter_complex，回傳最後的標籤
+function efParts(ef, prev, parts, W, H) {
+  const sc = W / 360; let n = 0; const nx = () => 'ef' + (n++);
+  const lin = f => { const o = nx(); parts.push(`[${prev}]${f}[${o}]`); prev = o; };
+  for (const [k] of EFX) {
+    const v = ef[k] || 0; if (v <= 0.001) continue;
+    if (k === 'blur') lin(`gblur=sigma=${Math.max(0.5, v * 5 * sc).toFixed(2)}`);
+    else if (k === 'chroma') { const m = Math.round(v * 10 * sc); lin(`rgbashift=rh=${-m}:bh=${m}`); }
+    else if (k === 'glitch') { const m = Math.round(v * 18 * sc); lin(`rgbashift=rh=${-m}:bh=${m}:gv=${Math.round(m / 3)}:enable='lt(mod(t,1.4),0.18)'`); }
+    else if (k === 'vig') lin(`vignette=angle=${(.15 + v * 1.2).toFixed(3)}`);
+    else if (k === 'grain') { const g1 = nx(), o = nx(), q = Math.max(2, Math.round(4 * sc)); parts.push(`color=c=0x808080:s=${Math.ceil(W / q)}x${Math.ceil(H / q)}:r=30,noise=c0s=${Math.round(v * 30)}:c0f=t,fps=10,scale=${W}:${H}:flags=neighbor,fps=30,format=yuv420p[${g1}]`, `[${prev}]format=yuv420p[${o}p]`, `[${o}p][${g1}]blend=c0_mode=grainmerge:c1_expr=A:c2_expr=A:shortest=1[${o}]`); prev = o; }
+    else if (k === 'mirror') { const a = nx(), b = nx(), m = nx(), o = nx(); parts.push(`[${prev}]split[${a}][${b}]`, `[${b}]hflip,format=yuva420p,colorchannelmixer=aa=${(v * 0.6).toFixed(3)}[${m}]`, `[${a}]format=yuv420p[${a}f]`, `[${a}f][${m}]overlay=format=auto,format=yuv420p[${o}]`); prev = o; }
+    else if (k === 'sketch') { const a = nx(), b = nx(), e = nx(), o = nx(); parts.push(`[${prev}]split[${a}][${b}]`, `[${b}]edgedetect=mode=wires:low=0.1:high=0.3,dilation,dilation,negate,format=yuv420p,lutyuv=y='if(gt(val,128),255,0)'[${e}]`, `[${a}]format=yuv420p[${a}f]`, `[${a}f][${e}]blend=c0_mode=multiply:c0_opacity=${v.toFixed(3)}:c1_expr=A:c2_expr=A[${o}]`); prev = o; }
+  }
+  return prev;
+}
 function drawLayer(l) {
   const a = assets.get(l.asset); if (!a) return;
   const { cw, ch, x, y } = lyRect(l), src = a.kind === 'image' ? a.img : layerEl(l);
-  const ready = a.kind === 'image' || src.readyState >= 2, fx = hasFx(l), op = l.op == null ? 1 : l.op;
-  const heavy = fx || l.ck || l.mk || l.bm; let T = g;
+  const ready = a.kind === 'image' || src.readyState >= 2, fx = hasFx(l), op = l.op == null ? 1 : l.op, kk = kfAt(l, cur - l.start), tf = !kfIdent(kk);
+  const heavy = fx || l.ck || l.mk || l.bm || tf; let T = g;
   if (heavy) { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); T = fxg; }
   T.save(); if (T === g) T.globalAlpha = op;
   T.beginPath(); T.rect(x, y, cw, ch); T.clip(); if (!l.ck) { T.fillStyle = '#000'; T.fillRect(x, y, cw, ch); }
@@ -473,7 +565,7 @@ function drawLayer(l) {
     if (l.ck) applyKey(l, rx, ry, rw, rh);
     if (fx) applyFx(l, rx, ry, rw, rh);
     if (l.mk) { mkc.width = Math.ceil(cw); mkc.height = Math.ceil(ch); mkg.clearRect(0, 0, mkc.width, mkc.height); drawMaskShape(mkg, l.mk, mkc.width, mkc.height); fxg.save(); fxg.globalCompositeOperation = 'destination-in'; fxg.drawImage(mkc, x, y); fxg.restore(); }
-    g.save(); g.globalAlpha = op; if (l.bm) g.globalCompositeOperation = l.bm; g.drawImage(fxc, rx, ry, rw, rh, rx, ry, rw, rh); g.restore();
+    g.save(); g.globalAlpha = op * (tf ? kk.o : 1); if (tf) applyTf(g, x + cw / 2, y + ch / 2, kk, cv.width, cv.height); if (l.bm) g.globalCompositeOperation = l.bm; g.drawImage(fxc, rx, ry, rw, rh, rx, ry, rw, rh); g.restore();
   } catch (er) {}
 }
 const blc = document.createElement('canvas'), blg = blc.getContext('2d');
@@ -485,10 +577,11 @@ function drawBlurBg(T, src, sw, sh, c) {
 }
 function drawEntry(e) {
   const a = assets.get(e.c.asset); if (!a) return;
-  const fx = hasFx(e.c); let T = g;
+  const fx = hasFx(e.c), kk = (state.kb && a.kind === 'image') ? null : kfAt(e.c, cur - e.start), tf = !kfIdent(kk); let T = g;
   if (fx) { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); T = fxg; }
+  if (tf) { g.save(); applyTf(g, cv.width / 2, cv.height / 2, kk, cv.width, cv.height); g.globalAlpha *= kk.o; }
   try {
-    if (e.c.bb && !(state.kb && a.kind === 'image') && !((e.c.z && e.c.z !== 1) || e.c.x || e.c.y)) { const sb = a.kind === 'image' ? a.img : (a.el.readyState >= 2 ? a.el : null); if (sb) drawBlurBg(T, sb, a.w, a.h, e.c); }
+    if (e.c.bb && !tf && !(state.kb && a.kind === 'image') && !((e.c.z && e.c.z !== 1) || e.c.x || e.c.y)) { const sb = a.kind === 'image' ? a.img : (a.el.readyState >= 2 ? a.el : null); if (sb) drawBlurBg(T, sb, a.w, a.h, e.c); }
     if (a.kind === 'image') {
       const z = state.kb ? 1 + 0.12 * clamp((cur - e.start) / e.d, 0, 1) : 1;
       T.save(); T.translate(cv.width / 2, cv.height / 2); T.scale(z, z); T.translate(-cv.width / 2, -cv.height / 2);
@@ -496,6 +589,7 @@ function drawEntry(e) {
     } else if (a.el.readyState >= 2) drawContain(T, a.el, a.w, a.h, e.c);
   } catch (err) {}
   if (fx) { try { applyFx(e.c); g.drawImage(fxc, 0, 0); } catch (err) {} }
+  if (tf) g.restore();
 }
 function drawTrans(type, p, dA, dB) {
   const W = cv.width, H = cv.height, R = Math.hypot(W, H) / 2;
@@ -527,6 +621,7 @@ function renderFrame() {
   } else { const act = activeEntries(); if (act.length) drawEntry(act[act.length - 1]); }
   for (const l of state.layers) if (cur >= l.start && cur < l.start + l.len) drawLayer(l);
   if (state.gfx && hasFx(state.gfx)) { try { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); fxg.drawImage(cv, 0, 0); applyFx(state.gfx); g.drawImage(fxc, 0, 0); } catch (er) {} }
+  if (state.gfx && hasEf(state.gfx.ef)) { try { applyEf(state.gfx.ef, cur); } catch (er) {} }
   for (const x of state.texts) if (cur >= x.start && cur < x.start + x.dur) drawText(g, cv.width, cv.height, x);
   if (selLy && showLy) { const l = state.layers.find(x => x.id === selLy); if (l && cur >= l.start && cur < l.start + l.len) { const r = lyRect(l); g.save(); g.setLineDash([8, 5]); g.lineWidth = 3; g.strokeStyle = '#ffb347'; g.strokeRect(r.x + 1.5, r.y + 1.5, r.cw - 3, r.ch - 3); g.restore(); } }
 }
@@ -605,6 +700,7 @@ function updateActive() {
   document.querySelectorAll('#row-v .clip').forEach(d => d.classList.toggle('active', !!e && +d.dataset.i === e.i));
   updateToolbar();
   if (showFx && e && e.i !== fxIdx) renderCtx();
+  if (showKf) kfSync();
 }
 function updateToolbar() {
   const e = clipAt(cur), has = !!e;
@@ -674,7 +770,7 @@ const ops = {
   split() {
     const e = clipAt(cur), local = cur - e.start;
     if (local < 0.1 || e.d - local < 0.1) return toast('請把時間線移到片段「中間」再分割');
-    commit(); const c = e.c, a = { ...c, id: uid++ }, ls = local * spd(c);
+    commit(); const c = e.c, a = { ...c, id: uid++ }, ls = local * spd(c); delete a.kf;
     if (c.rev) { c.in = c.out - ls; a.out = c.out - ls; } else { a.in = c.in + ls; c.out = c.in + ls; }
     state.clips.splice(e.i + 1, 0, a); afterEdit(cur); toast('已分割');
   },
@@ -682,7 +778,7 @@ const ops = {
     const e = clipAt(cur), local = cur - e.start;
     if (local < 0.05) return toast('時間線在片段最前面，沒有東西可以裁');
     if (e.d - local < 0.1) return toast('裁掉後片段太短了');
-    commit(); if (e.c.rev) e.c.out -= local * spd(e.c); else e.c.in += local * spd(e.c); afterEdit(e.start); toast('已裁掉左邊');
+    commit(); if (e.c.rev) e.c.out -= local * spd(e.c); else e.c.in += local * spd(e.c); if (e.c.kf) e.c.kf = e.c.kf.map(k => ({ ...k, t: +(k.t - local).toFixed(3) })); afterEdit(e.start); toast('已裁掉左邊');
   },
   trimR() {
     const e = clipAt(cur), local = cur - e.start;
@@ -701,6 +797,8 @@ const ops = {
   music() { $('#f-music').click(); },
   fx() { clearSel(); showFx = true; renderTimeline(); renderCtx(); },
   ly() { clearSel(); showLy = true; renderTimeline(); renderCtx(); dirty = true; },
+  kf() { const m = (showLy && selLy) ? 'ly' : 'clip', id = selLy; clearSel(); showKf = true; kfMode = m; kfLyId = id; renderTimeline(); renderCtx(); dirty = true; },
+  ef() { clearSel(); showEf = true; renderTimeline(); renderCtx(); dirty = true; },
   auto() { clearSel(); showAuto = true; renderTimeline(); renderCtx(); },
   undo, redo
 };
@@ -719,6 +817,8 @@ function renderCtx() {
   const t = selText && state.texts.find(x => x.id === selText);
   if (showAuto) { h += autoHtml(); }
   else if (selTr !== null && L[selTr]) { h += trHtml(); }
+  else if (showKf) { h += kfHtml(); }
+  else if (showEf) { h += efHtml(); }
   else if (showLy) { h += lyHtml(); }
   else if (showFx && clipAt(cur)) { h += fxHtml(); }
   else if (t) {
@@ -751,11 +851,13 @@ function renderCtx() {
     h += `<label class="chk"><input type="checkbox" id="kb"${state.kb ? ' checked' : ''}> 照片慢慢推近（較動感，匯出會比較慢）</label>`;
   }
   box.innerHTML = h;
-  box.classList.toggle('edit', !!(showAuto || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
+  box.classList.toggle('edit', !!(showAuto || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
   const on = (id, ev, fn) => { const el = box.querySelector(id); if (el) el.addEventListener(ev, fn); };
   on('#kb', 'change', e => { commit(); state.kb = e.target.checked; dirty = true; });
   if (showAuto) bindAuto(on);
   else if (selTr !== null && L[selTr]) bindTr(on);
+  else if (showKf) bindKf(on);
+  else if (showEf) bindEf(on);
   else if (showLy) bindLy(on);
   else if (showFx && clipAt(cur)) bindFx(on);
   else if (t) {
@@ -840,6 +942,56 @@ function sliderHtml(pre, c) {
 function bindSliders(on, pre, c) {
   [['fb', 'b', v => Math.round(v * 100)], ['fc', 'c', v => Math.round(v * 100) + '%'], ['fs', 's', v => Math.round(v * 100) + '%']].forEach(([k, id, f]) =>
     on('#' + pre + '-' + k, 'input', ev => { touch(pre + k + (c.id || '')); c[k] = +ev.target.value; $('#v-' + pre + id).textContent = f(c[k]); dirty = true; }));
+}
+
+function kfItem() {
+  if (kfMode === 'ly') { const l = state.layers.find(x => x.id === kfLyId); return l ? { it: l, start: l.start, dur: l.len } : null; }
+  const e = clipAt(cur); return e ? { it: e.c, start: e.start, dur: e.d, i: e.i } : null;
+}
+const kfDefs = [['x', '左右位移', -0.5, 0.5, 0.01, v => Math.round(v * 100) + '%'], ['y', '上下位移', -0.5, 0.5, 0.01, v => Math.round(v * 100) + '%'], ['s', '大小', 0.2, 3, 0.05, v => Math.round(v * 100) + '%'], ['r', '旋轉', -180, 180, 1, v => Math.round(v) + '°'], ['o', '透明度', 0, 1, 0.05, v => Math.round(v * 100) + '%']];
+function kfHtml() {
+  const tg = kfItem(); kfIdx = tg && tg.i != null ? tg.i : -1;
+  let h = `<h4>🎞 動畫（關鍵幀）</h4><div class="fchips"><button class="sm${kfMode === 'clip' ? ' ok' : ''}" data-kft="clip">主影片</button>${state.layers.map((x, i) => `<button class="sm${kfMode === 'ly' && kfLyId === x.id ? ' ok' : ''}" data-kft="${x.id}">第${i + 1}格</button>`).join('')}</div>`;
+  if (!tg) return h + `<label>目前這個時間點沒有影片，請把時間線移到影片上。</label><div class="r2" style="margin-top:8px"><button class="sm ok" id="kf-ok">完成</button></div>`;
+  const v = kfAt(tg.it, cur - tg.start) || KF0, kf = tg.it.kf || [];
+  h += `<label>把時間線移到想要的時間，再拉下面的滑桿，就會自動記下一個關鍵幀。兩個關鍵幀之間，畫面會自己慢慢變過去。</label>`;
+  h += kfDefs.map(([k, n, mn, mx, st, f]) => `<label>${n}<b id="v-kf-${k}">${f(v[k])}</b></label><input type="range" id="kf-${k}" min="${mn}" max="${mx}" step="${st}" value="${v[k]}">`).join('');
+  h += kf.length ? `<label>已記的關鍵幀（點一下跳到那個時間）</label><div class="fchips">${kf.map((k, i) => `<button class="sm${Math.abs(k.t - (cur - tg.start)) < 0.05 ? ' ok' : ''}" data-kfj="${i}">${k.t.toFixed(1)} 秒</button>`).join('')}</div>` : '';
+  h += `<div class="r2" style="margin-top:8px"><button class="sm red" id="kf-del">刪除這個時間點</button><button class="sm red" id="kf-clr">全部清除</button></div><div class="r2" style="margin-top:8px"><button class="sm ok" id="kf-ok">完成</button></div>`;
+  return h;
+}
+function kfSync() {
+  const tg = kfItem(); if (kfMode === 'clip' && ((tg ? tg.i : -1) !== kfIdx)) { renderCtx(); return; }
+  if (!tg || (document.activeElement && document.activeElement.type === 'range' && document.activeElement.closest('#ctx'))) return;
+  const v = kfAt(tg.it, cur - tg.start) || KF0;
+  kfDefs.forEach(([k, n, mn, mx, st, f]) => { const el = $('#kf-' + k), lb = $('#v-kf-' + k); if (el) el.value = v[k]; if (lb) lb.textContent = f(v[k]); });
+}
+function bindKf(on) {
+  document.querySelectorAll('#ctx [data-kft]').forEach(b => b.onclick = () => { if (b.dataset.kft === 'clip') kfMode = 'clip'; else { kfMode = 'ly'; kfLyId = +b.dataset.kft; const x = state.layers.find(q => q.id === kfLyId); if (x && !(cur >= x.start && cur < x.start + x.len)) setCur(x.start); } renderCtx(); });
+  const tg = kfItem(); on('#kf-ok', 'click', () => { showKf = false; renderTimeline(); renderCtx(); });
+  if (!tg) return;
+  const it = tg.it;
+  const write = () => {
+    const t = +clamp(cur - tg.start, 0, tg.dur).toFixed(3); touch('kf' + it.id + ':' + Math.round(t * 20));
+    const nk = { t }; kfDefs.forEach(([k]) => nk[k] = +$('#kf-' + k).value);
+    it.kf = it.kf || []; const j = it.kf.findIndex(q => Math.abs(q.t - t) < 0.05); if (j >= 0) it.kf[j] = nk; else { it.kf.push(nk); it.kf.sort((a, b) => a.t - b.t); }
+    dirty = true;
+  };
+  kfDefs.forEach(([k, n, mn, mx, st, f]) => { on('#kf-' + k, 'input', ev => { $('#v-kf-' + k).textContent = f(+ev.target.value); write(); }); on('#kf-' + k, 'change', () => renderCtx()); });
+  document.querySelectorAll('#ctx [data-kfj]').forEach(b => b.onclick = () => { const k = it.kf[+b.dataset.kfj]; if (k) { setCur(clamp(tg.start + k.t, 0, total)); } });
+  on('#kf-del', 'click', () => { const t = cur - tg.start, j = (it.kf || []).findIndex(q => Math.abs(q.t - t) < 0.1); if (j < 0) return toast('這個時間點沒有關鍵幀'); commit(); it.kf.splice(j, 1); if (!it.kf.length) delete it.kf; dirty = true; renderCtx(); });
+  on('#kf-clr', 'click', () => { if (!it.kf) return; commit(); delete it.kf; dirty = true; renderCtx(); });
+}
+function efHtml() {
+  const ef = (state.gfx && state.gfx.ef) || {};
+  return `<h4>🌈 特效包（整個畫面）</h4><label>每一項都是 0＝關閉，往右拉越強，可以疊加好幾個。</label>` +
+    EFX.map(([k, n]) => `<label>${n}<b id="v-ef-${k}">${Math.round((ef[k] || 0) * 100)}%</b></label><input type="range" id="ef-${k}" min="0" max="1" step="0.05" value="${ef[k] || 0}">`).join('') +
+    `<div class="r2" style="margin-top:8px"><button class="sm red" id="ef-reset">全部關閉</button><button class="sm ok" id="ef-ok">完成</button></div>`;
+}
+function bindEf(on) {
+  EFX.forEach(([k]) => on('#ef-' + k, 'input', ev => { touch('ef' + k); state.gfx = state.gfx || {}; state.gfx.ef = state.gfx.ef || {}; state.gfx.ef[k] = +ev.target.value; if (!state.gfx.ef[k]) delete state.gfx.ef[k]; $('#v-ef-' + k).textContent = Math.round(+ev.target.value * 100) + '%'; dirty = true; }));
+  on('#ef-reset', 'click', () => { if (!state.gfx || !state.gfx.ef) return; commit(); delete state.gfx.ef; dirty = true; renderCtx(); });
+  on('#ef-ok', 'click', () => { showEf = false; renderTimeline(); renderCtx(); });
 }
 function lyHtml() {
   const l = selLy && state.layers.find(x => x.id === selLy);
@@ -1094,6 +1246,10 @@ $('#xp-go').onclick = async () => {
         const tz = c.z || 1, tx = c.x || 0, ty = c.y || 0, hasT = Math.abs(tz - 1) > 0.001 || Math.abs(tx) > 0.0005 || Math.abs(ty) > 0.0005;
         const compose = (Wt, Ht) => `color=c=black:s=${Wt}x${Ht}:r=30[bg];[0:v]${pre}scale=${Wt}:${Ht}:force_original_aspect_ratio=decrease,${fxs}scale=trunc(iw*${tz.toFixed(4)}/2)*2:trunc(ih*${tz.toFixed(4)}/2)*2,setsar=1[fg];[bg][fg]overlay=x=(main_w-overlay_w)/2+${(tx * Wt).toFixed(2)}:y=(main_h-overlay_h)/2+${(ty * Ht).toFixed(2)}:shortest=1,setsar=1`;
         if (hasT && useKB) { const nf = Math.max(1, Math.round(len * 30)); fcv = `${compose(W * 2, H * 2)},zoompan=z='1+0.12*(${off.toFixed(3)}+on/30)/${d.toFixed(3)}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${nf}:s=${W}x${H}:fps=30,format=yuv420p[vout]`; }
+        else if (!useKB && c.kf && c.kf.length) {
+          const kb = kfBuild(c.kf, W, H, W, H, -off, Math.round(W / 2 + tx * W), Math.round(H / 2 + ty * H));
+          fcv = `color=c=black:s=${W}x${H}:r=30[bg];[0:v]${pre}scale=${W}:${H}:force_original_aspect_ratio=decrease,${fxs}scale=trunc(iw*${tz.toFixed(4)}/2)*2:trunc(ih*${tz.toFixed(4)}/2)*2,setsar=1${kb.chain ? ',' + kb.chain : ''}[fg];[bg][fg]overlay=${kb.ox}:${kb.oy}:shortest=1:format=auto,setsar=1,fps=30,format=yuv420p[vout]`;
+        }
         else if (hasT) { fcv = `${compose(W, H)},fps=30,format=yuv420p[vout]`; }
         else if (c.bb && !useKB) { const rad = Math.max(10, Math.round(Math.min(W, H) / 18)); fcv = `[0:v]${pre}${fxs}split[bs][fs];[bs]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},boxblur=${rad}:2,lutyuv=y=val*0.82[bg];[fs]scale=${W}:${H}:force_original_aspect_ratio=decrease,setsar=1[fg];[bg][fg]overlay=x=(main_w-overlay_w)/2:y=(main_h-overlay_h)/2,setsar=1,fps=30,format=yuv420p[vout]`; }
         else if (useKB) { const nf = Math.max(1, Math.round(len * 30)); vf = `${pre}scale=${W * 2}:${H * 2}:force_original_aspect_ratio=decrease,${fxs}pad=${W * 2}:${H * 2}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,zoompan=z='1+0.12*(${off.toFixed(3)}+on/30)/${d.toFixed(3)}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${nf}:s=${W}x${H}:fps=30`; }
@@ -1150,8 +1306,8 @@ $('#xp-go').onclick = async () => {
       const ln = `ly${lyInfo.length}.${extOf(la.name)}`; await f.writeFile(ln, await fetchFile(la.file)); files.push(ln);
       lyInfo.push({ l, la, ln, hasSnd: la.kind === 'video' && l.mute === false && await hasAudio(f, ln) });
     }
-    const gfxOn = !audioOnly && snap.gfx && hasFx(snap.gfx), layerAudio = lyInfo.filter(x => x.hasSnd);
-    const needV = !audioOnly && (texts.length > 0 || lyInfo.length > 0 || gfxOn || padT > 0);
+    const gfxOn = !audioOnly && snap.gfx && hasFx(snap.gfx), efOn = !audioOnly && !!snap.gfx && hasEf(snap.gfx.ef), layerAudio = lyInfo.filter(x => x.hasSnd);
+    const needV = !audioOnly && (texts.length > 0 || lyInfo.length > 0 || gfxOn || efOn || padT > 0);
     const needA = !!music || Math.abs(V1 - 1) > 0.001 || layerAudio.length > 0 || padT > 0;
     let outName, mime;
     if (!audioOnly && !needV && !needA) { outName = base; mime = 'video/mp4'; }
@@ -1192,14 +1348,16 @@ $('#xp-go').onclick = async () => {
             if (l.ck) parts.push(`[cl${k}]split[c1${k}][c2${k}]`, `[c1${k}]alphaextract[ae${k}]`, `[ae${k}][mg${k}]blend=all_mode=multiply,format=gray[am${k}]`, `[c2${k}][am${k}]alphamerge,setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
             else parts.push(`[cl${k}][mg${k}]alphamerge,setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
           } else parts.push(`${cell},setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
-          const ex = Math.round(l.x * W - cw / 2), ey = Math.round(l.y * H - ch / 2);
+          let ex = `x=${Math.round(l.x * W - cw / 2)}`, ey = `y=${Math.round(l.y * H - ch / 2)}`, lyN = `ly${k}`, ovf = '';
+          if (l.kf && l.kf.length) { const kb = kfBuild(l.kf, cw, ch, W, H, l.start, Math.round(l.x * W), Math.round(l.y * H)); if (kb.chain) { parts.push(`[ly${k}]${kb.chain}[lk${k}]`); lyN = `lk${k}`; } ex = kb.ox; ey = kb.oy; ovf = ':format=auto'; }
           if (l.bm) {
-            parts.push(`color=c=${BLEND_NEUTRAL[l.bm]}:s=${W}x${H}:r=30:d=${TT.toFixed(3)}[bn${k}]`, `[bn${k}][ly${k}]overlay=${ex}:${ey}:eof_action=pass:format=auto,format=yuv420p[bf${k}]`,
+            parts.push(`color=c=${BLEND_NEUTRAL[l.bm]}:s=${W}x${H}:r=30:d=${TT.toFixed(3)}[bn${k}]`, `[bn${k}][${lyN}]overlay=${ex}:${ey}:eof_action=pass:format=auto,format=yuv420p[bf${k}]`,
               `[${prev}]format=yuv420p[bp${k}]`, `[bp${k}][bf${k}]blend=all_mode=${FF_BLEND[l.bm]}:all_opacity=${op.toFixed(2)}:shortest=1[vl${k}]`);
-          } else parts.push(`[${prev}][ly${k}]overlay=${ex}:${ey}:eof_action=pass[vl${k}]`);
+          } else parts.push(`[${prev}][${lyN}]overlay=${ex}:${ey}:eof_action=pass${ovf}[vl${k}]`);
           prev = `vl${k}`;
         });
         if (gfxOn) { parts.push(`[${prev}]${fxString(snap.gfx)}[vg]`); prev = 'vg'; }
+        if (efOn) prev = efParts(snap.gfx.ef, prev, parts, W, H);
         texts.forEach((x, k) => { const nx = `v${k + 1}`; parts.push(`[${prev}][${k + 1}:v]overlay=0:0:enable='between(t,${x.start.toFixed(2)},${(x.start + x.dur).toFixed(2)})'[${nx}]`); prev = nx; });
         vmap = `[${prev}]`;
       }
@@ -1292,7 +1450,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-C', upd = document.getElementById('upd');
+  const VER = '1121-D', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
