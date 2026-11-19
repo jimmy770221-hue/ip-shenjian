@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#14161f">
 <style>
 :root{--bg:#14161f;--panel:#1d2030;--panel2:#262a3d;--line:#343a55;--text:#eef1ff;--sub:#99a2c8;--main:#5b86ff;--hot:#ff9f43;--ok:#2ec27e;--err:#ff6b6b}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;overscroll-behavior:none}
 #app{height:100dvh;max-width:760px;margin:0 auto;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
 .top{display:flex;align-items:center;gap:6px;padding:8px 8px;background:var(--panel)}
@@ -799,6 +799,11 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
   document.getElementById('h-cont').addEventListener('click', hideHome);
   window.__hideHome = hideHome;
   document.querySelector('.top .logo').addEventListener('click', showHome);
+})();
+
+// ===== 防止雙擊／雙指縮放 =====
+(function () {
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(n => document.addEventListener(n, e => e.preventDefault(), { passive: false }));
 })();
 </script>
 </body>
