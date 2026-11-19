@@ -74,6 +74,10 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .tmark{position:absolute;top:16px;width:26px;height:26px;margin-left:-13px;border-radius:50%;background:#262a3d;border:2px solid #fff;color:#fff;font-size:13px;line-height:22px;text-align:center;z-index:30;box-shadow:0 1px 4px #0008}
 .tmark.on{background:var(--hot);border-color:var(--hot);color:#000;font-weight:800}
 .tmark.sel{box-shadow:0 0 0 3px #fff8}
+.tabs3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+.fchips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.fchips .sm{flex:0 0 auto;min-width:58px}
+.ctx label b{color:var(--text);font-weight:700;margin-left:6px}
 .trg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .trg .sm{padding:10px 4px}
 #home{position:fixed;inset:0;z-index:60;background:#07070d;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 22px;text-align:center;overflow:hidden;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
@@ -150,7 +154,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1120-M（開始按鈕改版）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-A（濾鏡、變速、倒放、旋轉翻轉）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -184,6 +188,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   <div class="toolbar" id="toolbar">
     <button class="tb" data-a="add"><i>＋</i>素材</button>
     <button class="tb" data-a="auto"><i>✨</i>幻燈片</button>
+    <button class="tb" data-a="fx"><i>🎛</i>調整</button>
     <button class="tb" data-a="split"><i>✂️</i>分割</button>
     <button class="tb" data-a="trimL"><i>⇤</i>裁左邊</button>
     <button class="tb" data-a="trimR"><i>⇥</i>裁右邊</button>
@@ -228,9 +233,23 @@ const assets = new Map();           // id -> {id,kind,file,url,el,img,w,h,dur,na
 let uid = 1;
 let state = { ratio: '9:16', clips: [], texts: [], music: null, kb: false, vol: { video: 1, music: 0.6 } };
 let history = [], redoStack = [], lastTouch = null;
+let showFx = false, fxTab = 'f', fxIdx = -1;
 let cur = 0, playing = false, pps = 80, selText = null, selMusic = false, selTr = null, showAuto = false, dirty = true;
-function clearSel() { selText = null; selMusic = false; selTr = null; showAuto = false; }
+function clearSel() { showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
 let L = [], total = 0;               // 排版結果
+const FXP = {
+  none: { n: '原圖', b: 0, ct: 1, sa: 1, r: 1, g: 1, bl: 1 },
+  vintage: { n: '復古', b: .02, ct: 1.05, sa: .75, r: 1.08, g: 1, bl: .85 },
+  cinema: { n: '電影', b: -.03, ct: 1.2, sa: .9, r: 1.06, g: 1, bl: .94 },
+  japan: { n: '日系', b: .08, ct: .9, sa: .85, r: 1, g: 1.03, bl: 1.06 },
+  bw: { n: '黑白', b: 0, ct: 1.15, sa: 0, r: 1, g: 1, bl: 1 },
+  vivid: { n: '鮮豔', b: 0, ct: 1.1, sa: 1.5, r: 1, g: 1, bl: 1 },
+  cool: { n: '冷調', b: 0, ct: 1, sa: 1, r: .92, g: 1, bl: 1.1 },
+  warm: { n: '暖調', b: 0, ct: 1, sa: 1, r: 1.1, g: 1.02, bl: .9 }
+};
+const fxP = c => { const p = FXP[c.fp] || FXP.none; return { b: p.b + (c.fb || 0), ct: p.ct * (c.fc == null ? 1 : c.fc), sa: p.sa * (c.fs == null ? 1 : c.fs), r: p.r, g: p.g, bl: p.bl }; };
+const hasFx = c => { const q = fxP(c); return Math.abs(q.b) > .001 || Math.abs(q.ct - 1) > .001 || Math.abs(q.sa - 1) > .001 || q.r !== 1 || q.g !== 1 || q.bl !== 1; };
+const spd = c => c.sp || 1;
 const RATIO = { '9:16': [360, 640], '16:9': [640, 360], '1:1': [480, 480], '4:3': [640, 480], '3:4': [480, 640] };
 
 const fmt = t => { t = Math.max(0, t); const m = Math.floor(t / 60), s = t - m * 60; return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1); };
@@ -254,7 +273,7 @@ function redo() { if (!redoStack.length) return toast('沒有可以重做的了'
 function relayout() {
   L = [];
   state.clips.forEach((c, i) => {
-    const d = c.out - c.in; let td = 0;
+    const d = (c.out - c.in) / spd(c); let td = 0;
     if (i > 0 && c.tr) { td = Math.min(c.tr.dur, 0.45 * Math.min(L[i - 1].d, d)); td = Math.round(td * 30) / 30; if (td < 0.2) td = 0; }
     const start = i ? L[i - 1].end - td : 0;
     L.push({ c, i, start, end: start + d, d, td });
@@ -338,10 +357,25 @@ function drawText(g, W, H, x) {
   g.strokeStyle = (x.color === '#ff6b6b' || x.color === '#000000') ? '#ffffff' : '#000000'; g.fillStyle = x.color;
   lines.forEach((ln, i) => { g.strokeText(ln, W / 2, y0 + i * lh); g.fillText(ln, W / 2, y0 + i * lh); });
 }
-function drawContain(src, sw, sh, c) {
-  const W = cv.width, H = cv.height, z = (c && c.z) || 1, ox = (c && c.x) || 0, oy = (c && c.y) || 0;
-  const s = Math.min(W / sw, H / sh) * z, w = sw * s, h = sh * s;
-  g.drawImage(src, (W - w) / 2 + ox * W, (H - h) / 2 + oy * H, w, h);
+function drawContain(T, src, sw, sh, c) {
+  const W = cv.width, H = cv.height, z = (c && c.z) || 1, ox = (c && c.x) || 0, oy = (c && c.y) || 0, rot = (c && c.rot) || 0;
+  const sw2 = rot % 180 ? sh : sw, sh2 = rot % 180 ? sw : sh, s = Math.min(W / sw2, H / sh2) * z;
+  T.save(); T.translate(W / 2 + ox * W, H / 2 + oy * H); T.rotate(rot * Math.PI / 180); T.scale(c && c.fh ? -1 : 1, c && c.fv ? -1 : 1);
+  T.drawImage(src, -sw * s / 2, -sh * s / 2, sw * s, sh * s); T.restore();
+}
+const fxc = document.createElement('canvas'), fxg = fxc.getContext('2d', { willReadFrequently: true });
+function applyFx(c) {
+  const q = fxP(c), W = fxc.width, H = fxc.height, im = fxg.getImageData(0, 0, W, H), d = im.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (!d[i + 3]) continue;
+    let r = d[i] / 255 * q.r, gr = d[i + 1] / 255 * q.g, b = d[i + 2] / 255 * q.bl;
+    if (r > 1) r = 1; if (gr > 1) gr = 1; if (b > 1) b = 1;
+    const l = .299 * r + .587 * gr + .114 * b;
+    const l2 = (l - .5) * q.ct + .5 + q.b;   // 對比只作用在亮度，和匯出一致
+    r = l2 + (r - l) * q.sa; gr = l2 + (gr - l) * q.sa; b = l2 + (b - l) * q.sa;
+    d[i] = r < 0 ? 0 : r > 1 ? 255 : r * 255; d[i + 1] = gr < 0 ? 0 : gr > 1 ? 255 : gr * 255; d[i + 2] = b < 0 ? 0 : b > 1 ? 255 : b * 255;
+  }
+  fxg.putImageData(im, 0, 0);
 }
 function activeEntries() {
   const a = L.filter(e => cur >= e.start && cur < e.end);
@@ -355,13 +389,16 @@ function transState() {
 }
 function drawEntry(e) {
   const a = assets.get(e.c.asset); if (!a) return;
+  const fx = hasFx(e.c); let T = g;
+  if (fx) { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); T = fxg; }
   try {
     if (a.kind === 'image') {
       const z = state.kb ? 1 + 0.12 * clamp((cur - e.start) / e.d, 0, 1) : 1;
-      g.save(); g.translate(cv.width / 2, cv.height / 2); g.scale(z, z); g.translate(-cv.width / 2, -cv.height / 2);
-      drawContain(a.img, a.w, a.h, e.c); g.restore();
-    } else if (a.el.readyState >= 2) drawContain(a.el, a.w, a.h, e.c);
+      T.save(); T.translate(cv.width / 2, cv.height / 2); T.scale(z, z); T.translate(-cv.width / 2, -cv.height / 2);
+      drawContain(T, a.img, a.w, a.h, e.c); T.restore();
+    } else if (a.el.readyState >= 2) drawContain(T, a.el, a.w, a.h, e.c);
   } catch (err) {}
+  if (fx) { try { applyFx(e.c); g.drawImage(fxc, 0, 0); } catch (err) {} }
 }
 function drawTrans(type, p, dA, dB) {
   const W = cv.width, H = cv.height, R = Math.hypot(W, H) / 2;
@@ -397,12 +434,15 @@ function syncMedia() {
   const act = activeEntries(), ts = transState(), want = new Map();
   act.forEach(e => {
     const a = assets.get(e.c.asset);
-    if (a && a.kind === 'video') { let f = 1; if (ts) f = e === ts.B ? ts.p : e === ts.A ? 1 - ts.p : 1; want.set(a.id, { t: e.c.in + (cur - e.start), mute: e.c.mute, f }); }
+    if (a && a.kind === 'video') { let f = 1; if (ts) f = e === ts.B ? ts.p : e === ts.A ? 1 - ts.p : 1; const sp = spd(e.c), lt = (cur - e.start) * sp; want.set(a.id, { t: e.c.rev ? e.c.out - lt : e.c.in + lt, mute: e.c.mute, f, sp, rev: !!e.c.rev }); }
   });
   assets.forEach(a => { if (a.kind === 'video' && !want.has(a.id) && !a.el.paused) a.el.pause(); });
   want.forEach((w, id) => {
-    const el = assets.get(id).el; el.muted = w.mute; el.volume = clamp(state.vol.video * w.f, 0, 1);
-    if (playing) { if (el.paused || Math.abs(el.currentTime - w.t) > 0.3) { el.currentTime = w.t; el.play().catch(() => {}); } }
+    const el = assets.get(id).el, sm = w.rev || w.sp > 2 || w.sp < 0.5;   // 倒放或太快太慢：預覽改用逐格跳轉
+    el.muted = w.mute || sm; el.volume = clamp(state.vol.video * w.f, 0, 1);
+    try { el.playbackRate = sm ? 1 : w.sp; } catch (er) {}
+    if (playing && sm) { if (!el.paused) el.pause(); if (!el.seeking && Math.abs(el.currentTime - w.t) > 0.04) el.currentTime = clamp(w.t, 0, el.duration || 1e9); }
+    else if (playing) { if (el.paused || Math.abs(el.currentTime - w.t) > 0.3) { el.currentTime = w.t; el.play().catch(() => {}); } }
     else if (Math.abs(el.currentTime - w.t) > 0.02) el.currentTime = w.t;
   });
   if (state.music) {
@@ -452,12 +492,13 @@ function updateActive() {
   const e = clipAt(cur);
   document.querySelectorAll('#row-v .clip').forEach(d => d.classList.toggle('active', !!e && +d.dataset.i === e.i));
   updateToolbar();
+  if (showFx && e && e.i !== fxIdx) renderCtx();
 }
 function updateToolbar() {
   const e = clipAt(cur), has = !!e;
   const set = (a, v) => { const b = document.querySelector(`.tb[data-a="${a}"]`); if (b) b.disabled = !v; };
   set('split', has); set('trimL', has); set('trimR', has); set('del', has); set('mvL', has && e.i > 0); set('mvR', has && e.i < L.length - 1);
-  set('text', has); set('undo', history.length > 0); set('redo', redoStack.length > 0);
+  set('text', has); set('fx', has); set('undo', history.length > 0); set('redo', redoStack.length > 0);
 }
 function renderTimeline() {
   const h = half(); $('#inner').style.padding = `0 ${h}px 6px`;
@@ -471,7 +512,7 @@ function renderTimeline() {
   const rv = $('#row-v'); rv.style.width = W + 'px';
   rv.innerHTML = L.map(e => {
     const a = assets.get(e.c.asset);
-    return `<div class="clip${e.c.mute ? ' mute' : ''}" data-i="${e.i}" style="z-index:${e.i + 1};left:${e.start * pps}px;width:${Math.max(4, e.d * pps - 2)}px;${a.thumb ? `background-image:url(${a.thumb})` : ''}"><span>${a.kind === 'image' ? '🖼 ' : ''}${e.i + 1}・${e.d.toFixed(1)}秒</span></div>`;
+    return `<div class="clip${e.c.mute ? ' mute' : ''}" data-i="${e.i}" style="z-index:${e.i + 1};left:${e.start * pps}px;width:${Math.max(4, e.d * pps - 2)}px;${a.thumb ? `background-image:url(${a.thumb})` : ''}"><span>${a.kind === 'image' ? '🖼 ' : ''}${e.i + 1}・${e.d.toFixed(1)}秒${e.c.sp && e.c.sp !== 1 ? ' ⚡' + e.c.sp + 'x' : ''}${e.c.rev ? ' ↺' : ''}${hasFx(e.c) ? ' 🎨' : ''}</span></div>`;
   }).join('') + L.slice(1).map(e => `<div class="tmark${e.td > 0 ? ' on' : ''}${selTr === e.i ? ' sel' : ''}" data-ti="${e.i}" style="left:${(e.start + e.td / 2) * pps}px">${e.td > 0 ? '⟷' : '＋'}</div>`).join('');
   // 文字軌（自動分層）
   const rt = $('#row-t'), lanes = [];
@@ -495,7 +536,7 @@ $('#row-v').addEventListener('click', e => {
   if (m) { const i = +m.dataset.ti; pause(); clearSel(); selTr = i; setCur(L[i].start + L[i].td / 2); renderTimeline(); renderCtx(); return; }
   const d = e.target.closest('.clip'); if (!d) return; const en = L[+d.dataset.i];
   const x = e.clientX - d.getBoundingClientRect().left; // 點到哪裡就跳到哪裡
-  pause(); setCur(en.start + clamp(x / pps, 0, en.d - 0.001)); clearSel(); renderTimeline(); renderCtx();
+  const keepFx = showFx; pause(); setCur(en.start + clamp(x / pps, 0, en.d - 0.001)); clearSel(); showFx = keepFx; renderTimeline(); renderCtx();
 });
 $('#row-t').addEventListener('click', e => { const d = e.target.closest('.tblock'); if (!d) return; clearSel(); selText = +d.dataset.tid; renderTimeline(); renderCtx(); });
 $('#row-m').addEventListener('click', e => { if (!e.target.closest('.mblock')) return; clearSel(); selMusic = true; renderTimeline(); renderCtx(); });
@@ -515,20 +556,21 @@ const ops = {
   split() {
     const e = clipAt(cur), local = cur - e.start;
     if (local < 0.1 || e.d - local < 0.1) return toast('請把時間線移到片段「中間」再分割');
-    commit(); const c = e.c, a = { ...c, id: uid++, in: c.in + local }; c.out = c.in + local;
+    commit(); const c = e.c, a = { ...c, id: uid++ }, ls = local * spd(c);
+    if (c.rev) { c.in = c.out - ls; a.out = c.out - ls; } else { a.in = c.in + ls; c.out = c.in + ls; }
     state.clips.splice(e.i + 1, 0, a); afterEdit(cur); toast('已分割');
   },
   trimL() {
     const e = clipAt(cur), local = cur - e.start;
     if (local < 0.05) return toast('時間線在片段最前面，沒有東西可以裁');
     if (e.d - local < 0.1) return toast('裁掉後片段太短了');
-    commit(); e.c.in += local; afterEdit(e.start); toast('已裁掉左邊');
+    commit(); if (e.c.rev) e.c.out -= local * spd(e.c); else e.c.in += local * spd(e.c); afterEdit(e.start); toast('已裁掉左邊');
   },
   trimR() {
     const e = clipAt(cur), local = cur - e.start;
     if (e.d - local < 0.05) return toast('時間線在片段最後面，沒有東西可以裁');
     if (local < 0.1) return toast('裁掉後片段太短了');
-    commit(); e.c.out = e.c.in + local; afterEdit(e.start + local - 0.01); toast('已裁掉右邊');
+    commit(); if (e.c.rev) e.c.in = e.c.out - local * spd(e.c); else e.c.out = e.c.in + local * spd(e.c); afterEdit(e.start + local - 0.01); toast('已裁掉右邊');
   },
   del() { const e = clipAt(cur); commit(); state.clips.splice(e.i, 1); afterEdit(Math.min(e.start, Math.max(0, total - e.d))); toast('已刪除這一段'); },
   mvL() { const e = clipAt(cur); if (e.i < 1) return; commit(); const c = state.clips; [c[e.i - 1], c[e.i]] = [c[e.i], c[e.i - 1]]; relayout(); afterEdit(L[e.i - 1].start + (cur - e.start)); },
@@ -539,6 +581,7 @@ const ops = {
     state.texts.push(x); clearSel(); selText = x.id; renderTimeline(); renderCtx(); dirty = true;
   },
   music() { $('#f-music').click(); },
+  fx() { clearSel(); showFx = true; renderTimeline(); renderCtx(); },
   auto() { clearSel(); showAuto = true; renderTimeline(); renderCtx(); },
   undo, redo
 };
@@ -557,6 +600,7 @@ function renderCtx() {
   const t = selText && state.texts.find(x => x.id === selText);
   if (showAuto) { h += autoHtml(); }
   else if (selTr !== null && L[selTr]) { h += trHtml(); }
+  else if (showFx && clipAt(cur)) { h += fxHtml(); }
   else if (t) {
     h += `<h4>✏️ 編輯文字</h4>
     <textarea id="tx-text">${esc(t.text)}</textarea>
@@ -587,11 +631,12 @@ function renderCtx() {
     h += `<label class="chk"><input type="checkbox" id="kb"${state.kb ? ' checked' : ''}> 照片慢慢推近（較動感，匯出會比較慢）</label>`;
   }
   box.innerHTML = h;
-  box.classList.toggle('edit', !!(showAuto || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
+  box.classList.toggle('edit', !!(showAuto || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
   const on = (id, ev, fn) => { const el = box.querySelector(id); if (el) el.addEventListener(ev, fn); };
   on('#kb', 'change', e => { commit(); state.kb = e.target.checked; dirty = true; });
   if (showAuto) bindAuto(on);
   else if (selTr !== null && L[selTr]) bindTr(on);
+  else if (showFx && clipAt(cur)) bindFx(on);
   else if (t) {
     on('#tx-text', 'input', e => { touch('t' + t.id); t.text = e.target.value || ' '; renderTimelineLight(); dirty = true; });
     on('#tx-color', 'change', e => { commit(); t.color = e.target.value; dirty = true; });
@@ -610,7 +655,7 @@ function renderCtx() {
     on('#m-ok', 'click', () => { selMusic = false; renderTimeline(); renderCtx(); });
   } else {
     on('#img-d', 'change', e => { const en = clipAt(cur); commit(); en.c.out = en.c.in + clamp(+e.target.value || 3, 0.5, 30); afterEdit(cur); });
-    on('#fit-fill', 'click', () => { const en = clipAt(cur); if (!en) return; const a = assets.get(en.c.asset), W = cv.width, H = cv.height; commit(); en.c.z = Math.max(W / a.w, H / a.h) / Math.min(W / a.w, H / a.h); en.c.x = 0; en.c.y = 0; dirty = true; });
+    on('#fit-fill', 'click', () => { const en = clipAt(cur); if (!en) return; const a = assets.get(en.c.asset), W = cv.width, H = cv.height; commit(); const rw = (en.c.rot || 0) % 180 ? a.h : a.w, rh = (en.c.rot || 0) % 180 ? a.w : a.h; en.c.z = Math.max(W / rw, H / rh) / Math.min(W / rw, H / rh); en.c.x = 0; en.c.y = 0; dirty = true; });
     on('#fit-reset', 'click', () => { const en = clipAt(cur); if (!en) return; commit(); en.c.z = 1; en.c.x = 0; en.c.y = 0; dirty = true; });
     on('#clip-mute', 'change', e => { const en = clipAt(cur); commit(); en.c.mute = e.target.checked; renderTimeline(); syncMedia(); });
     on('#vol-v', 'input', e => { touch('vv'); state.vol.video = +e.target.value; e.target.previousElementSibling.textContent = '影片原聲音量 ' + Math.round(state.vol.video * 100) + '%'; syncMedia(); });
@@ -619,6 +664,50 @@ function renderCtx() {
 }
 const TRS = [['fade', '淡入淡出', '🌫'], ['fadeblack', '黑場過渡', '⬛'], ['fadewhite', '閃白', '⬜'], ['slideleft', '向左推', '⬅️'], ['slideright', '向右推', '➡️'], ['slideup', '向上推', '⬆️'], ['slidedown', '向下推', '⬇️'], ['wipeleft', '向左擦拭', '◀️'], ['wiperight', '向右擦拭', '▶️'], ['circleopen', '圓形展開', '⭕'], ['circleclose', '圓形收合', '🎯'], ['radial', '時鐘擦拭', '🕐']];
 const AUTO_STYLES = [['🎲 隨機混合', TRS.map(t => t[0])], ['🌫 柔和淡入淡出', ['fade']], ['➡️ 推擠換頁', ['slideleft', 'slideright', 'slideup', 'slidedown']], ['🧹 擦拭換頁', ['wipeleft', 'wiperight']], ['⭕ 圓形與時鐘', ['circleopen', 'circleclose', 'radial']], ['⚡ 閃光動感', ['fadewhite', 'fadeblack']]];
+const SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3, 4];
+function fxHtml() {
+  const e = clipAt(cur), c = e.c, a = assets.get(c.asset), isV = a.kind === 'video'; fxIdx = e.i;
+  let h = `<h4>🎛 調整・第 ${e.i + 1} 段</h4><div class="tabs3">${[['f', '🎨 濾鏡'], ['s', '⚡ 速度'], ['x', '🔄 變換']].map(t => `<button class="sm${fxTab === t[0] ? ' ok' : ''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`;
+  if (fxTab === 'f') {
+    h += `<div class="fchips">${Object.entries(FXP).map(([k, p]) => `<button class="sm${(c.fp || 'none') === k ? ' ok' : ''}" data-fp="${k}">${p.n}</button>`).join('')}</div>`;
+    h += `<label>亮度<b id="v-fb">${Math.round((c.fb || 0) * 100)}</b></label><input type="range" id="fx-fb" min="-0.3" max="0.3" step="0.02" value="${c.fb || 0}">`;
+    h += `<label>對比<b id="v-fc">${Math.round((c.fc == null ? 1 : c.fc) * 100)}%</b></label><input type="range" id="fx-fc" min="0.5" max="1.6" step="0.05" value="${c.fc == null ? 1 : c.fc}">`;
+    h += `<label>飽和<b id="v-fs">${Math.round((c.fs == null ? 1 : c.fs) * 100)}%</b></label><input type="range" id="fx-fs" min="0" max="2" step="0.05" value="${c.fs == null ? 1 : c.fs}">`;
+    h += `<div class="r2" style="margin-top:8px"><button class="sm" id="fx-reset">重設濾鏡</button><button class="sm" id="fx-all">全部片段套用</button></div>`;
+  } else if (fxTab === 's') {
+    if (!isV) h += `<p class="hint">照片沒有速度可以調。想讓照片久一點，請在下面「這張照片顯示幾秒」設定。</p>`;
+    else {
+      h += `<div class="fchips">${SPEEDS.map(v => `<button class="sm${spd(c) === v ? ' ok' : ''}" data-sp="${v}">${v}x</button>`).join('')}</div>`;
+      h += `<label class="chk"><input type="checkbox" id="fx-rev"${c.rev ? ' checked' : ''}> ↺ 倒放（影片倒著播）</label>`;
+      h += `<p class="hint">目前這一段約 ${e.d.toFixed(1)} 秒。${(c.rev || spd(c) > 2) ? '倒放與 3x、4x 的預覽會比較卡，匯出的成品是順的。' : ''}${c.rev ? '倒放的片段不會有聲音。' : ''}</p>`;
+    }
+  } else {
+    h += `<div class="r2"><button class="sm" data-x="rot">↻ 轉 90°</button><button class="sm" data-x="fh">⇋ 左右翻轉</button></div>
+    <div class="r2" style="margin-top:8px"><button class="sm" data-x="fv">⇅ 上下翻轉</button><button class="sm" data-x="reset">還原</button></div>
+    <p class="hint">目前：旋轉 ${c.rot || 0}°${c.fh ? '・左右翻轉' : ''}${c.fv ? '・上下翻轉' : ''}</p>`;
+  }
+  return h + `<button class="sm ok" id="fx-ok" style="width:100%;margin-top:8px">完成</button>`;
+}
+function bindFx(on) {
+  const e = clipAt(cur); if (!e) return; const c = e.c;
+  document.querySelectorAll('#ctx [data-tab]').forEach(b => b.onclick = () => { fxTab = b.dataset.tab; renderCtx(); });
+  document.querySelectorAll('#ctx [data-fp]').forEach(b => b.onclick = () => { commit(); c.fp = b.dataset.fp; if (c.fp === 'none') delete c.fp; dirty = true; renderCtx(); renderTimeline(); });
+  [['fb', v => Math.round(v * 100)], ['fc', v => Math.round(v * 100) + '%'], ['fs', v => Math.round(v * 100) + '%']].forEach(([k, f]) => on('#fx-' + k, 'input', ev => { touch('fx' + k + c.id); c[k] = +ev.target.value; $('#v-' + k).textContent = f(c[k]); dirty = true; renderTimelineLight2(); }));
+  on('#fx-reset', 'click', () => { commit(); delete c.fp; delete c.fb; delete c.fc; delete c.fs; dirty = true; renderCtx(); renderTimeline(); });
+  on('#fx-all', 'click', () => { commit(); state.clips.forEach(x => { ['fp', 'fb', 'fc', 'fs'].forEach(k => { if (c[k] == null) delete x[k]; else x[k] = c[k]; }); }); dirty = true; renderTimeline(); toast('已套用到全部片段'); });
+  document.querySelectorAll('#ctx [data-sp]').forEach(b => b.onclick = () => { commit(); const v = +b.dataset.sp; if (v === 1) delete c.sp; else c.sp = v; afterEdit(e.start); });
+  on('#fx-rev', 'change', ev => { commit(); if (ev.target.checked) c.rev = true; else delete c.rev; afterEdit(e.start); });
+  document.querySelectorAll('#ctx [data-x]').forEach(b => b.onclick = () => {
+    commit(); const k = b.dataset.x;
+    if (k === 'rot') { c.rot = ((c.rot || 0) + 90) % 360; if (!c.rot) delete c.rot; }
+    else if (k === 'fh') { if (c.fh) delete c.fh; else c.fh = true; }
+    else if (k === 'fv') { if (c.fv) delete c.fv; else c.fv = true; }
+    else { delete c.rot; delete c.fh; delete c.fv; }
+    dirty = true; renderCtx();
+  });
+  on('#fx-ok', 'click', () => { showFx = false; renderTimeline(); renderCtx(); });
+}
+function renderTimelineLight2() { const d = document.querySelector(`#row-v .clip[data-i="${fxIdx}"] span`), e = L[fxIdx]; if (d && e) { const a = assets.get(e.c.asset); d.textContent = `${a.kind === 'image' ? '🖼 ' : ''}${e.i + 1}・${e.d.toFixed(1)}秒${e.c.sp && e.c.sp !== 1 ? ' ⚡' + e.c.sp + 'x' : ''}${e.c.rev ? ' ↺' : ''}${hasFx(e.c) ? ' 🎨' : ''}`; } }
 function trHtml() {
   const e = L[selTr], c = e.c, ty = c.tr ? c.tr.type : '';
   return `<h4>🎞 第 ${selTr} 段 → 第 ${selTr + 1} 段 的換頁效果</h4>
@@ -664,7 +753,7 @@ function bindAuto(on) {
       let each = sec;
       if (fit) {
         const mus = assets.get(state.music.asset).dur - state.music.offset;
-        const fixed = state.clips.filter(c => assets.get(c.asset).kind !== 'image').reduce((a, c) => a + (c.out - c.in), 0);
+        const fixed = state.clips.filter(c => assets.get(c.asset).kind !== 'image').reduce((a, c) => a + (c.out - c.in) / spd(c), 0);
         each = Math.round(clamp((mus - fixed + (state.clips.length - 1) * dur) / imgs.length, 1.5, 10) * 10) / 10;
       }
       imgs.forEach(c => { c.out = c.in + each; });
@@ -737,20 +826,32 @@ $('#xp-go').onclick = async () => {
       let hasA = false;
       if (a.kind === 'video' && !c.mute) { if (!(a.id in audioMap)) audioMap[a.id] = await hasAudio(f, names[a.id]); hasA = audioMap[a.id]; }
       const useKB = !audioOnly && kb && a.kind === 'image';
-      const args = a.kind === 'video' ? ['-ss', String(c.in + off), '-i', names[a.id]] : useKB ? ['-i', names[a.id]] : ['-loop', '1', '-framerate', '30', '-t', String(len), '-i', names[a.id]];
+      const sp = a.kind === 'video' ? spd(c) : 1, rev = a.kind === 'video' && !!c.rev;
+      const ssrc = Math.max(0, rev ? c.out - (off + len) * sp : c.in + off * sp);
+      const vin = ['-ss', ssrc.toFixed(3), ...(rev || sp !== 1 ? ['-t', (len * sp).toFixed(3)] : []), '-i', names[a.id]];
+      const args = a.kind === 'video' ? vin : useKB ? ['-i', names[a.id]] : ['-loop', '1', '-framerate', '30', '-t', String(len), '-i', names[a.id]];
+      if (hasA && rev) hasA = false;   // 倒放：不要聲音（和預覽一致）
+      const geo = []; if (rev) geo.push('reverse'); if (sp !== 1) geo.push(`setpts=PTS/${sp}`);
+      if (c.fh) geo.push('hflip'); if (c.fv) geo.push('vflip');
+      const rr = c.rot || 0; if (rr === 90) geo.push('transpose=1'); else if (rr === 180) geo.push('hflip,vflip'); else if (rr === 270) geo.push('transpose=2');
+      const pre = geo.length ? geo.join(',') + ',' : '';
+      const fxl = []; if (hasFx(c)) { const q = fxP(c); if (q.r !== 1 || q.g !== 1 || q.bl !== 1) fxl.push(`colorchannelmixer=rr=${q.r}:gg=${q.g}:bb=${q.bl}`); fxl.push(`eq=brightness=${q.b.toFixed(3)}:contrast=${q.ct.toFixed(3)}:saturation=${q.sa.toFixed(3)}`); }
+      const fxs = fxl.length ? fxl.join(',') + ',' : '';
+      const af = []; if (hasA && sp !== 1) { let sv = sp; while (sv > 2.0001) { af.push('atempo=2'); sv /= 2; } while (sv < 0.4999) { af.push('atempo=0.5'); sv /= 0.5; } af.push(`atempo=${sv.toFixed(4)}`); }
+      const afA = af.length ? ['-af', af.join(',')] : [];
       if (!hasA) args.push('-f', 'lavfi', '-t', String(len), '-i', 'anullsrc=r=44100:cl=stereo');
       const am = hasA ? '0:a' : '1:a';
-      if (audioOnly) args.push('-vn', '-map', am, '-t', String(len), '-c:a', 'aac', '-ar', '44100', '-ac', '2');
+      if (audioOnly) args.push('-vn', '-map', am, ...afA, '-t', String(len), '-c:a', 'aac', '-ar', '44100', '-ac', '2');
       else {
         let vf, fcv = null;
         const tz = c.z || 1, tx = c.x || 0, ty = c.y || 0, hasT = Math.abs(tz - 1) > 0.001 || Math.abs(tx) > 0.0005 || Math.abs(ty) > 0.0005;
-        const compose = (Wt, Ht) => `color=c=black:s=${Wt}x${Ht}:r=30[bg];[0:v]scale=${Wt}:${Ht}:force_original_aspect_ratio=decrease,scale=trunc(iw*${tz.toFixed(4)}/2)*2:trunc(ih*${tz.toFixed(4)}/2)*2,setsar=1[fg];[bg][fg]overlay=x=(main_w-overlay_w)/2+${(tx * Wt).toFixed(2)}:y=(main_h-overlay_h)/2+${(ty * Ht).toFixed(2)}:shortest=1,setsar=1`;
+        const compose = (Wt, Ht) => `color=c=black:s=${Wt}x${Ht}:r=30[bg];[0:v]${pre}scale=${Wt}:${Ht}:force_original_aspect_ratio=decrease,${fxs}scale=trunc(iw*${tz.toFixed(4)}/2)*2:trunc(ih*${tz.toFixed(4)}/2)*2,setsar=1[fg];[bg][fg]overlay=x=(main_w-overlay_w)/2+${(tx * Wt).toFixed(2)}:y=(main_h-overlay_h)/2+${(ty * Ht).toFixed(2)}:shortest=1,setsar=1`;
         if (hasT && useKB) { const nf = Math.max(1, Math.round(len * 30)); fcv = `${compose(W * 2, H * 2)},zoompan=z='1+0.12*(${off.toFixed(3)}+on/30)/${d.toFixed(3)}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${nf}:s=${W}x${H}:fps=30,format=yuv420p[vout]`; }
         else if (hasT) { fcv = `${compose(W, H)},fps=30,format=yuv420p[vout]`; }
-        else if (useKB) { const nf = Math.max(1, Math.round(len * 30)); vf = `scale=${W * 2}:${H * 2}:force_original_aspect_ratio=decrease,pad=${W * 2}:${H * 2}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,zoompan=z='1+0.12*(${off.toFixed(3)}+on/30)/${d.toFixed(3)}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${nf}:s=${W}x${H}:fps=30`; }
-        else vf = `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=30`;
+        else if (useKB) { const nf = Math.max(1, Math.round(len * 30)); vf = `${pre}scale=${W * 2}:${H * 2}:force_original_aspect_ratio=decrease,${fxs}pad=${W * 2}:${H * 2}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,zoompan=z='1+0.12*(${off.toFixed(3)}+on/30)/${d.toFixed(3)}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${nf}:s=${W}x${H}:fps=30`; }
+        else vf = `${pre}scale=${W}:${H}:force_original_aspect_ratio=decrease,${fxs}pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=30`;
         if (fcv) args.push('-filter_complex', fcv, '-map', '[vout]', '-map', am); else args.push('-vf', vf + ',format=yuv420p', '-map', '0:v', '-map', am);
-        args.push( '-t', String(len), ...X264, '-crf', '23', '-c:a', 'aac', '-ar', '44100', '-ac', '2');
+        args.push(...afA, '-t', String(len), ...X264, '-crf', '23', '-c:a', 'aac', '-ar', '44100', '-ac', '2');
       }
       args.push(outName);
       if (await f.exec(args) !== 0) throw new Error(`第 ${i + 1} 段處理失敗`);
@@ -887,7 +988,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1120-M', upd = document.getElementById('upd');
+  const VER = '1121-A', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
