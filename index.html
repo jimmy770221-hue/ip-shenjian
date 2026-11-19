@@ -114,7 +114,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   <button class="hbtn" id="h-start">開始剪輯</button>
   <button class="hbtn sub" id="h-cont" style="display:none">繼續剛剛的剪輯</button>
   <a class="hbtn sub" href="tools.html">🧰 快速小工具（轉MP3、壓縮…）</a>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1120-E（快速字幕／音樂）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1120-F（修正時間軸走不到最後）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -426,6 +426,7 @@ function updateToolbar() {
 function renderTimeline() {
   const h = half(); $('#inner').style.padding = `0 ${h}px 6px`;
   const W = Math.max(1, total * pps);
+  $('#inner').style.width = (W + 2 * h) + 'px';
   // 尺標
   const step = pps >= 160 ? 0.5 : pps >= 80 ? 1 : pps >= 40 ? 2 : 5;
   let rh = ''; for (let t = 0; t <= total + 0.001; t += step) rh += `<i style="left:${t * pps}px">${t % 1 ? t.toFixed(1) : t}s</i>`;
@@ -850,7 +851,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1120-E', upd = document.getElementById('upd');
+  const VER = '1120-F', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
