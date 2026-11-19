@@ -49,10 +49,13 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .mblock.sel{border-color:var(--hot)}
 .playhead{position:absolute;left:50%;top:0;bottom:0;width:2px;background:#fff;margin-left:-1px;pointer-events:none;z-index:3;box-shadow:0 0 4px rgba(0,0,0,.6)}
 .playhead::before{content:"";position:absolute;top:0;left:-5px;border:6px solid transparent;border-top-color:#fff}
+.quick{display:flex;gap:8px;padding:4px 8px;background:var(--bg)}
+.quick button{flex:1;background:var(--panel2);color:var(--text);border:1px dashed var(--line);border-radius:9px;padding:6px 4px;font-size:13px;font-weight:700}
+.quick button:active{background:var(--line)}
 .toolbar{display:flex;gap:4px;overflow-x:auto;padding:6px;background:var(--panel);scrollbar-width:none}
 .toolbar::-webkit-scrollbar{display:none}
-.tb{flex:0 0 auto;min-width:58px;background:transparent;border:0;color:var(--text);padding:3px 4px;border-radius:10px;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px}
-.tb i{font-style:normal;font-size:21px;line-height:1}
+.tb{flex:0 0 auto;min-width:50px;background:transparent;border:0;color:var(--text);padding:3px 4px;border-radius:10px;font-size:10px;display:flex;flex-direction:column;align-items:center;gap:1px}
+.tb i{font-style:normal;font-size:17px;line-height:1}
 .tb:active{background:var(--panel2)}
 .tb:disabled{opacity:.35}
 .ctx{background:var(--panel);padding:6px 12px 8px;max-height:13vh;overflow-y:auto;border-top:1px solid var(--line);font-size:14px}
@@ -111,7 +114,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   <button class="hbtn" id="h-start">開始剪輯</button>
   <button class="hbtn sub" id="h-cont" style="display:none">繼續剛剛的剪輯</button>
   <a class="hbtn sub" href="tools.html">🧰 快速小工具（轉MP3、壓縮…）</a>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1120-D（會自動檢查更新）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1120-E（快速字幕／音樂）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -141,6 +144,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     </div></div>
     <div class="playhead"></div>
   </div>
+  <div class="quick"><button id="q-text">🅣 添加文字</button><button id="q-music" class="m">🎵 添加音樂</button></div>
   <div class="toolbar" id="toolbar">
     <button class="tb" data-a="add"><i>＋</i>素材</button>
     <button class="tb" data-a="auto"><i>✨</i>幻燈片</button>
@@ -447,6 +451,7 @@ function renderTimeline() {
     rm.innerHTML = `<div class="mblock${selMusic ? ' sel' : ''}" data-m="1" style="left:${state.music.offset * pps}px;width:${Math.max(30, w - 2)}px">🎵 ${esc(m.name)}</div>`;
   } else { rm.style.height = '0'; rm.innerHTML = ''; }
   setScroll(cur); updateActive();
+  const qm = document.getElementById('q-music'); if (qm) qm.textContent = state.music ? '🎵 更換音樂' : '🎵 添加音樂';
 }
 $('#row-v').addEventListener('click', e => {
   const m = e.target.closest('.tmark');
@@ -845,7 +850,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1120-D', upd = document.getElementById('upd');
+  const VER = '1120-E', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
@@ -866,6 +871,12 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
   window.addEventListener('pageshow', check);
   check();
+})();
+
+// ===== 影片軸下方的快速按鈕 =====
+(function () {
+  document.getElementById('q-text').addEventListener('click', () => { if (!L.length) return toast('請先按「＋素材」加入影片或照片'); pause(); ops.text(); });
+  document.getElementById('q-music').addEventListener('click', () => { if (!L.length) return toast('請先按「＋素材」加入影片或照片'); pause(); ops.music(); });
 })();
 </script>
 </body>
