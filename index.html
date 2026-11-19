@@ -78,6 +78,14 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .fchips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
 .fchips .sm{flex:0 0 auto;min-width:58px}
 .ctx label b{color:var(--text);font-weight:700;margin-left:6px}
+.lblock{position:absolute;height:24px;border-radius:6px;font-size:12px;line-height:24px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#d6527a;border:2px solid #d6527a}
+.lblock.sel{border-color:var(--hot)}
+.tpls{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+.tplb{flex:0 0 auto;width:62px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:6px 4px 4px;font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tplb svg{width:30px;height:40px}
+.tplb svg rect{fill:#5b86ff55;stroke:#8fb0ff;stroke-width:.8}
+.tabs4{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px}
+.tabs4 .sm{padding:9px 2px;font-size:12px}
 .trg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .trg .sm{padding:10px 4px}
 #home{position:fixed;inset:0;z-index:60;background:#07070d;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 22px;text-align:center;overflow:hidden;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
@@ -154,7 +162,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-A（濾鏡、變速、倒放、旋轉翻轉）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-B（拼貼疊影）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -179,6 +187,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <div id="scroller"><div id="inner">
       <div class="ruler" id="ruler"></div>
       <div class="row v" id="row-v"></div>
+      <div class="row" id="row-l" style="height:0"></div>
       <div class="row" id="row-t" style="height:0"></div>
       <div class="row" id="row-m" style="height:0"></div>
     </div></div>
@@ -189,6 +198,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tb" data-a="add"><i>＋</i>素材</button>
     <button class="tb" data-a="auto"><i>✨</i>幻燈片</button>
     <button class="tb" data-a="fx"><i>🎛</i>調整</button>
+    <button class="tb" data-a="ly"><i>🧩</i>拼貼</button>
     <button class="tb" data-a="split"><i>✂️</i>分割</button>
     <button class="tb" data-a="trimL"><i>⇤</i>裁左邊</button>
     <button class="tb" data-a="trimR"><i>⇥</i>裁右邊</button>
@@ -203,6 +213,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   <div class="ctx" id="ctx"></div>
 </div>
 <input type="file" id="f-media" accept="video/*,image/*" multiple hidden>
+<input type="file" id="f-layer" accept="video/*,image/*" multiple hidden>
 <input type="file" id="f-music" accept="audio/*,video/*" hidden>
 <div id="pool"></div>
 <div class="toast" id="toast"></div>
@@ -231,11 +242,11 @@ const { FFmpeg } = FFmpegWASM, { fetchFile } = FFmpegUtil;
 /* ================= 資料 ================= */
 const assets = new Map();           // id -> {id,kind,file,url,el,img,w,h,dur,name,thumb}
 let uid = 1;
-let state = { ratio: '9:16', clips: [], texts: [], music: null, kb: false, vol: { video: 1, music: 0.6 } };
+let state = { ratio: '9:16', clips: [], layers: [], texts: [], music: null, kb: false, vol: { video: 1, music: 0.6 } };
 let history = [], redoStack = [], lastTouch = null;
-let showFx = false, fxTab = 'f', fxIdx = -1;
+let showFx = false, fxTab = 'f', fxIdx = -1, showLy = false, selLy = null, lyTab = 'p', pendingTpl = null;
 let cur = 0, playing = false, pps = 80, selText = null, selMusic = false, selTr = null, showAuto = false, dirty = true;
-function clearSel() { showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
+function clearSel() { showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
 let L = [], total = 0;               // 排版結果
 const FXP = {
   none: { n: '原圖', b: 0, ct: 1, sa: 1, r: 1, g: 1, bl: 1 },
@@ -278,7 +289,8 @@ function relayout() {
     const start = i ? L[i - 1].end - td : 0;
     L.push({ c, i, start, end: start + d, d, td });
   });
-  total = L.length ? L[L.length - 1].end : 0; cur = clamp(cur, 0, total);
+  const mainEnd = L.length ? L[L.length - 1].end : 0, lyEnd = (state.layers || []).reduce((m, l) => Math.max(m, l.start + l.len), 0);
+  total = Math.max(mainEnd, lyEnd); cur = clamp(cur, 0, total);
 }
 function clipAt(t) {
   if (!L.length) return null;
@@ -364,8 +376,8 @@ function drawContain(T, src, sw, sh, c) {
   T.drawImage(src, -sw * s / 2, -sh * s / 2, sw * s, sh * s); T.restore();
 }
 const fxc = document.createElement('canvas'), fxg = fxc.getContext('2d', { willReadFrequently: true });
-function applyFx(c) {
-  const q = fxP(c), W = fxc.width, H = fxc.height, im = fxg.getImageData(0, 0, W, H), d = im.data;
+function applyFx(c, rx, ry, rw, rh) {
+  const q = fxP(c), W = rw == null ? fxc.width : rw, H = rw == null ? fxc.height : rh, im = fxg.getImageData(rx || 0, ry || 0, W, H), d = im.data;
   for (let i = 0; i < d.length; i += 4) {
     if (!d[i + 3]) continue;
     let r = d[i] / 255 * q.r, gr = d[i + 1] / 255 * q.g, b = d[i + 2] / 255 * q.bl;
@@ -375,17 +387,60 @@ function applyFx(c) {
     r = l2 + (r - l) * q.sa; gr = l2 + (gr - l) * q.sa; b = l2 + (b - l) * q.sa;
     d[i] = r < 0 ? 0 : r > 1 ? 255 : r * 255; d[i + 1] = gr < 0 ? 0 : gr > 1 ? 255 : gr * 255; d[i + 2] = b < 0 ? 0 : b > 1 ? 255 : b * 255;
   }
-  fxg.putImageData(im, 0, 0);
+  fxg.putImageData(im, rx || 0, ry || 0);
 }
 function activeEntries() {
   const a = L.filter(e => cur >= e.start && cur < e.end);
-  if (!a.length && L.length) a.push(L[L.length - 1]);
+  if (!a.length && L.length && cur <= L[L.length - 1].end + 0.001) a.push(L[L.length - 1]);
   return a;
 }
 function transState() {
   const act = activeEntries();
   if (act.length >= 2) { const A = act[act.length - 2], B = act[act.length - 1]; if (B.td > 0 && B.c.tr) return { A, B, p: clamp((cur - B.start) / B.td, 0, 1) }; }
   return null;
+}
+const TPLS = [
+  { k: 'lr2', n: '左右2格', c: [[.25, .5, .5, 1], [.75, .5, .5, 1]] },
+  { k: 'tb2', n: '上下2格', c: [[.5, .25, 1, .5], [.5, .75, 1, .5]] },
+  { k: 'g4', n: '田字4格', c: [[.25, .25, .5, .5], [.75, .25, .5, .5], [.25, .75, .5, .5], [.75, .75, .5, .5]] },
+  { k: 'r4', n: '橫向4條', c: [0, 1, 2, 3].map(i => [.5, .125 + .25 * i, 1, .25]) },
+  { k: 'c4', n: '直向4條', c: [0, 1, 2, 3].map(i => [.125 + .25 * i, .5, .25, 1]) },
+  { k: 'r3', n: '橫向3條', c: [0, 1, 2].map(i => [.5, 1 / 6 + i / 3, 1, 1 / 3]) },
+  { k: 'c3', n: '直向3條', c: [0, 1, 2].map(i => [1 / 6 + i / 3, .5, 1 / 3, 1]) },
+  { k: 'b1s3', n: '1大3小', c: [[.5, .3, 1, .6], [1 / 6, .8, 1 / 3, .4], [.5, .8, 1 / 3, .4], [5 / 6, .8, 1 / 3, .4]] },
+  { k: 'l1r2', n: '左大右2小', c: [[1 / 3, .5, 2 / 3, 1], [5 / 6, .25, 1 / 3, .5], [5 / 6, .75, 1 / 3, .5]] },
+  { k: 't2b1', n: '上2下1', c: [[.25, .25, .5, .5], [.75, .25, .5, .5], [.5, .75, 1, .5]] },
+  { k: 'g6', n: '六宮格', c: [0, 1, 2].flatMap(r => [0, 1].map(cc => [.25 + .5 * cc, 1 / 6 + r / 3, .5, 1 / 3])) },
+  { k: 'g9', n: '九宮格', c: [0, 1, 2].flatMap(r => [0, 1, 2].map(cc => [1 / 6 + cc / 3, 1 / 6 + r / 3, 1 / 3, 1 / 3])) },
+  { k: 'pip', n: '畫中畫', c: [[.5, .5, 1, 1], [.8, .82, .36, .2]] }
+];
+const R_OPTS = [['9:16', 9 / 16], ['1:1', 1], ['4:3', 4 / 3], ['3:4', 3 / 4], ['16:9', 16 / 9]];
+const lyEls = new Map();
+function layerEl(l) {
+  let e = lyEls.get(l.id);
+  if (!e) { const a = assets.get(l.asset); e = document.createElement('video'); e.playsInline = true; e.preload = 'auto'; e.muted = true; e.src = a.url; e.setAttribute('playsinline', ''); $('#pool').appendChild(e); e.addEventListener('seeked', () => dirty = true); e.addEventListener('loadeddata', () => dirty = true); lyEls.set(l.id, e); }
+  return e;
+}
+function lyRect(l) { const W = cv.width, H = cv.height, cw = l.w * W, ch = cw / l.ar; return { cw, ch, x: l.x * W - cw / 2, y: l.y * H - ch / 2 }; }
+function drawLayer(l, outline) {
+  const a = assets.get(l.asset); if (!a) return;
+  const { cw, ch, x, y } = lyRect(l), src = a.kind === 'image' ? a.img : layerEl(l);
+  const ready = a.kind === 'image' || src.readyState >= 2, fx = hasFx(l);
+  let T = g;
+  if (fx) { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); T = fxg; }
+  T.save(); if (T === g) T.globalAlpha = l.op == null ? 1 : l.op;
+  T.beginPath(); T.rect(x, y, cw, ch); T.clip(); T.fillStyle = '#000'; T.fillRect(x, y, cw, ch);
+  if (ready) {
+    const rot = l.rot || 0, sw2 = rot % 180 ? a.h : a.w, sh2 = rot % 180 ? a.w : a.h;
+    const s = (l.fit === 'contain' ? Math.min(cw / sw2, ch / sh2) : Math.max(cw / sw2, ch / sh2)) * (l.iz || 1);
+    T.translate(x + cw / 2 + (l.ix || 0) * cw, y + ch / 2 + (l.iy || 0) * ch); T.rotate(rot * Math.PI / 180); T.scale(l.fh ? -1 : 1, l.fv ? -1 : 1);
+    try { T.drawImage(src, -a.w * s / 2, -a.h * s / 2, a.w * s, a.h * s); } catch (er) {}
+  }
+  T.restore();
+  if (fx) {
+    const rx = Math.max(0, Math.floor(x)), ry = Math.max(0, Math.floor(y)), rw = Math.min(cv.width - rx, Math.ceil(cw) + 1), rh = Math.min(cv.height - ry, Math.ceil(ch) + 1);
+    if (rw > 0 && rh > 0) { try { applyFx(l, rx, ry, rw, rh); g.save(); g.globalAlpha = l.op == null ? 1 : l.op; g.drawImage(fxc, rx, ry, rw, rh, rx, ry, rw, rh); g.restore(); } catch (er) {} }
+  }
 }
 function drawEntry(e) {
   const a = assets.get(e.c.asset); if (!a) return;
@@ -428,7 +483,10 @@ function renderFrame() {
     const sameVideo = ts.A.c.asset === ts.B.c.asset && assets.get(ts.B.c.asset).kind === 'video';
     if (sameVideo) drawEntry(ts.B); else drawTrans(ts.B.c.tr.type, ts.p, () => drawEntry(ts.A), () => drawEntry(ts.B));
   } else { const act = activeEntries(); if (act.length) drawEntry(act[act.length - 1]); }
+  for (const l of state.layers) if (cur >= l.start && cur < l.start + l.len) drawLayer(l);
+  if (state.gfx && hasFx(state.gfx)) { try { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); fxg.drawImage(cv, 0, 0); applyFx(state.gfx); g.drawImage(fxc, 0, 0); } catch (er) {} }
   for (const x of state.texts) if (cur >= x.start && cur < x.start + x.dur) drawText(g, cv.width, cv.height, x);
+  if (selLy && showLy) { const l = state.layers.find(x => x.id === selLy); if (l && cur >= l.start && cur < l.start + l.len) { const r = lyRect(l); g.save(); g.setLineDash([8, 5]); g.lineWidth = 3; g.strokeStyle = '#ffb347'; g.strokeRect(r.x + 1.5, r.y + 1.5, r.cw - 3, r.ch - 3); g.restore(); } }
 }
 function syncMedia() {
   const act = activeEntries(), ts = transState(), want = new Map();
@@ -445,6 +503,17 @@ function syncMedia() {
     else if (playing) { if (el.paused || Math.abs(el.currentTime - w.t) > 0.3) { el.currentTime = w.t; el.play().catch(() => {}); } }
     else if (Math.abs(el.currentTime - w.t) > 0.02) el.currentTime = w.t;
   });
+  for (const l of state.layers) {
+    const a = assets.get(l.asset); if (!a || a.kind !== 'video') continue;
+    const act = cur >= l.start && cur < l.start + l.len;
+    if (!act) { const e0 = lyEls.get(l.id); if (e0 && !e0.paused) e0.pause(); continue; }
+    const el = layerEl(l), sp = spd(l), t = l.in + (cur - l.start) * sp, sm = sp > 2 || sp < 0.5;
+    el.muted = l.mute !== false || sm; el.volume = clamp(state.vol.video, 0, 1);
+    try { el.playbackRate = sm ? 1 : sp; } catch (er) {}
+    if (playing && sm) { if (!el.paused) el.pause(); if (!el.seeking && Math.abs(el.currentTime - t) > 0.04) el.currentTime = clamp(t, 0, el.duration || 1e9); }
+    else if (playing) { if (el.paused || Math.abs(el.currentTime - t) > 0.3) { el.currentTime = t; el.play().catch(() => {}); } }
+    else if (Math.abs(el.currentTime - t) > 0.02) el.currentTime = t;
+  }
   if (state.music) {
     const m = assets.get(state.music.asset), el = m.el, mw = cur - state.music.offset;
     el.volume = clamp(state.vol.music, 0, 1);
@@ -455,14 +524,15 @@ function syncMedia() {
 }
 let playT0 = 0, wall0 = 0;
 function play() {
-  if (!L.length) return toast('請先加入素材');
+  if (!total) return toast('請先加入素材');
   if (cur >= total - 0.05) cur = 0;
   // 讓 iPhone 允許之後用程式播放每一支影片
   assets.forEach(a => { if (a.kind === 'video' && !a.unlocked) { a.unlocked = true; const was = a.el.muted; a.el.muted = true; const p = a.el.play(); if (p) p.then(() => { a.el.pause(); a.el.muted = was; }).catch(() => { a.unlocked = false; }); } });
+  state.layers.forEach(l => { const a = assets.get(l.asset); if (a && a.kind === 'video') { const e = layerEl(l); if (!e.unlocked) { e.unlocked = true; const p = e.play(); if (p) p.then(() => e.pause()).catch(() => { e.unlocked = false; }); } } });
   playing = true; playT0 = cur; wall0 = performance.now(); $('#b-play').textContent = '⏸';
 }
-function pause() { if (!playing) return; playing = false; $('#b-play').textContent = '▶'; assets.forEach(a => { if (a.el && !a.el.paused) a.el.pause(); }); syncMedia(); dirty = true; }
-function stopAtEnd() { playing = false; $('#b-play').textContent = '▶'; assets.forEach(a => { if (a.el && !a.el.paused) a.el.pause(); }); }
+function pause() { if (!playing) return; playing = false; $('#b-play').textContent = '▶'; assets.forEach(a => { if (a.el && !a.el.paused) a.el.pause(); }); lyEls.forEach(e => { if (!e.paused) e.pause(); }); syncMedia(); dirty = true; }
+function stopAtEnd() { playing = false; $('#b-play').textContent = '▶'; assets.forEach(a => { if (a.el && !a.el.paused) a.el.pause(); }); lyEls.forEach(e => { if (!e.paused) e.pause(); }); }
 function setCur(t, fromScroll) {
   cur = clamp(t, 0, total); if (playing && !fromScroll) { playT0 = cur; wall0 = performance.now(); }
   if (!fromScroll) setScroll(cur);
@@ -514,6 +584,11 @@ function renderTimeline() {
     const a = assets.get(e.c.asset);
     return `<div class="clip${e.c.mute ? ' mute' : ''}" data-i="${e.i}" style="z-index:${e.i + 1};left:${e.start * pps}px;width:${Math.max(4, e.d * pps - 2)}px;${a.thumb ? `background-image:url(${a.thumb})` : ''}"><span>${a.kind === 'image' ? '🖼 ' : ''}${e.i + 1}・${e.d.toFixed(1)}秒${e.c.sp && e.c.sp !== 1 ? ' ⚡' + e.c.sp + 'x' : ''}${e.c.rev ? ' ↺' : ''}${hasFx(e.c) ? ' 🎨' : ''}</span></div>`;
   }).join('') + L.slice(1).map(e => `<div class="tmark${e.td > 0 ? ' on' : ''}${selTr === e.i ? ' sel' : ''}" data-ti="${e.i}" style="left:${(e.start + e.td / 2) * pps}px">${e.td > 0 ? '⟷' : '＋'}</div>`).join('');
+  // 疊加層軌
+  const rl = $('#row-l'), lln = [];
+  const litems = state.layers.map((l, i) => { let ln = lln.findIndex(end => end <= l.start + 0.001); if (ln < 0) { ln = lln.length; lln.push(0); } lln[ln] = l.start + l.len; return { l, i, ln }; });
+  rl.style.height = lln.length ? lln.length * 28 + 'px' : '0'; rl.style.width = W + 'px';
+  rl.innerHTML = litems.map(({ l, i, ln }) => `<div class="lblock${selLy === l.id ? ' sel' : ''}" data-lid="${l.id}" style="top:${ln * 28}px;left:${l.start * pps}px;width:${Math.max(24, l.len * pps - 2)}px">🧩 第${i + 1}層・${esc(assets.get(l.asset) ? assets.get(l.asset).name : '')}</div>`).join('');
   // 文字軌（自動分層）
   const rt = $('#row-t'), lanes = [];
   const items = state.texts.slice().sort((a, b) => a.start - b.start).map(x => {
@@ -538,6 +613,7 @@ $('#row-v').addEventListener('click', e => {
   const x = e.clientX - d.getBoundingClientRect().left; // 點到哪裡就跳到哪裡
   const keepFx = showFx; pause(); setCur(en.start + clamp(x / pps, 0, en.d - 0.001)); clearSel(); showFx = keepFx; renderTimeline(); renderCtx();
 });
+$('#row-l').addEventListener('click', e => { const d = e.target.closest('.lblock'); if (!d) return; clearSel(); showLy = true; selLy = +d.dataset.lid; renderTimeline(); renderCtx(); dirty = true; });
 $('#row-t').addEventListener('click', e => { const d = e.target.closest('.tblock'); if (!d) return; clearSel(); selText = +d.dataset.tid; renderTimeline(); renderCtx(); });
 $('#row-m').addEventListener('click', e => { if (!e.target.closest('.mblock')) return; clearSel(); selMusic = true; renderTimeline(); renderCtx(); });
 function setPps(v) { pps = clamp(v, 12, 600); renderTimeline(); }
@@ -582,6 +658,7 @@ const ops = {
   },
   music() { $('#f-music').click(); },
   fx() { clearSel(); showFx = true; renderTimeline(); renderCtx(); },
+  ly() { clearSel(); showLy = true; renderTimeline(); renderCtx(); dirty = true; },
   auto() { clearSel(); showAuto = true; renderTimeline(); renderCtx(); },
   undo, redo
 };
@@ -600,6 +677,7 @@ function renderCtx() {
   const t = selText && state.texts.find(x => x.id === selText);
   if (showAuto) { h += autoHtml(); }
   else if (selTr !== null && L[selTr]) { h += trHtml(); }
+  else if (showLy) { h += lyHtml(); }
   else if (showFx && clipAt(cur)) { h += fxHtml(); }
   else if (t) {
     h += `<h4>✏️ 編輯文字</h4>
@@ -631,11 +709,12 @@ function renderCtx() {
     h += `<label class="chk"><input type="checkbox" id="kb"${state.kb ? ' checked' : ''}> 照片慢慢推近（較動感，匯出會比較慢）</label>`;
   }
   box.innerHTML = h;
-  box.classList.toggle('edit', !!(showAuto || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
+  box.classList.toggle('edit', !!(showAuto || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
   const on = (id, ev, fn) => { const el = box.querySelector(id); if (el) el.addEventListener(ev, fn); };
   on('#kb', 'change', e => { commit(); state.kb = e.target.checked; dirty = true; });
   if (showAuto) bindAuto(on);
   else if (selTr !== null && L[selTr]) bindTr(on);
+  else if (showLy) bindLy(on);
   else if (showFx && clipAt(cur)) bindFx(on);
   else if (t) {
     on('#tx-text', 'input', e => { touch('t' + t.id); t.text = e.target.value || ' '; renderTimelineLight(); dirty = true; });
@@ -708,6 +787,108 @@ function bindFx(on) {
   on('#fx-ok', 'click', () => { showFx = false; renderTimeline(); renderCtx(); });
 }
 function renderTimelineLight2() { const d = document.querySelector(`#row-v .clip[data-i="${fxIdx}"] span`), e = L[fxIdx]; if (d && e) { const a = assets.get(e.c.asset); d.textContent = `${a.kind === 'image' ? '🖼 ' : ''}${e.i + 1}・${e.d.toFixed(1)}秒${e.c.sp && e.c.sp !== 1 ? ' ⚡' + e.c.sp + 'x' : ''}${e.c.rev ? ' ↺' : ''}${hasFx(e.c) ? ' 🎨' : ''}`; } }
+function tplSvg(t) { return `<svg viewBox="0 0 30 40">${t.c.map(([cx, cy, cw, ch]) => `<rect x="${((cx - cw / 2) * 30 + .6).toFixed(1)}" y="${((cy - ch / 2) * 40 + .6).toFixed(1)}" width="${(cw * 30 - 1.2).toFixed(1)}" height="${(ch * 40 - 1.2).toFixed(1)}" rx="1.2"/>`).join('')}</svg>`; }
+function sliderHtml(pre, c) {
+  return `<label>亮度<b id="v-${pre}b">${Math.round((c.fb || 0) * 100)}</b></label><input type="range" id="${pre}-fb" min="-0.3" max="0.3" step="0.02" value="${c.fb || 0}">
+  <label>對比<b id="v-${pre}c">${Math.round((c.fc == null ? 1 : c.fc) * 100)}%</b></label><input type="range" id="${pre}-fc" min="0.5" max="1.6" step="0.05" value="${c.fc == null ? 1 : c.fc}">
+  <label>飽和<b id="v-${pre}s">${Math.round((c.fs == null ? 1 : c.fs) * 100)}%</b></label><input type="range" id="${pre}-fs" min="0" max="2" step="0.05" value="${c.fs == null ? 1 : c.fs}">`;
+}
+function bindSliders(on, pre, c) {
+  [['fb', 'b', v => Math.round(v * 100)], ['fc', 'c', v => Math.round(v * 100) + '%'], ['fs', 's', v => Math.round(v * 100) + '%']].forEach(([k, id, f]) =>
+    on('#' + pre + '-' + k, 'input', ev => { touch(pre + k + (c.id || '')); c[k] = +ev.target.value; $('#v-' + pre + id).textContent = f(c[k]); dirty = true; }));
+}
+function lyHtml() {
+  const l = selLy && state.layers.find(x => x.id === selLy);
+  if (!l) {
+    const gx = state.gfx || {};
+    return `<h4>🧩 拼貼・疊影：同一個畫面放多個影片或照片</h4>
+    <label>版面範本（點一個，再選素材，會依序放進每一格）</label>
+    <div class="tpls">${TPLS.map(t => `<button class="tplb" data-tpl="${t.k}">${tplSvg(t)}${t.n}</button>`).join('')}</div>
+    <div class="r2" style="margin-top:8px"><button class="sm" id="ly-add">＋ 自由加一層</button><button class="sm ok" id="ly-ok">完成</button></div>
+    ${state.layers.length ? `<label>每一格都能單獨編輯（點下面按鈕，或點時間軸上的粉紅方塊）</label><div class="fchips">${state.layers.map((x, i) => `<button class="sm" data-ly="${x.id}">第${i + 1}格</button>`).join('')}</div>` : ''}
+    <label>🎨 整個畫面的濾鏡（所有格子一起套用）</label>
+    <div class="fchips">${Object.entries(FXP).map(([k, p]) => `<button class="sm${(gx.fp || 'none') === k ? ' ok' : ''}" data-gfp="${k}">${p.n}</button>`).join('')}</div>
+    ${sliderHtml('gx', gx)}`;
+  }
+  const a = assets.get(l.asset), isV = a.kind === 'video', idx = state.layers.indexOf(l), arm = R_OPTS.find(r => Math.abs(r[1] - l.ar) < 0.01);
+  let h = `<h4>🧩 第 ${idx + 1} 格・${esc(a.name)}</h4><div class="tabs4">${[['p', '📐 版位'], ['f', '🎨 濾鏡'], ['x', '🔄 變換'], ['t', '⏱ 時間']].map(t => `<button class="sm${lyTab === t[0] ? ' ok' : ''}" data-ltab="${t[0]}">${t[1]}</button>`).join('')}</div>`;
+  if (lyTab === 'p') {
+    h += `<div class="r2"><div><label>格子比例</label><select id="ly-ar">${R_OPTS.map(r => `<option value="${r[1]}"${arm && arm[1] === r[1] ? ' selected' : ''}>${r[0]}</option>`).join('')}<option value="orig">原素材比例</option>${arm ? '' : '<option value="keep" selected>目前（依範本）</option>'}</select></div>
+    <div><label>畫面填法</label><select id="ly-fit"><option value="cover"${l.fit !== 'contain' ? ' selected' : ''}>填滿（會裁邊）</option><option value="contain"${l.fit === 'contain' ? ' selected' : ''}>完整顯示（可能有黑邊）</option></select></div></div>
+    <label>格子大小<b id="v-lw">${Math.round(l.w * 100)}%</b></label><input type="range" id="ly-w" min="0.1" max="1.5" step="0.02" value="${l.w}">
+    <label>透明度<b id="v-lo">${Math.round((l.op == null ? 1 : l.op) * 100)}%</b></label><input type="range" id="ly-op" min="0.1" max="1" step="0.05" value="${l.op == null ? 1 : l.op}">
+    <label>格內畫面放大<b id="v-liz">${(l.iz || 1).toFixed(1)}x</b></label><input type="range" id="ly-iz" min="1" max="4" step="0.1" value="${l.iz || 1}">
+    <div class="r2"><div><label>左右位移</label><input type="range" id="ly-ix" min="-1" max="1" step="0.02" value="${l.ix || 0}"></div><div><label>上下位移</label><input type="range" id="ly-iy" min="-1" max="1" step="0.02" value="${l.iy || 0}"></div></div>
+    <div class="r2" style="margin-top:8px"><button class="sm" data-pos="c">置中</button><button class="sm" data-pos="tl">↖</button><button class="sm" data-pos="tr">↗</button><button class="sm" data-pos="bl">↙</button><button class="sm" data-pos="br">↘</button></div>
+    <p class="hint">在預覽畫面上：一指拖動＝移動這一格，兩指＝放大縮小這一格。</p>`;
+  } else if (lyTab === 'f') {
+    h += `<div class="fchips">${Object.entries(FXP).map(([k, p]) => `<button class="sm${(l.fp || 'none') === k ? ' ok' : ''}" data-lfp="${k}">${p.n}</button>`).join('')}</div>${sliderHtml('lf', l)}
+    <button class="sm" id="lf-reset" style="margin-top:8px;width:100%">重設這一格的濾鏡</button>`;
+  } else if (lyTab === 'x') {
+    h += `<div class="r2"><button class="sm" data-lx="rot">↻ 轉 90°</button><button class="sm" data-lx="fh">⇋ 左右翻轉</button></div>
+    <div class="r2" style="margin-top:8px"><button class="sm" data-lx="fv">⇅ 上下翻轉</button><button class="sm" data-lx="reset">還原</button></div>`;
+    if (isV) h += `<label>速度</label><div class="fchips">${SPEEDS.map(v => `<button class="sm${spd(l) === v ? ' ok' : ''}" data-lsp="${v}">${v}x</button>`).join('')}</div>`;
+    h += `<p class="hint">目前：旋轉 ${l.rot || 0}°${l.fh ? '・左右翻轉' : ''}${l.fv ? '・上下翻轉' : ''}${isV ? '・速度 ' + spd(l) + 'x' : ''}</p>`;
+  } else {
+    h += `<div class="r2"><div><label>從第幾秒開始出現</label><input type="number" id="ly-s" step="0.1" min="0" value="${l.start.toFixed(1)}"></div><div><label>出現多久（秒）</label><input type="number" id="ly-d" step="0.1" min="0.3" value="${l.len.toFixed(1)}"></div></div>
+    <div class="r2" style="margin-top:8px"><button class="sm" id="ly-ss">開始＝目前位置</button><button class="sm" id="ly-se">結束＝目前位置</button></div>
+    ${isV ? `<label class="chk"><input type="checkbox" id="ly-snd"${l.mute === false ? ' checked' : ''}> 這一格要有聲音（預設靜音，免得好幾個聲音混在一起）</label>` : ''}
+    <div class="r2" style="margin-top:8px"><button class="sm" id="ly-up">⬆ 往上一層</button><button class="sm" id="ly-dn">⬇ 往下一層</button></div>
+    <button class="sm red" id="ly-del" style="margin-top:8px;width:100%">刪除這一格</button>`;
+  }
+  return h + `<button class="sm ok" id="ly-back" style="width:100%;margin-top:8px">完成這一格</button>`;
+}
+function bindLy(on) {
+  const l = selLy && state.layers.find(x => x.id === selLy), all = sel => document.querySelectorAll('#ctx ' + sel);
+  if (!l) {
+    all('[data-tpl]').forEach(b => b.onclick = () => { pendingTpl = b.dataset.tpl; $('#f-layer').click(); });
+    on('#ly-add', 'click', () => { pendingTpl = null; $('#f-layer').click(); });
+    on('#ly-ok', 'click', () => { showLy = false; selLy = null; renderTimeline(); renderCtx(); dirty = true; });
+    all('[data-ly]').forEach(b => b.onclick = () => { selLy = +b.dataset.ly; lyTab = 'p'; const x = state.layers.find(q => q.id === selLy); if (x && !(cur >= x.start && cur < x.start + x.len)) setCur(x.start); renderTimeline(); renderCtx(); dirty = true; });
+    all('[data-gfp]').forEach(b => b.onclick = () => { commit(); state.gfx = state.gfx || {}; if (b.dataset.gfp === 'none') delete state.gfx.fp; else state.gfx.fp = b.dataset.gfp; dirty = true; renderCtx(); });
+    state.gfx = state.gfx || {}; bindSliders(on, 'gx', state.gfx);
+    return;
+  }
+  const re = () => { relayout(); renderAll(); setCur(cur); };
+  all('[data-ltab]').forEach(b => b.onclick = () => { lyTab = b.dataset.ltab; renderCtx(); });
+  on('#ly-ar', 'change', e => { commit(); const a = assets.get(l.asset); if (e.target.value === 'orig') l.ar = clamp(a.w / a.h, .3, 3); else if (e.target.value !== 'keep') l.ar = +e.target.value; dirty = true; renderCtx(); });
+  on('#ly-fit', 'change', e => { commit(); l.fit = e.target.value; dirty = true; });
+  const sl = (id, k, lab, f) => on(id, 'input', e => { touch('l' + k + l.id); l[k] = +e.target.value; $(lab).textContent = f(l[k]); dirty = true; });
+  sl('#ly-w', 'w', '#v-lw', v => Math.round(v * 100) + '%'); sl('#ly-op', 'op', '#v-lo', v => Math.round(v * 100) + '%'); sl('#ly-iz', 'iz', '#v-liz', v => v.toFixed(1) + 'x');
+  on('#ly-ix', 'input', e => { touch('lix' + l.id); l.ix = +e.target.value; dirty = true; }); on('#ly-iy', 'input', e => { touch('liy' + l.id); l.iy = +e.target.value; dirty = true; });
+  all('[data-pos]').forEach(b => b.onclick = () => { commit(); const r = lyRect(l), fw = r.cw / cv.width / 2, fh = r.ch / cv.height / 2, k = b.dataset.pos; if (k === 'c') { l.x = .5; l.y = .5; } else { l.x = k[1] === 'l' ? fw : 1 - fw; l.y = k[0] === 't' ? fh : 1 - fh; } dirty = true; });
+  all('[data-lfp]').forEach(b => b.onclick = () => { commit(); if (b.dataset.lfp === 'none') delete l.fp; else l.fp = b.dataset.lfp; dirty = true; renderCtx(); });
+  bindSliders(on, 'lf', l);
+  on('#lf-reset', 'click', () => { commit(); delete l.fp; delete l.fb; delete l.fc; delete l.fs; dirty = true; renderCtx(); });
+  all('[data-lx]').forEach(b => b.onclick = () => { commit(); const k = b.dataset.lx; if (k === 'rot') { l.rot = ((l.rot || 0) + 90) % 360; if (!l.rot) delete l.rot; } else if (k === 'fh') { if (l.fh) delete l.fh; else l.fh = true; } else if (k === 'fv') { if (l.fv) delete l.fv; else l.fv = true; } else { delete l.rot; delete l.fh; delete l.fv; } dirty = true; renderCtx(); });
+  all('[data-lsp]').forEach(b => b.onclick = () => { commit(); const v = +b.dataset.lsp, a = assets.get(l.asset); if (v === 1) delete l.sp; else l.sp = v; l.len = Math.min(Math.max(0.3, l.len), (a.dur - l.in) / spd(l)); re(); });
+  on('#ly-s', 'change', e => { commit(); l.start = Math.max(0, +e.target.value || 0); re(); });
+  on('#ly-d', 'change', e => { commit(); const a = assets.get(l.asset), mx = a.kind === 'video' ? (a.dur - l.in) / spd(l) : 120; l.len = clamp(+e.target.value || 1, 0.3, mx); re(); });
+  on('#ly-ss', 'click', () => { commit(); const end = l.start + l.len; l.start = cur; l.len = Math.max(0.3, end - cur); re(); });
+  on('#ly-se', 'click', () => { if (cur - l.start < 0.3) return toast('結束要比開始晚'); commit(); l.len = cur - l.start; re(); });
+  on('#ly-snd', 'change', e => { commit(); l.mute = !e.target.checked; syncMedia(); });
+  on('#ly-up', 'click', () => { const i = state.layers.indexOf(l); if (i >= state.layers.length - 1) return toast('已經在最上面'); commit(); [state.layers[i], state.layers[i + 1]] = [state.layers[i + 1], state.layers[i]]; renderTimeline(); renderCtx(); dirty = true; });
+  on('#ly-dn', 'click', () => { const i = state.layers.indexOf(l); if (i < 1) return toast('已經在最下面'); commit(); [state.layers[i], state.layers[i - 1]] = [state.layers[i - 1], state.layers[i]]; renderTimeline(); renderCtx(); dirty = true; });
+  on('#ly-del', 'click', () => { commit(); state.layers = state.layers.filter(x => x !== l); const e0 = lyEls.get(l.id); if (e0) { e0.pause(); e0.remove(); lyEls.delete(l.id); } selLy = null; re(); });
+  on('#ly-back', 'click', () => { selLy = null; renderTimeline(); renderCtx(); dirty = true; });
+}
+async function addLayers(files, tplKey) {
+  toast('匯入中…'); commit();
+  const tpl = tplKey && TPLS.find(t => t.k === tplKey), W = cv.width, H = cv.height; let n = 0, last = null;
+  for (const f of files) {
+    if (tpl && n >= tpl.c.length) break;
+    try {
+      const a = await makeAsset(f); let x = .5, y = .5, w = .5, ar = clamp(a.w / a.h, .3, 3);
+      if (tpl) { const [cx, cy, cw, ch] = tpl.c[n]; x = cx; y = cy; w = cw; ar = (cw * W) / (ch * H); }
+      const l = { id: uid++, asset: a.id, start: cur, in: 0, len: a.kind === 'image' ? 3 : a.dur, x, y, w, ar, fit: 'cover', mute: true };
+      state.layers.push(l); last = l; n++;
+    } catch (e) { toast(e.message); }
+  }
+  clearSel(); showLy = true; lyTab = 'p'; selLy = (!tpl && last) ? last.id : null;
+  relayout(); renderAll(); setCur(cur);
+  toast(tpl ? (n < tpl.c.length ? `放了 ${n} 格，還有 ${tpl.c.length - n} 格是空的，可再用「自由加一層」補` : '已放進版面') : '已加一層');
+}
+$('#f-layer').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; const t = pendingTpl; pendingTpl = null; if (fs.length) { pause(); addLayers(fs, t); } };
 function trHtml() {
   const e = L[selTr], c = e.c, ty = c.tr ? c.tr.type : '';
   return `<h4>🎞 第 ${selTr} 段 → 第 ${selTr + 1} 段 的換頁效果</h4>
@@ -763,7 +944,7 @@ function bindAuto(on) {
   });
 }
 function renderTimelineLight() { const d = document.querySelector(`.tblock[data-tid="${selText}"]`); const t = state.texts.find(x => x.id === selText); if (d && t) d.textContent = 'T ' + t.text.replace(/\n/g, ' '); }
-function renderAll() { relayout(); renderTimeline(); renderCtx(); updateTime(); $('#empty').style.display = L.length ? 'none' : 'flex'; dirty = true; }
+function renderAll() { relayout(); renderTimeline(); renderCtx(); updateTime(); $('#empty').style.display = (L.length || state.layers.length) ? 'none' : 'flex'; dirty = true; }
 
 /* ================= 匯出 ================= */
 let ff = null, ffLoading = null, ffLog = [], onProg = null;
@@ -783,7 +964,7 @@ const xp = $('#xp'), xbar = $('#xp .bar'), xfill = xbar.querySelector('i'), xst 
 function xStatus(t, c) { xst.textContent = t; xst.className = 'st ' + (c || ''); }
 function xProg(p) { xbar.style.display = 'block'; xfill.style.width = Math.round(clamp(p, 0, 1) * 100) + '%'; }
 $('#btn-export').onclick = () => {
-  pause(); if (!L.length) return toast('還沒有素材可以匯出');
+  pause(); if (!total) return toast('還沒有素材可以匯出');
   $('#xp-opts').style.display = 'block'; $('#xp-res').innerHTML = ''; xStatus(''); xbar.style.display = 'none';
   $('#xp-note').textContent = total > 120 ? '⚠️ 作品超過 2 分鐘，手機處理可能很久或記憶體不足，建議先分成幾段匯出。' : '匯出時請保持畫面開著，不要切換到別的程式。';
   xp.classList.add('on');
@@ -879,14 +1060,32 @@ $('#xp-go').onclick = async () => {
     }
     for (const id of usedIds) { try { await f.deleteFile(names[id]); } catch (e) {} }
     xStatus('正在接起來…'); xProg(0.8);
-    await f.writeFile('list.txt', list.map(x => `file '${x}'`).join('\n')); files.push('list.txt');
     const base = `base.${segExt}`; files.push(base);
-    if (await f.exec(['-f', 'concat', '-safe', '0', '-i', 'list.txt', '-c', 'copy', base]) !== 0) throw new Error('接合失敗');
-    for (const x of list) { try { await f.deleteFile(x); } catch (e) {} }
+    if (nClip === 0) {
+      const a0 = audioOnly ? ['-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo', '-t', TT.toFixed(3), '-c:a', 'aac', base]
+        : ['-f', 'lavfi', '-i', `color=c=black:s=${W}x${H}:r=30`, '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo', '-t', TT.toFixed(3), ...X264, '-crf', '23', '-c:a', 'aac', base];
+      if (await f.exec(a0) !== 0) throw new Error('準備畫布失敗');
+    } else {
+      await f.writeFile('list.txt', list.map(x => `file '${x}'`).join('\n')); files.push('list.txt');
+      if (await f.exec(['-f', 'concat', '-safe', '0', '-i', 'list.txt', '-c', 'copy', base]) !== 0) throw new Error('接合失敗');
+      for (const x of list) { try { await f.deleteFile(x); } catch (e) {} }
+    }
 
     const music = snap.music && assets.get(snap.music.asset) && snap.music.offset < TT - 0.05 ? snap.music : null;
     const V1 = snap.vol.video, Vm = snap.vol.music, texts = audioOnly ? [] : snap.texts.filter(x => x.start < TT);
-    const needV = texts.length > 0, needA = !!music || Math.abs(V1 - 1) > 0.001;
+    const ev = n => { n = Math.round(n); return n % 2 ? n + 1 : n; };
+    const fxString = c => { const q = fxP(c), o = []; if (q.r !== 1 || q.g !== 1 || q.bl !== 1) o.push(`colorchannelmixer=rr=${q.r}:gg=${q.g}:bb=${q.bl}`); o.push(`eq=brightness=${q.b.toFixed(3)}:contrast=${q.ct.toFixed(3)}:saturation=${q.sa.toFixed(3)}`); return o.join(','); };
+    const atempoStr = sp => { const o = []; let sv = sp; while (sv > 2.0001) { o.push('atempo=2'); sv /= 2; } while (sv < 0.4999) { o.push('atempo=0.5'); sv /= 0.5; } o.push(`atempo=${sv.toFixed(4)}`); return o.join(','); };
+    const mainEnd = nClip ? LL[nClip - 1].end : TT, padT = TT - mainEnd > 0.05 ? TT - mainEnd : 0;
+    const lyInfo = [];
+    for (const l of (snap.layers || [])) {
+      const la = assets.get(l.asset); if (!la || l.start >= TT || (audioOnly && la.kind !== 'video')) continue;
+      const ln = `ly${lyInfo.length}.${extOf(la.name)}`; await f.writeFile(ln, await fetchFile(la.file)); files.push(ln);
+      lyInfo.push({ l, la, ln, hasSnd: la.kind === 'video' && l.mute === false && await hasAudio(f, ln) });
+    }
+    const gfxOn = !audioOnly && snap.gfx && hasFx(snap.gfx), layerAudio = lyInfo.filter(x => x.hasSnd);
+    const needV = !audioOnly && (texts.length > 0 || lyInfo.length > 0 || gfxOn || padT > 0);
+    const needA = !!music || Math.abs(V1 - 1) > 0.001 || layerAudio.length > 0 || padT > 0;
     let outName, mime;
     if (!audioOnly && !needV && !needA) { outName = base; mime = 'video/mp4'; }
     else if (audioOnly && !needA) {
@@ -894,24 +1093,48 @@ $('#xp-go').onclick = async () => {
       if (await f.exec(['-i', base, '-vn', '-c:a', 'libmp3lame', '-q:a', '2', 'out.mp3']) !== 0) throw new Error('轉 MP3 失敗');
       outName = 'out.mp3'; mime = 'audio/mpeg'; files.push(outName);
     } else {
-      xStatus(audioOnly ? '正在混音…' : '正在加上文字與配樂…'); prog(0.8, 1);
+      xStatus(audioOnly ? '正在混音…' : '正在合成畫面、文字與配樂…'); prog(0.8, 1);
       const args = ['-i', base]; let idx = 1;
       for (const x of texts) { const pn = `t${idx}.png`; await f.writeFile(pn, await textPng(x, W, H)); files.push(pn); args.push('-i', pn); idx++; }
+      for (const it of lyInfo) {
+        it.i = idx++;
+        if (it.la.kind === 'image') args.push('-loop', '1', '-framerate', '30', '-t', it.l.len.toFixed(3), '-i', it.ln);
+        else args.push('-ss', it.l.in.toFixed(3), '-t', (it.l.len * spd(it.l)).toFixed(3), '-i', it.ln);
+      }
       let mi = -1; if (music) { const ma = assets.get(music.asset); const mn = `music.${extOf(ma.name)}`; await f.writeFile(mn, await fetchFile(ma.file)); files.push(mn); args.push('-i', mn); mi = idx; }
       const parts = []; let vmap = '0:v';
       if (needV) {
-        let prev = '0:v'; texts.forEach((x, k) => { const nx = `v${k + 1}`; parts.push(`[${prev}][${k + 1}:v]overlay=0:0:enable='between(t,${x.start.toFixed(2)},${(x.start + x.dur).toFixed(2)})'[${nx}]`); prev = nx; });
+        let prev = '0:v';
+        if (padT > 0) { parts.push(`[0:v]tpad=stop_mode=add:stop_duration=${padT.toFixed(3)}:color=black[vp]`); prev = 'vp'; }
+        lyInfo.forEach((it, k) => {
+          const { l, la } = it, rot = l.rot || 0, sw2 = rot % 180 ? la.h : la.w, sh2 = rot % 180 ? la.w : la.h;
+          const cw = ev(l.w * W), ch = ev(cw / l.ar), sc = (l.fit === 'contain' ? Math.min(cw / sw2, ch / sh2) : Math.max(cw / sw2, ch / sh2)) * (l.iz || 1);
+          const w2 = Math.max(2, Math.round(sw2 * sc)), h2 = Math.max(2, Math.round(sh2 * sc)), sp = la.kind === 'video' ? spd(l) : 1, op = l.op == null ? 1 : l.op;
+          const geo = [sp !== 1 ? `setpts=(PTS-STARTPTS)/${sp}` : 'setpts=PTS-STARTPTS']; if (l.fh) geo.push('hflip'); if (l.fv) geo.push('vflip');
+          if (rot === 90) geo.push('transpose=1'); else if (rot === 180) geo.push('hflip,vflip'); else if (rot === 270) geo.push('transpose=2');
+          geo.push(`scale=${w2}:${h2}`); if (hasFx(l)) geo.push(fxString(l)); geo.push('fps=30');
+          const ox = Math.round((cw - w2) / 2 + (l.ix || 0) * cw), oy = Math.round((ch - h2) / 2 + (l.iy || 0) * ch);
+          parts.push(`color=c=black:s=${cw}x${ch}:r=30[lc${k}]`, `[${it.i}:v]${geo.join(',')}[ls${k}]`,
+            `[lc${k}][ls${k}]overlay=x=${ox}:y=${oy}:shortest=1${op < 0.999 ? `,format=yuva420p,colorchannelmixer=aa=${op.toFixed(2)}` : ''},setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
+          const ex = Math.round(l.x * W - cw / 2), ey = Math.round(l.y * H - ch / 2);
+          parts.push(`[${prev}][ly${k}]overlay=${ex}:${ey}:eof_action=pass[vl${k}]`); prev = `vl${k}`;
+        });
+        if (gfxOn) { parts.push(`[${prev}]${fxString(snap.gfx)}[vg]`); prev = 'vg'; }
+        texts.forEach((x, k) => { const nx = `v${k + 1}`; parts.push(`[${prev}][${k + 1}:v]overlay=0:0:enable='between(t,${x.start.toFixed(2)},${(x.start + x.dur).toFixed(2)})'[${nx}]`); prev = nx; });
         vmap = `[${prev}]`;
       }
       let amap = '0:a';
-      if (music) {
-        const ms = Math.round(music.offset * 1000);
-        parts.push(`[0:a]volume=${V1}[a0]`, `[${mi}:a]volume=${Vm}${ms > 0 ? `,adelay=${ms}:all=1` : ''}[a1]`, `[a0][a1]amix=inputs=2:duration=first:normalize=0[aout]`); amap = '[aout]';
-      } else if (Math.abs(V1 - 1) > 0.001) { parts.push(`[0:a]volume=${V1}[aout]`); amap = '[aout]'; }
+      if (needA) {
+        const aL = [];
+        parts.push(`[0:a]${padT > 0 ? `apad=pad_dur=${padT.toFixed(3)},` : ''}volume=${V1}[a0]`); aL.push('[a0]');
+        layerAudio.forEach(it => { const sp = spd(it.l); parts.push(`[${it.i}:a]${sp !== 1 ? atempoStr(sp) + ',' : ''}adelay=${Math.round(it.l.start * 1000)}:all=1[la${it.i}]`); aL.push(`[la${it.i}]`); });
+        if (music) { const ms = Math.round(music.offset * 1000); parts.push(`[${mi}:a]volume=${Vm}${ms > 0 ? `,adelay=${ms}:all=1` : ''}[am]`); aL.push('[am]'); }
+        if (aL.length > 1) { parts.push(`${aL.join('')}amix=inputs=${aL.length}:duration=first:normalize=0[aout]`); amap = '[aout]'; } else amap = aL[0];
+      }
       if (parts.length) args.push('-filter_complex', parts.join(';'));
-      if (audioOnly) { args.push('-vn', '-map', amap, '-c:a', 'libmp3lame', '-q:a', '2', 'out.mp3'); outName = 'out.mp3'; mime = 'audio/mpeg'; }
+      if (audioOnly) { args.push('-vn', '-map', amap, '-t', TT.toFixed(3), '-c:a', 'libmp3lame', '-q:a', '2', 'out.mp3'); outName = 'out.mp3'; mime = 'audio/mpeg'; }
       else {
-        args.push('-map', vmap, '-map', amap);
+        args.push('-map', vmap, '-map', amap, '-t', TT.toFixed(3));
         args.push(...(needV ? [...X264, '-crf', '23'] : ['-c:v', 'copy']), '-c:a', amap === '0:a' ? 'copy' : 'aac', '-movflags', '+faststart', 'out.mp4'); outName = 'out.mp4'; mime = 'video/mp4';
       }
       if (await f.exec(args) !== 0) throw new Error('合成失敗');
@@ -963,24 +1186,25 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 // ===== 預覽畫面：兩指縮放、一指拖移（只作用在目前這一段） =====
 (function () {
   const stage = document.querySelector('.stage'), ptr = new Map();
-  let target = null, start = null, committed = false;
+  let target = null, start = null, committed = false, lyMode = false;
   const dispK = () => { const r = cv.getBoundingClientRect(); return Math.min(r.width / cv.width, r.height / cv.height) || 1; };
   const info = () => {
     const pts = [...ptr.values()];
     if (pts.length >= 2) return { n: 2, cx: (pts[0].x + pts[1].x) / 2, cy: (pts[0].y + pts[1].y) / 2, d: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) };
     return { n: 1, cx: pts[0].x, cy: pts[0].y, d: 0 };
   };
-  const reset = () => { if (!ptr.size) { target = null; start = null; committed = false; return; } const en = clipAt(cur); target = en ? en.c : null; start = info(); start.z = target && target.z || 1; start.x = target && target.x || 0; start.y = target && target.y || 0; };
-  stage.addEventListener('pointerdown', e => { if (!L.length) return; ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { stage.setPointerCapture(e.pointerId); } catch (x) {} reset(); });
+  const reset = () => { if (!ptr.size) { target = null; start = null; committed = false; return; } lyMode = !!(showLy && selLy); const en = clipAt(cur); target = lyMode ? (state.layers.find(x => x.id === selLy) || null) : (en ? en.c : null); start = info();
+    if (lyMode && target) { start.z = target.w; start.x = target.x; start.y = target.y; } else { start.z = target && target.z || 1; start.x = target && target.x || 0; start.y = target && target.y || 0; } };
+  stage.addEventListener('pointerdown', e => { if (!L.length && !state.layers.length) return; ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { stage.setPointerCapture(e.pointerId); } catch (x) {} reset(); });
   stage.addEventListener('pointermove', e => {
     if (!ptr.has(e.pointerId) || !target) return;
     ptr.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const now = info(); if (now.n !== start.n) { reset(); return; }
     const k = dispK(), dx = (now.cx - start.cx) / (k * cv.width), dy = (now.cy - start.cy) / (k * cv.height);
-    const nz = now.n === 2 && start.d > 10 ? clamp(start.z * now.d / start.d, 0.3, 5) : start.z;
-    const nx = clamp(start.x + dx, -1.5, 1.5), ny = clamp(start.y + dy, -1.5, 1.5);
+    const nz = now.n === 2 && start.d > 10 ? (lyMode ? clamp(start.z * now.d / start.d, 0.1, 2) : clamp(start.z * now.d / start.d, 0.3, 5)) : start.z;
+    const nx = lyMode ? clamp(start.x + dx, -0.3, 1.3) : clamp(start.x + dx, -1.5, 1.5), ny = lyMode ? clamp(start.y + dy, -0.3, 1.3) : clamp(start.y + dy, -1.5, 1.5);
     if (!committed && (Math.abs(nz - start.z) > 0.005 || Math.abs(nx - start.x) > 0.003 || Math.abs(ny - start.y) > 0.003)) { commit(); committed = true; }
-    if (committed) { target.z = nz; target.x = nx; target.y = ny; dirty = true; }
+    if (committed) { if (lyMode) target.w = nz; else target.z = nz; target.x = nx; target.y = ny; dirty = true; }
   });
   const up = e => { ptr.delete(e.pointerId); reset(); };
   stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
@@ -988,7 +1212,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-A', upd = document.getElementById('upd');
+  const VER = '1121-B', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
