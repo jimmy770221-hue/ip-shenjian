@@ -184,6 +184,8 @@ $$('.tab').forEach(b => b.onclick = () => {
   $$('.panel').forEach(p => p.classList.toggle('on', p.id === 'p-' + b.dataset.t));
 });
 
+{ const h = location.hash.slice(1), b = $$('.tab').find(x => x.dataset.t === h); if (b) b.click(); }
+
 /* ---------- ffmpeg 載入 ---------- */
 let ff = null, ffLog = [], onProg = null, loading = null;
 async function getFF(setStatus) {

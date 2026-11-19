@@ -85,6 +85,11 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 #home .hbtn:active{transform:scale(.98)}
 #home .hbtn.sub{margin-top:14px;padding:14px 10px;font-size:16px;background:var(--panel2);color:var(--text);box-shadow:none;border:1px solid var(--line)}
 #home a.hbtn{text-decoration:none}
+#home .hgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:340px;margin-top:22px}
+#home .tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:16px;padding:14px 4px;font-size:14px;font-weight:700;text-decoration:none;font-family:inherit}
+#home .tile i{font-style:normal;font-size:26px;line-height:1}
+#home .tile:active{transform:scale(.96)}
+#home .tile:disabled{opacity:.6}
 #home .hfoot{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));left:0;right:0;font-size:12px;color:var(--sub)}
 #upd{position:fixed;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));z-index:90;background:#ff9f43;color:#2a1300;font-weight:800;font-size:15px;padding:12px 14px;border-radius:14px;text-align:center;box-shadow:0 6px 20px #000a;display:none}
 .toast{position:fixed;left:50%;top:60px;transform:translateX(-50%);background:#000c;color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
@@ -113,10 +118,16 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   <p>免費・不用註冊・不用上傳<br>影片只在你的手機裡處理</p>
   <button class="hbtn" id="h-start">開始剪輯</button>
   <button class="hbtn sub" id="h-cont" style="display:none">繼續剛剛的剪輯</button>
-  <button class="hbtn sub" id="h-chk">🔄 檢查更新</button>
-  <div id="h-chk-st" style="margin-top:8px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <a class="hbtn sub" href="tools.html" style="margin-top:6px">🧰 快速小工具（轉MP3、壓縮…）</a>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1120-G（首頁可手動檢查更新）</div>
+  <div class="hgrid">
+    <a class="tile" href="tools.html#trim"><i>✂️</i>剪裁</a>
+    <a class="tile" href="tools.html#merge"><i>🔗</i>合併</a>
+    <a class="tile" href="tools.html#mp3"><i>🎵</i>轉MP3</a>
+    <a class="tile" href="tools.html#sub"><i>💬</i>加字幕</a>
+    <a class="tile" href="tools.html#zip"><i>📦</i>壓縮</a>
+    <button class="tile" id="h-chk"><i>🔄</i>檢查更新</button>
+  </div>
+  <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1120-H（首頁工具格）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -853,7 +864,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1120-G', upd = document.getElementById('upd');
+  const VER = '1120-H', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
