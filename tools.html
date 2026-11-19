@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>I POWER 神剪輯・小工具</title>
+<link rel="icon" href="icon-180.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{--main:#4f7cff;--main-d:#3a62d6;--bg:#f3f6ff;--card:#fff;--text:#1f2a44;--sub:#6b7694;--ok:#22a06b;--err:#d64545;--line:#dde4f5}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text);padding-bottom:env(safe-area-inset-bottom)}
+header{background:linear-gradient(135deg,#4f7cff,#7a5cff);color:#fff;padding:18px 16px 14px;text-align:center}
+header h1{margin:0;font-size:22px}
+header p{margin:6px 0 0;font-size:13px;opacity:.9}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:12px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.tab{flex:0 0 auto;border:0;background:#eef2ff;color:var(--main-d);padding:10px 14px;border-radius:20px;font-size:15px;font-weight:600}
+.tab.on{background:var(--main);color:#fff}
+main{max-width:640px;margin:0 auto;padding:14px}
+.panel{display:none}.panel.on{display:block}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(40,60,120,.08)}
+.card h3{margin:0 0 10px;font-size:16px}
+.hint{font-size:13px;color:var(--sub);margin:6px 0}
+label{display:block;font-size:14px;margin:10px 0 4px;color:var(--sub)}
+input[type=number],input[type=text],textarea,select{width:100%;padding:10px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--text)}
+textarea{resize:vertical;min-height:60px;font-family:inherit}
+input[type=range]{width:100%}
+.row{display:flex;gap:8px}.row>*{flex:1}
+button.btn{width:100%;padding:13px;font-size:17px;font-weight:700;border:0;border-radius:12px;background:var(--main);color:#fff;margin-top:10px}
+button.btn:active{background:var(--main-d)}
+button.btn:disabled{background:#b5bfdc}
+button.sm{padding:9px 10px;font-size:14px;border:1px solid var(--line);background:#fff;color:var(--main-d);border-radius:10px;font-weight:600}
+button.del{border-color:#f0c4c4;color:var(--err)}
+.pick{display:block;border:2px dashed #aebdf0;border-radius:12px;padding:16px;text-align:center;color:var(--main-d);font-weight:700;background:#f8faff;margin:0}
+.pick input{display:none}
+video,audio{width:100%;border-radius:10px;margin-top:8px;background:#000}
+video{max-height:38vh;object-fit:contain}
+audio{background:none}
+.bar{height:14px;background:#e3e9fb;border-radius:8px;overflow:hidden;margin-top:10px;display:none}
+.bar i{display:block;height:100%;width:0;background:var(--ok);transition:width .2s}
+.status{font-size:14px;margin-top:8px;color:var(--sub);min-height:20px;white-space:pre-wrap}
+.status.err{color:var(--err)}.status.ok{color:var(--ok)}
+.result{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.result a.btn,.result button.btn{display:block;text-align:center;text-decoration:none}
+.list .item{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--line);border-radius:10px;margin-top:8px;font-size:14px}
+.list .item span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub-item{border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:10px;background:#fafbff}
+.foot{text-align:center;color:var(--sub);font-size:12px;padding:10px 14px 24px}
+.nudge{margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#f8faff}
+.nudge .t{text-align:center;font-size:20px;font-weight:800;color:var(--main-d);font-variant-numeric:tabular-nums}
+.nudge .t small{display:block;font-size:12px;font-weight:400;color:var(--sub)}
+.nudge .btns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}
+.nudge .btns button{padding:14px 2px;font-size:14px;border:1px solid var(--line);background:#fff;color:var(--main-d);border-radius:10px;font-weight:700}
+.nudge .btns button:active{background:#e3ebff}
+.nudge input[type=range]{height:36px}
+.nudge .cap{font-size:12px;color:var(--sub);text-align:center}
+.warn{background:#fff6e0;border:1px solid #f1d58a;color:#7a5a00;border-radius:10px;padding:8px 10px;font-size:13px;margin-bottom:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧰 IP神剪・快速小工具</h1>
+  <p>免費・不用安裝・影片只在你的手機裡處理，不會上傳</p>
+  <p><a href="index.html" style="color:#fff;font-weight:700">← 回到 I POWER 神剪輯</a></p>
+</header>
+
+<div class="tabs" id="tabs">
+  <button class="tab on" data-t="trim">✂️ 剪裁</button>
+  <button class="tab" data-t="merge">🔗 合併</button>
+  <button class="tab" data-t="mp3">🎵 轉MP3</button>
+  <button class="tab" data-t="sub">💬 加字幕</button>
+  <button class="tab" data-t="zip">📦 壓縮</button>
+</div>
+
+<main>
+<div class="warn">第一次使用要下載約 30MB 的處理程式，請連上 Wi-Fi。處理較長的影片會比較久，請保持畫面開著不要鎖屏。</div>
+
+<!-- 剪裁 -->
+<section class="panel on" id="p-trim">
+  <div class="card">
+    <h3>① 選擇影片</h3>
+    <label class="pick"><input type="file" accept="video/*" id="trim-file">📂 點這裡選影片</label>
+    <video id="trim-video" controls playsinline style="display:none"></video>
+    <div class="nudge" id="trim-nudge" style="display:none"></div>
+  </div>
+  <div class="card">
+    <h3>② 設定要留下的片段</h3>
+    <div class="row">
+      <div><label>開始（秒）</label><input type="number" id="trim-s" value="0" min="0" step="0.1"></div>
+      <div><label>結束（秒）</label><input type="number" id="trim-e" value="0" min="0" step="0.1"></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="sm" id="trim-set-s">用目前播放位置當開始</button>
+      <button class="sm" id="trim-set-e">用目前播放位置當結束</button>
+    </div>
+    <p class="hint">先把影片播到想要的位置，再按上面的按鈕，就不用自己算秒數。</p>
+    <button class="sm" id="trim-preview" style="width:100%;margin-top:10px">▶ 預覽選取的這一段</button>
+    <label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="trim-fast"> 快速模式（比較快，但開頭可能差一點點）</label>
+    <button class="btn" id="trim-go">開始剪裁</button>
+    <div class="bar"><i></i></div><div class="status"></div>
+    <div class="result"></div>
+  </div>
+</section>
+
+<!-- 合併 -->
+<section class="panel" id="p-merge">
+  <div class="card">
+    <h3>① 選擇要合併的影片（照順序）</h3>
+    <label class="pick"><input type="file" accept="video/*" id="merge-file" multiple>📂 點這裡加入影片（可選多個）</label>
+    <div class="list" id="merge-list"></div>
+    <p class="hint">用 ⬆️ ⬇️ 調整順序。畫面大小會統一成第一支影片的大小。</p>
+    <button class="btn" id="merge-go">開始合併</button>
+    <div class="bar"><i></i></div><div class="status"></div>
+    <div class="result"></div>
+  </div>
+</section>
+
+<!-- 轉MP3 -->
+<section class="panel" id="p-mp3">
+  <div class="card">
+    <h3>① 選擇影片</h3>
+    <label class="pick"><input type="file" accept="video/*,audio/*" id="mp3-file">📂 點這裡選影片</label>
+    <div class="hint" id="mp3-name"></div>
+    <button class="btn" id="mp3-go">轉成 MP3</button>
+    <div class="bar"><i></i></div><div class="status"></div>
+    <div class="result"></div>
+  </div>
+</section>
+
+<!-- 字幕 -->
+<section class="panel" id="p-sub">
+  <div class="card">
+    <h3>① 選擇影片</h3>
+    <label class="pick"><input type="file" accept="video/*" id="sub-file">📂 點這裡選影片</label>
+    <video id="sub-video" controls playsinline style="display:none"></video>
+    <div class="nudge" id="sub-nudge" style="display:none"></div>
+  </div>
+  <div class="card">
+    <h3>② 加入字幕</h3>
+    <div id="sub-list"></div>
+    <button class="sm" id="sub-add" style="width:100%;margin-top:10px">＋ 新增一句字幕</button>
+    <label>字體大小</label>
+    <input type="range" id="sub-size" min="3" max="12" value="6">
+    <label>文字顏色</label>
+    <select id="sub-color"><option value="#ffffff">白色（黑邊）</option><option value="#ffe14d">黃色（黑邊）</option><option value="#ff6b6b">紅色（白邊）</option><option value="#4dd2ff">藍色（黑邊）</option></select>
+    <button class="btn" id="sub-go">開始製作</button>
+    <div class="bar"><i></i></div><div class="status"></div>
+    <div class="result"></div>
+  </div>
+</section>
+
+<!-- 壓縮 -->
+<section class="panel" id="p-zip">
+  <div class="card">
+    <h3>① 選擇影片</h3>
+    <label class="pick"><input type="file" accept="video/*" id="zip-file">📂 點這裡選影片</label>
+    <div class="hint" id="zip-name"></div>
+    <label>想要的大小</label>
+    <select id="zip-level">
+      <option value="480">最小檔（480p，適合傳 LINE）</option>
+      <option value="720" selected>中等（720p，一般用）</option>
+      <option value="1080">高畫質（1080p，檔案較大）</option>
+    </select>
+    <p class="hint">輸出一律是 MP4，所以 iPhone 的 MOV 也會順便轉成 MP4。</p>
+    <button class="btn" id="zip-go">開始壓縮</button>
+    <div class="bar"><i></i></div><div class="status"></div>
+    <div class="result"></div>
+  </div>
+</section>
+</main>
+<div class="foot">使用 ffmpeg.wasm 製作 ・ 完全免費</div>
+
+<script src="lib/ffmpeg.js"></script>
+<script src="lib/util.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const { FFmpeg } = FFmpegWASM;
+const { fetchFile } = FFmpegUtil;
+
+/* ---------- 分頁 ---------- */
+$$('.tab').forEach(b => b.onclick = () => {
+  $$('.tab').forEach(x => x.classList.toggle('on', x === b));
+  $$('.panel').forEach(p => p.classList.toggle('on', p.id === 'p-' + b.dataset.t));
+});
+
+/* ---------- ffmpeg 載入 ---------- */
+let ff = null, ffLog = [], onProg = null, loading = null;
+async function getFF(setStatus) {
+  if (ff) return ff;
+  if (!loading) loading = (async () => {
+    const f = new FFmpeg();
+    f.on('log', ({ message }) => { ffLog.push(message); if (ffLog.length > 400) ffLog.shift(); });
+    f.on('progress', ({ progress }) => { if (onProg) onProg(Math.max(0, Math.min(1, progress))); });
+    const base = new URL('lib/', location.href).href;
+    await f.load({
+      coreURL: base + 'ffmpeg-core.js',
+      wasmURL: base + 'ffmpeg-core.wasm'
+    });
+    ff = f; return f;
+  })();
+  if (setStatus) setStatus('正在載入處理程式…（第一次約 30 秒）');
+  try { return await loading; } catch (e) { loading = null; throw e; }
+}
+
+/* ---------- 共用工具 ---------- */
+function ext(name) { const m = /\.([a-z0-9]+)$/i.exec(name || ''); return m ? m[1].toLowerCase() : 'mp4'; }
+function even(n) { n = Math.round(n); return n % 2 ? n - 1 : n; }
+function fmtSize(b) { return b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.round(b / 1024) + ' KB'; }
+function loadMeta(file) {
+  return new Promise((res, rej) => {
+    const v = document.createElement('video');
+    const url = URL.createObjectURL(file);
+    v.preload = 'metadata'; v.muted = true; v.playsInline = true;
+    v.onloadedmetadata = () => res({ w: v.videoWidth, h: v.videoHeight, d: v.duration, url });
+    v.onerror = () => rej(new Error('這個影片讀不出來，可能格式不支援'));
+    v.src = url;
+  });
+}
+function fitSize(w, h, maxSide) {
+  const s = Math.min(1, maxSide / Math.max(w, h));
+  return [even(w * s) || 2, even(h * s) || 2];
+}
+
+function makeRunner(panel) {
+  const bar = $(panel + ' .bar'), fill = bar.querySelector('i'), st = $(panel + ' .status'), rs = $(panel + ' .result');
+  const btn = $(panel + ' .btn');
+  const api = {
+    status(t, cls) { st.textContent = t; st.className = 'status ' + (cls || ''); },
+    progress(p) { bar.style.display = 'block'; fill.style.width = Math.round(p * 100) + '%'; },
+    async run(job) {
+      btn.disabled = true; rs.style.display = 'none'; rs.innerHTML = '';
+      api.progress(0); ffLog = [];
+      try {
+        const f = await getFF(api.status);
+        api.status('處理中，請稍候…');
+        onProg = p => { api.progress(p); api.status('處理中… ' + Math.round(p * 100) + '%'); };
+        await job(f);
+      } catch (e) {
+        console.error(e, ffLog.slice(-15).join('\n'));
+        api.status('失敗了：' + (e && e.message ? e.message : e) + '\n（可能是檔案太大或手機記憶體不足，試試先剪短或選小一點的檔案）', 'err');
+        bar.style.display = 'none';
+      } finally { onProg = null; btn.disabled = false; }
+    },
+    async done(data, name, mime, isAudio) {
+      const blob = new Blob([data.buffer], { type: mime });
+      const url = URL.createObjectURL(blob);
+      bar.style.display = 'none';
+      api.status('完成！檔案大小 ' + fmtSize(blob.size), 'ok');
+      rs.innerHTML = (isAudio ? `<audio controls src="${url}"></audio>` : `<video controls playsinline src="${url}"></video>`)
+        + `<a class="btn" download="${name}" href="${url}">⬇️ 下載 ${name}</a>`
+        + `<button class="btn share" style="background:#22a06b">📤 分享／存到相簿或檔案</button>`
+        + `<p class="hint">iPhone 如果按下載沒反應，請按「分享」再選「儲存影片」或「儲存到檔案」。</p>`;
+      rs.style.display = 'block';
+      rs.querySelector('.share').onclick = async () => {
+        const file = new File([blob], name, { type: mime });
+        try {
+          if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file] });
+          else alert('這個瀏覽器不支援分享，請改按「下載」');
+        } catch (e) { /* 使用者取消 */ }
+      };
+    }
+  };
+  return api;
+}
+async function cleanup(f, names) { for (const n of names) { try { await f.deleteFile(n); } catch (e) {} } }
+async function hasAudio(f, name) {
+  ffLog = [];
+  try { await f.exec(['-i', name, '-t', '0.1', '-f', 'null', '-']); } catch (e) {}
+  return ffLog.some(l => /Stream #.*Audio:/.test(l));
+}
+const X264 = ['-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p'];
+
+/* ---------- 時間微調工具（手指太粗也能對準） ---------- */
+function setupNudge(video, box) {
+  box.innerHTML = `<div class="t"><span class="cur">0.00</span> 秒<small>目前位置</small></div>
+    <div class="btns"><button data-d="-1">⏪ -1秒</button><button data-d="-0.1">◀ -0.1秒</button><button data-d="0.1">+0.1秒 ▶</button><button data-d="1">+1秒 ⏩</button></div>
+    <input type="range" class="fine" min="-5" max="5" step="0.02" value="0">
+    <div class="cap">▲ 放大版滑桿：整條只代表前後 5 秒，拖起來很細緻</div>`;
+  const cur = box.querySelector('.cur'), fine = box.querySelector('.fine');
+  let base = 0;
+  const clamp = t => Math.max(0, Math.min(video.duration || 0, t));
+  const show = () => { cur.textContent = video.currentTime.toFixed(2); };
+  video.addEventListener('timeupdate', show); video.addEventListener('seeked', show);
+  box.querySelectorAll('.btns button').forEach(b => b.onclick = () => { video.pause(); video.currentTime = clamp(video.currentTime + parseFloat(b.dataset.d)); });
+  fine.addEventListener('pointerdown', () => { video.pause(); base = video.currentTime; });
+  fine.addEventListener('touchstart', () => { video.pause(); base = video.currentTime; }, { passive: true });
+  fine.addEventListener('input', () => { video.currentTime = clamp(base + parseFloat(fine.value)); });
+  const reset = () => { fine.value = 0; base = video.currentTime; };
+  fine.addEventListener('change', reset);
+  fine.addEventListener('pointerup', reset);
+}
+setupNudge($('#trim-video'), $('#trim-nudge'));
+setupNudge($('#sub-video'), $('#sub-nudge'));
+
+/* ---------- ① 剪裁 ---------- */
+const trim = makeRunner('#p-trim'); let trimFile = null, trimDur = 0;
+$('#trim-preview').onclick = () => {
+  const v = $('#trim-video'), s = parseFloat($('#trim-s').value) || 0, e = parseFloat($('#trim-e').value) || 0;
+  if (!trimFile || e <= s) return trim.status('請先選影片，並確認「結束」比「開始」晚', 'err');
+  v.currentTime = s; v.play();
+  const stop = () => { if (v.currentTime >= e) { v.pause(); v.removeEventListener('timeupdate', stop); } };
+  v.addEventListener('timeupdate', stop);
+};
+$('#trim-file').onchange = async e => {
+  const file = e.target.files[0]; if (!file) return;
+  trimFile = file;
+  const v = $('#trim-video'); v.style.display = 'block'; $('#trim-nudge').style.display = 'block';
+  v.src = URL.createObjectURL(file);
+  v.onloadedmetadata = () => { trimDur = v.duration; $('#trim-s').value = 0; $('#trim-e').value = v.duration.toFixed(1); };
+  trim.status('已選擇：' + file.name + '（' + fmtSize(file.size) + '）');
+};
+$('#trim-set-s').onclick = () => { $('#trim-s').value = $('#trim-video').currentTime.toFixed(1); };
+$('#trim-set-e').onclick = () => { $('#trim-e').value = $('#trim-video').currentTime.toFixed(1); };
+$('#trim-go').onclick = () => {
+  if (!trimFile) return trim.status('請先選擇影片', 'err');
+  const s = parseFloat($('#trim-s').value) || 0, e = parseFloat($('#trim-e').value) || 0;
+  if (e <= s) return trim.status('「結束」要比「開始」晚喔', 'err');
+  trim.run(async f => {
+    const inn = 'in.' + ext(trimFile.name);
+    await f.writeFile(inn, await fetchFile(trimFile));
+    const fast = $('#trim-fast').checked;
+    const args = ['-ss', String(s), '-i', inn, '-t', String(e - s)];
+    if (fast) args.push('-c', 'copy', '-avoid_negative_ts', 'make_zero'); else args.push(...X264, '-crf', '23', '-c:a', 'aac');
+    args.push('-movflags', '+faststart', 'out.mp4');
+    const code = await f.exec(args);
+    if (code !== 0) throw new Error('剪裁失敗');
+    const data = await f.readFile('out.mp4');
+    await cleanup(f, [inn, 'out.mp4']);
+    await trim.done(data, '剪裁後.mp4', 'video/mp4');
+  });
+};
+
+/* ---------- ② 合併 ---------- */
+const merge = makeRunner('#p-merge'); let mergeFiles = [];
+function renderMerge() {
+  $('#merge-list').innerHTML = mergeFiles.map((f, i) => `<div class="item"><b>${i + 1}</b><span>${f.name}</span>
+    <button class="sm" data-a="up" data-i="${i}">⬆️</button><button class="sm" data-a="dn" data-i="${i}">⬇️</button><button class="sm del" data-a="rm" data-i="${i}">✕</button></div>`).join('');
+}
+$('#merge-file').onchange = e => { mergeFiles.push(...e.target.files); e.target.value = ''; renderMerge(); };
+$('#merge-list').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const i = +b.dataset.i, a = b.dataset.a;
+  if (a === 'rm') mergeFiles.splice(i, 1);
+  if (a === 'up' && i > 0) [mergeFiles[i - 1], mergeFiles[i]] = [mergeFiles[i], mergeFiles[i - 1]];
+  if (a === 'dn' && i < mergeFiles.length - 1) [mergeFiles[i + 1], mergeFiles[i]] = [mergeFiles[i], mergeFiles[i + 1]];
+  renderMerge();
+};
+$('#merge-go').onclick = () => {
+  if (mergeFiles.length < 2) return merge.status('請至少選 2 支影片', 'err');
+  merge.run(async f => {
+    const m0 = await loadMeta(mergeFiles[0]);
+    const [W, H] = fitSize(m0.w, m0.h, 1280);
+    const parts = [];
+    for (let i = 0; i < mergeFiles.length; i++) {
+      merge.status(`正在處理第 ${i + 1} / ${mergeFiles.length} 支影片…`);
+      const inn = `m${i}.` + ext(mergeFiles[i].name), outn = `n${i}.mp4`;
+      await f.writeFile(inn, await fetchFile(mergeFiles[i]));
+      const aud = await hasAudio(f, inn);
+      const vf = `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30`;
+      const args = ['-i', inn];
+      if (!aud) args.push('-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo', '-shortest', '-map', '0:v', '-map', '1:a');
+      args.push('-vf', vf, ...X264, '-crf', '26', '-c:a', 'aac', '-ar', '44100', '-ac', '2', outn);
+      const code = await f.exec(args);
+      if (code !== 0) throw new Error('第 ' + (i + 1) + ' 支影片處理失敗');
+      await f.deleteFile(inn);
+      parts.push(outn);
+    }
+    merge.status('正在接起來…');
+    await f.writeFile('list.txt', parts.map(p => `file '${p}'`).join('\n'));
+    const code = await f.exec(['-f', 'concat', '-safe', '0', '-i', 'list.txt', '-c', 'copy', '-movflags', '+faststart', 'merged.mp4']);
+    if (code !== 0) throw new Error('合併失敗');
+    const data = await f.readFile('merged.mp4');
+    await cleanup(f, [...parts, 'list.txt', 'merged.mp4']);
+    await merge.done(data, '合併後.mp4', 'video/mp4');
+  });
+};
+
+/* ---------- ③ 轉MP3 ---------- */
+const mp3 = makeRunner('#p-mp3'); let mp3File = null;
+$('#mp3-file').onchange = e => { mp3File = e.target.files[0]; if (mp3File) { $('#mp3-name').textContent = '已選擇：' + mp3File.name + '（' + fmtSize(mp3File.size) + '）'; } };
+$('#mp3-go').onclick = () => {
+  if (!mp3File) return mp3.status('請先選擇影片', 'err');
+  mp3.run(async f => {
+    const inn = 'in.' + ext(mp3File.name);
+    await f.writeFile(inn, await fetchFile(mp3File));
+    if (!(await hasAudio(f, inn))) throw new Error('這支影片沒有聲音');
+    const code = await f.exec(['-i', inn, '-vn', '-c:a', 'libmp3lame', '-q:a', '2', 'out.mp3']);
+    if (code !== 0) throw new Error('轉換失敗');
+    const data = await f.readFile('out.mp3');
+    await cleanup(f, [inn, 'out.mp3']);
+    const base = mp3File.name.replace(/\.[^.]+$/, '') || '音樂';
+    await mp3.done(data, base + '.mp3', 'audio/mpeg', true);
+  });
+};
+
+/* ---------- ④ 字幕 ---------- */
+const sub = makeRunner('#p-sub'); let subFile = null, subMeta = null;
+$('#sub-file').onchange = async e => {
+  const file = e.target.files[0]; if (!file) return;
+  subFile = file;
+  const v = $('#sub-video'); v.style.display = 'block'; $('#sub-nudge').style.display = 'block'; v.src = URL.createObjectURL(file);
+  try { subMeta = await loadMeta(file); } catch (err) { return sub.status(err.message, 'err'); }
+  sub.status('已選擇：' + file.name + '（' + fmtSize(file.size) + '）');
+  if (!$$('.sub-item').length) addSub();
+};
+function addSub() {
+  const d = document.createElement('div'); d.className = 'sub-item';
+  d.innerHTML = `<textarea placeholder="輸入字幕文字（可換行）"></textarea>
+    <div class="row"><div><label>開始（秒）</label><input type="number" class="ss" value="0" min="0" step="0.1"></div>
+    <div><label>結束（秒）</label><input type="number" class="se" value="${subMeta ? subMeta.d.toFixed(1) : 5}" min="0" step="0.1"></div></div>
+    <div class="row" style="margin-top:8px"><button class="sm">用目前播放位置當開始</button><button class="sm">用目前播放位置當結束</button></div>
+    <div class="row" style="margin-top:8px"><select class="pos"><option value="bottom">字幕在下方</option><option value="middle">字幕在中間</option><option value="top">字幕在上方</option></select>
+    <button class="sm del rm">刪除這句</button></div>`;
+  const [b1, b2] = d.querySelectorAll('.row:nth-of-type(2) button');
+  b1.onclick = () => d.querySelector('.ss').value = $('#sub-video').currentTime.toFixed(1);
+  b2.onclick = () => d.querySelector('.se').value = $('#sub-video').currentTime.toFixed(1);
+  d.querySelector('.rm').onclick = () => d.remove();
+  $('#sub-list').appendChild(d);
+}
+$('#sub-add').onclick = addSub;
+function renderSubPng(text, W, H, pos, sizePct, color) {
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d'); const fs = Math.round(H * sizePct / 100);
+  g.font = `700 ${fs}px "PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+  const lines = [];
+  for (const para of text.split('\n')) {
+    let cur = '';
+    for (const ch of para) { if (g.measureText(cur + ch).width > W * 0.9 && cur) { lines.push(cur); cur = ch; } else cur += ch; }
+    lines.push(cur);
+  }
+  const lh = fs * 1.25, total = lh * lines.length;
+  let y0 = pos === 'top' ? H * 0.06 + lh / 2 : pos === 'middle' ? (H - total) / 2 + lh / 2 : H * 0.94 - total + lh / 2;
+  g.lineWidth = Math.max(3, fs / 6);
+  g.strokeStyle = color === '#ff6b6b' ? '#ffffff' : '#000000'; g.fillStyle = color;
+  lines.forEach((ln, i) => { g.strokeText(ln, W / 2, y0 + i * lh); g.fillText(ln, W / 2, y0 + i * lh); });
+  return new Promise(r => c.toBlob(async b => r(new Uint8Array(await b.arrayBuffer())), 'image/png'));
+}
+$('#sub-go').onclick = () => {
+  if (!subFile || !subMeta) return sub.status('請先選擇影片', 'err');
+  const items = $$('.sub-item').map(d => ({
+    t: d.querySelector('textarea').value.trim(), s: parseFloat(d.querySelector('.ss').value) || 0,
+    e: parseFloat(d.querySelector('.se').value) || 0, pos: d.querySelector('.pos').value
+  })).filter(x => x.t);
+  if (!items.length) return sub.status('請至少輸入一句字幕', 'err');
+  if (items.some(x => x.e <= x.s)) return sub.status('有字幕的「結束」沒有比「開始」晚', 'err');
+  sub.run(async f => {
+    const [W, H] = fitSize(subMeta.w, subMeta.h, 1280);
+    const inn = 'in.' + ext(subFile.name);
+    await f.writeFile(inn, await fetchFile(subFile));
+    const args = ['-i', inn]; const pngs = [];
+    const size = +$('#sub-size').value, color = $('#sub-color').value;
+    for (let i = 0; i < items.length; i++) {
+      const n = `s${i}.png`;
+      await f.writeFile(n, await renderSubPng(items[i].t, W, H, items[i].pos, size, color));
+      args.push('-i', n); pngs.push(n);
+    }
+    let fc = `[0:v]scale=${W}:${H},setsar=1[b0]`;
+    items.forEach((it, i) => { fc += `;[b${i}][${i + 1}:v]overlay=0:0:enable='between(t,${it.s},${it.e})'[b${i + 1}]`; });
+    args.push('-filter_complex', fc, '-map', `[b${items.length}]`, '-map', '0:a?', ...X264, '-crf', '24', '-c:a', 'aac', '-movflags', '+faststart', 'out.mp4');
+    const code = await f.exec(args);
+    if (code !== 0) throw new Error('製作失敗');
+    const data = await f.readFile('out.mp4');
+    await cleanup(f, [inn, 'out.mp4', ...pngs]);
+    await sub.done(data, '加字幕.mp4', 'video/mp4');
+  });
+};
+
+/* ---------- ⑤ 壓縮 ---------- */
+const zip = makeRunner('#p-zip'); let zipFile = null;
+$('#zip-file').onchange = e => { zipFile = e.target.files[0]; if (zipFile) $('#zip-name').textContent = '已選擇：' + zipFile.name + '（' + fmtSize(zipFile.size) + '）'; };
+$('#zip-go').onclick = () => {
+  if (!zipFile) return zip.status('請先選擇影片', 'err');
+  zip.run(async f => {
+    const meta = await loadMeta(zipFile);
+    const lvl = +$('#zip-level').value, crf = { 480: 31, 720: 28, 1080: 24 }[lvl];
+    const short = Math.min(meta.w, meta.h);
+    let vf = null;
+    if (short > lvl) { const s = lvl / short; vf = `scale=${even(meta.w * s)}:${even(meta.h * s)}`; }
+    const inn = 'in.' + ext(zipFile.name);
+    await f.writeFile(inn, await fetchFile(zipFile));
+    const args = ['-i', inn]; if (vf) args.push('-vf', vf);
+    args.push(...X264, '-crf', String(crf), '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', 'out.mp4');
+    const code = await f.exec(args);
+    if (code !== 0) throw new Error('壓縮失敗');
+    const data = await f.readFile('out.mp4');
+    await cleanup(f, [inn, 'out.mp4']);
+    const base = zipFile.name.replace(/\.[^.]+$/, '') || '影片';
+    await zip.done(data, base + '_壓縮.mp4', 'video/mp4');
+  });
+};
+</script>
+</body>
+</html>
