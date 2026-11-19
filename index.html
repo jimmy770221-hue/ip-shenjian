@@ -73,6 +73,16 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .tmark.sel{box-shadow:0 0 0 3px #fff8}
 .trg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .trg .sm{padding:10px 4px}
+#home{position:fixed;inset:0;z-index:60;background:radial-gradient(120% 80% at 50% 0%,#2b2f55 0%,var(--bg) 60%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+#home.off{display:none}
+#home .hlogo{background:linear-gradient(135deg,#5b86ff,#a05bff);color:#fff;font-weight:900;font-size:30px;padding:14px 22px;border-radius:22px;letter-spacing:2px;line-height:1.15;box-shadow:0 10px 30px #5b86ff55}
+#home h1{margin:22px 0 6px;font-size:28px}
+#home p{margin:0;color:var(--sub);font-size:14px;line-height:1.7}
+#home .hbtn{display:block;width:100%;max-width:340px;border:0;border-radius:20px;padding:22px 10px;font-size:22px;font-weight:900;margin-top:34px;background:linear-gradient(135deg,#ffb347,#ff7a45);color:#2a1300;box-shadow:0 10px 26px #ff7a4555}
+#home .hbtn:active{transform:scale(.98)}
+#home .hbtn.sub{margin-top:14px;padding:14px 10px;font-size:16px;background:var(--panel2);color:var(--text);box-shadow:none;border:1px solid var(--line)}
+#home a.hbtn{text-decoration:none}
+#home .hfoot{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));left:0;right:0;font-size:12px;color:var(--sub)}
 .toast{position:fixed;left:50%;top:60px;transform:translateX(-50%);background:#000c;color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
 .toast.on{opacity:1}
 #xp{position:fixed;inset:0;background:#000b;z-index:40;display:none;align-items:flex-end;justify-content:center}
@@ -92,6 +102,15 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 </style>
 </head>
 <body>
+<div id="home">
+  <div class="hlogo">IP<br>神剪</div>
+  <h1>I POWER 神剪輯</h1>
+  <p>免費・不用註冊・不用上傳<br>影片只在你的手機裡處理</p>
+  <button class="hbtn" id="h-start">開始剪輯</button>
+  <button class="hbtn sub" id="h-cont" style="display:none">繼續剛剛的剪輯</button>
+  <a class="hbtn sub" href="tools.html">🧰 快速小工具（轉MP3、壓縮…）</a>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片</div>
+</div>
 <div id="app">
   <div class="top">
     <span class="logo">IP神剪</span>
@@ -479,7 +498,7 @@ const ops = {
   undo, redo
 };
 $('#toolbar').addEventListener('click', e => { const b = e.target.closest('.tb'); if (!b || b.disabled) return; pause(); ops[b.dataset.a](); });
-$('#f-media').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; if (fs.length) addMedia(fs); };
+$('#f-media').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; if (fs.length) { addMedia(fs); if (window.__hideHome) window.__hideHome(); } };
 $('#f-music').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) addMusic(f); };
 $('#b-play').onclick = () => playing ? pause() : play();
 $('#b-prev').onclick = () => { pause(); setCur(cur - 1 / 30); };
@@ -766,6 +785,21 @@ $('#xp-go').onclick = async () => {
 window.addEventListener('beforeunload', e => { if (state.clips.length && !exporting) { e.preventDefault(); e.returnValue = ''; } });
 window.ED = { get state() { return state; }, refresh() { relayout(); renderAll(); }, setCur, ops, get total() { return total; }, get L() { return L; } };
 applyRatio(); renderAll(); requestAnimationFrame(tick);
+
+// ===== 首頁 =====
+(function () {
+  const home = document.getElementById('home');
+  const hideHome = () => home.classList.add('off');
+  const showHome = () => {
+    document.getElementById('h-cont').style.display = (state.clips && state.clips.length) ? 'block' : 'none';
+    document.getElementById('h-start').textContent = (state.clips && state.clips.length) ? '再加素材' : '開始剪輯';
+    home.classList.remove('off');
+  };
+  document.getElementById('h-start').addEventListener('click', () => { document.getElementById('f-media').click(); });
+  document.getElementById('h-cont').addEventListener('click', hideHome);
+  window.__hideHome = hideHome;
+  document.querySelector('.top .logo').addEventListener('click', showHome);
+})();
 </script>
 </body>
 </html>
