@@ -83,6 +83,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 #home .hbtn.sub{margin-top:14px;padding:14px 10px;font-size:16px;background:var(--panel2);color:var(--text);box-shadow:none;border:1px solid var(--line)}
 #home a.hbtn{text-decoration:none}
 #home .hfoot{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));left:0;right:0;font-size:12px;color:var(--sub)}
+#upd{position:fixed;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));z-index:90;background:#ff9f43;color:#2a1300;font-weight:800;font-size:15px;padding:12px 14px;border-radius:14px;text-align:center;box-shadow:0 6px 20px #000a;display:none}
 .toast{position:fixed;left:50%;top:60px;transform:translateX(-50%);background:#000c;color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
 .toast.on{opacity:1}
 #xp{position:fixed;inset:0;background:#000b;z-index:40;display:none;align-items:flex-end;justify-content:center}
@@ -102,6 +103,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 </style>
 </head>
 <body>
+<div id="upd">🔄 有新版本了，點這裡更新（更新後目前剪的內容會消失，請先匯出）</div>
 <div id="home">
   <div class="hlogo">IP<br>神剪</div>
   <h1>I POWER 神剪輯</h1>
@@ -109,7 +111,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   <button class="hbtn" id="h-start">開始剪輯</button>
   <button class="hbtn sub" id="h-cont" style="display:none">繼續剛剛的剪輯</button>
   <a class="hbtn sub" href="tools.html">🧰 快速小工具（轉MP3、壓縮…）</a>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1120-C（可縮放畫面・4:3 / 3:4）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1120-D（會自動檢查更新）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -839,6 +841,31 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
   });
   const up = e => { ptr.delete(e.pointerId); reset(); };
   stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+})();
+
+// ===== 自動檢查新版本 =====
+(function () {
+  const VER = '1120-D', upd = document.getElementById('upd');
+  const reloadNew = () => {
+    try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
+    location.replace(location.pathname + '?v=' + Date.now());
+  };
+  upd.addEventListener('click', () => { try { sessionStorage.removeItem('ipsj-rl'); } catch (e) {} reloadNew(); });
+  let busy = false;
+  async function check() {
+    if (busy) return; busy = true;
+    try {
+      const r = await fetch('index.html?chk=' + Date.now(), { cache: 'no-store' });
+      const m = /版本 ([0-9A-Za-z\-]+)/.exec(await r.text());
+      if (m && m[1] !== VER) {
+        if (!state.clips.length) reloadNew(); else upd.style.display = 'block';
+      }
+    } catch (e) {}
+    busy = false;
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+  window.addEventListener('pageshow', check);
+  check();
 })();
 </script>
 </body>
