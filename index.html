@@ -76,27 +76,41 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .tmark.sel{box-shadow:0 0 0 3px #fff8}
 .trg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .trg .sm{padding:10px 4px}
-#home{position:fixed;inset:0;z-index:60;background:radial-gradient(120% 50% at 50% 0%,#1d1f33 0%,#000 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+#home{position:fixed;inset:0;z-index:60;background:#07070d;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 22px;text-align:center;overflow:hidden;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
 #home.off{display:none}
-#home .hlogo{transform:scale(.62);margin:-14px 0 -12px;background:linear-gradient(135deg,#5b86ff,#a05bff);color:#fff;font-weight:900;font-size:30px;padding:14px 22px;border-radius:22px;letter-spacing:2px;line-height:1.15;box-shadow:0 10px 30px #5b86ff55}
-#home h1{margin:10px 0 4px;font-size:24px}
-#home p{margin:0;color:var(--sub);font-size:14px;line-height:1.7}
-#home .hbtn{display:block;width:100%;max-width:340px;border:0;border-radius:20px;padding:22px 10px;font-size:22px;font-weight:900;margin-top:34px;background:linear-gradient(135deg,#ffb347,#ff7a45);color:#2a1300;box-shadow:0 10px 26px #ff7a4555}
-#home .hbtn:active{transform:scale(.98)}
-#home .hbtn.sub{margin-top:14px;padding:14px 10px;font-size:16px;background:var(--panel2);color:var(--text);box-shadow:none;border:1px solid var(--line)}
-#home a.hbtn{text-decoration:none}
-#home .hbox{width:100%;max-width:360px;margin-top:26px;text-align:left}
-#home .hbox .ht{font-size:18px;color:#fff;margin:0 2px 14px;font-weight:800}
-#home .hgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px 8px}
-#home .tile{display:flex;flex-direction:column;align-items:center;gap:9px;background:none;border:0;color:#cfcfd6;padding:0;font-size:13px;font-weight:700;text-decoration:none;font-family:inherit;-webkit-tap-highlight-color:transparent}
-#home .tile i{display:flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:20px;background:linear-gradient(180deg,#232326,#18181a);border:1px solid #ffffff14;color:#fff;box-shadow:0 6px 14px #0008,inset 0 1px 0 #ffffff12}
-#home .tile i svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-#home .tile:active i{transform:scale(.92);background:#2c2c30}
+#home .bl{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55;will-change:transform;pointer-events:none}
+#home .b1{width:300px;height:300px;background:#8b5cff;top:-90px;left:-80px;animation:fl1 14s ease-in-out infinite alternate}
+#home .b2{width:260px;height:260px;background:#ff4f9a;top:30%;right:-110px;animation:fl2 17s ease-in-out infinite alternate}
+#home .b3{width:280px;height:280px;background:#25c7ff;bottom:-110px;left:-60px;opacity:.4;animation:fl3 16s ease-in-out infinite alternate}
+@keyframes fl1{to{transform:translate(70px,90px) scale(1.15)}}
+@keyframes fl2{to{transform:translate(-80px,-60px) scale(1.2)}}
+@keyframes fl3{to{transform:translate(90px,-70px) scale(1.1)}}
+#home>*:not(.bl){position:relative;z-index:1;animation:up .6s cubic-bezier(.2,.8,.2,1) both}
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+#home .hlogo{background:linear-gradient(135deg,#5b86ff,#a05bff 55%,#ff5fa2);color:#fff;font-weight:900;font-size:26px;padding:12px 18px;border-radius:22px;letter-spacing:2px;line-height:1.15;box-shadow:0 10px 36px #a05bff88,inset 0 1px 0 #ffffff66;transform:rotate(-6deg)}
+#home h1{margin:18px 0 10px;font-size:27px;font-weight:900;letter-spacing:1px;background:linear-gradient(90deg,#fff 20%,#d9c8ff 55%,#8fe3ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+#home .chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+#home .chips span{font-size:12px;font-weight:700;color:#e9e4ff;padding:5px 11px;border-radius:99px;background:#ffffff14;border:1px solid #ffffff22;backdrop-filter:blur(6px)}
+#home .hbtn{display:block;width:100%;max-width:360px;border:0;font-family:inherit;font-weight:900;color:#fff}
+#home #h-start{position:relative;overflow:hidden;margin-top:28px;padding:22px 10px 20px;border-radius:28px;font-size:22px;letter-spacing:2px;background:linear-gradient(120deg,#ff4f9a 0%,#8b5cff 50%,#25c7ff 100%);background-size:200% 200%;animation:up .6s both,gs 6s ease infinite;box-shadow:0 14px 40px #8b5cff66,inset 0 1px 0 #ffffff77}
+@keyframes gs{50%{background-position:100% 50%}}
+#home #h-start::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,#ffffff55,transparent);transform:skewX(-20deg);animation:sh 4s ease-in-out infinite}
+@keyframes sh{0%,60%{left:-60%}100%{left:130%}}
+#home #h-start .pl{display:flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;background:#ffffff30;border:1px solid #ffffff66;margin:0 auto 10px;backdrop-filter:blur(6px)}
+#home #h-start .pl svg{width:26px;height:26px;stroke:#fff;stroke-width:2.8;stroke-linecap:round;fill:none}
+#home #h-start:active{transform:scale(.97)}
+#home .hbtn.sub{margin-top:12px;padding:14px 10px;font-size:16px;background:#ffffff12;border:1px solid #ffffff22;border-radius:18px}
+#home .hbox{width:100%;max-width:360px;margin-top:24px;text-align:left}
+#home .hbox .ht{font-size:15px;color:#fff;margin:0 4px 12px;font-weight:800;letter-spacing:1px;opacity:.9}
+#home .hgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+#home .tile{--a:#8b5cff;display:flex;flex-direction:column;align-items:center;gap:9px;color:#fff;padding:14px 4px 12px;font-size:13px;font-weight:800;text-decoration:none;font-family:inherit;border-radius:22px;background:linear-gradient(160deg,color-mix(in srgb,var(--a) 28%,transparent),#ffffff0a 70%);border:1px solid color-mix(in srgb,var(--a) 45%,#ffffff20);backdrop-filter:blur(10px);-webkit-tap-highlight-color:transparent;box-shadow:0 8px 20px #0006,inset 0 1px 0 #ffffff22}
+#home .tile i{display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:15px;background:color-mix(in srgb,var(--a) 22%,#0000);color:var(--a)}
+#home .tile i svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 6px var(--a))}
+#home .tile:active{transform:scale(.94)}
 #home .tile:disabled{opacity:.6}
-#home #h-start{max-width:360px;margin-top:26px;padding:26px 10px 24px;border-radius:26px;font-size:21px;color:#201000;background:radial-gradient(90% 120% at 15% 90%,#f0661f 0%,#f0661f00 60%),radial-gradient(80% 110% at 90% 10%,#ffc04d 0%,#ffc04d00 65%),#f1962b;box-shadow:0 12px 30px #ff8a2c40}
-#home #h-start .pl{display:flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:15px;background:#0b0b0b;margin:0 auto 12px}
-#home #h-start .pl svg{width:26px;height:26px;stroke:#fff;stroke-width:2.6;stroke-linecap:round;fill:none}
-#home .hfoot{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));left:0;right:0;font-size:12px;color:var(--sub)}
+#home .c1{--a:#ff6b8b}#home .c2{--a:#a67bff}#home .c3{--a:#3ee0b0}#home .c4{--a:#ffc94d}#home .c5{--a:#ff8f4d}#home .c6{--a:#35c8ff}
+#home .hfoot{position:absolute;bottom:calc(16px + env(safe-area-inset-bottom));left:0;right:0;font-size:11px;color:#ffffff80;animation:none}
+@media (prefers-reduced-motion:reduce){#home *{animation:none!important}}
 #upd{position:fixed;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));z-index:90;background:#ff9f43;color:#2a1300;font-weight:800;font-size:15px;padding:12px 14px;border-radius:14px;text-align:center;box-shadow:0 6px 20px #000a;display:none}
 .toast{position:fixed;left:50%;top:60px;transform:translateX(-50%);background:#000c;color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
 .toast.on{opacity:1}
@@ -119,10 +133,11 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 <body>
 <div id="upd">🔄 有新版本了，點這裡更新（更新後目前剪的內容會消失，請先匯出）</div>
 <div id="home">
+  <div class="bl b1"></div><div class="bl b2"></div><div class="bl b3"></div>
   <div class="hlogo">IP<br>神剪</div>
   <h1>I POWER 神剪輯</h1>
-  <p>免費・不用註冊・不用上傳<br>影片只在你的手機裡處理</p>
-  <button class="hbtn" id="h-start"><span class="pl"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>開始剪輯</button>
+  <div class="chips"><span>免費</span><span>免註冊</span><span>不上傳</span><span>手機裡處理</span></div>
+  <button class="hbtn" id="h-start"><span class="pl"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="lb">開始剪輯</span></button>
   <button class="hbtn sub" id="h-cont" style="display:none">繼續剛剛的剪輯</button>
   <div class="hbox"><div class="ht">快速小工具</div><div class="hgrid">
     <a class="tile c1" href="tools.html#trim"><i><svg viewBox="0 0 24 24"><circle cx="6" cy="6.5" r="2.6"/><circle cx="6" cy="17.5" r="2.6"/><path d="M8 8l12 10M8 16L20 6"/></svg></i>剪裁</a>
@@ -133,7 +148,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1120-J（首頁小影風）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1120-K（首頁潮流版）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -828,7 +843,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
   const hideHome = () => home.classList.add('off');
   const showHome = () => {
     document.getElementById('h-cont').style.display = (state.clips && state.clips.length) ? 'block' : 'none';
-    document.getElementById('h-start').textContent = (state.clips && state.clips.length) ? '再加素材' : '開始剪輯';
+    document.querySelector('#h-start .lb').textContent = (state.clips && state.clips.length) ? '再加素材' : '開始剪輯';
     home.classList.remove('off');
   };
   document.getElementById('h-start').addEventListener('click', () => { document.getElementById('f-media').click(); });
@@ -870,7 +885,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1120-J', upd = document.getElementById('upd');
+  const VER = '1120-K', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
