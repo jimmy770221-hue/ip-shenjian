@@ -85,11 +85,19 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 #home .hbtn:active{transform:scale(.98)}
 #home .hbtn.sub{margin-top:14px;padding:14px 10px;font-size:16px;background:var(--panel2);color:var(--text);box-shadow:none;border:1px solid var(--line)}
 #home a.hbtn{text-decoration:none}
-#home .hgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:340px;margin-top:22px}
-#home .tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:16px;padding:14px 4px;font-size:14px;font-weight:700;text-decoration:none;font-family:inherit}
-#home .tile i{font-style:normal;font-size:26px;line-height:1}
-#home .tile:active{transform:scale(.96)}
+#home .hbox{width:100%;max-width:340px;margin-top:22px;background:#ffffff0d;border:1px solid #ffffff18;border-radius:22px;padding:14px 10px 12px;backdrop-filter:blur(8px)}
+#home .hbox .ht{font-size:13px;color:var(--sub);text-align:left;margin:0 6px 12px;font-weight:700;letter-spacing:1px}
+#home .hgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 6px}
+#home .tile{display:flex;flex-direction:column;align-items:center;gap:8px;background:none;border:0;color:var(--text);padding:0;font-size:13px;font-weight:700;text-decoration:none;font-family:inherit;-webkit-tap-highlight-color:transparent}
+#home .tile i{display:flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:17px;font-style:normal;font-size:26px;line-height:1;box-shadow:0 6px 14px #0006,inset 0 1px 0 #ffffff55}
+#home .tile:active i{transform:scale(.9)}
 #home .tile:disabled{opacity:.6}
+#home .c1 i{background:linear-gradient(135deg,#ff9a5b,#ff5e62)}
+#home .c2 i{background:linear-gradient(135deg,#6a8bff,#8b5bff)}
+#home .c3 i{background:linear-gradient(135deg,#3ddc97,#17a2b8)}
+#home .c4 i{background:linear-gradient(135deg,#ffd35b,#ff9f43)}
+#home .c5 i{background:linear-gradient(135deg,#ff7eb3,#c45bff)}
+#home .c6 i{background:linear-gradient(135deg,#5bd0ff,#3b82f6)}
 #home .hfoot{position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));left:0;right:0;font-size:12px;color:var(--sub)}
 #upd{position:fixed;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));z-index:90;background:#ff9f43;color:#2a1300;font-weight:800;font-size:15px;padding:12px 14px;border-radius:14px;text-align:center;box-shadow:0 6px 20px #000a;display:none}
 .toast{position:fixed;left:50%;top:60px;transform:translateX(-50%);background:#000c;color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
@@ -118,16 +126,16 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   <p>免費・不用註冊・不用上傳<br>影片只在你的手機裡處理</p>
   <button class="hbtn" id="h-start">開始剪輯</button>
   <button class="hbtn sub" id="h-cont" style="display:none">繼續剛剛的剪輯</button>
-  <div class="hgrid">
-    <a class="tile" href="tools.html#trim"><i>✂️</i>剪裁</a>
-    <a class="tile" href="tools.html#merge"><i>🔗</i>合併</a>
-    <a class="tile" href="tools.html#mp3"><i>🎵</i>轉MP3</a>
-    <a class="tile" href="tools.html#sub"><i>💬</i>加字幕</a>
-    <a class="tile" href="tools.html#zip"><i>📦</i>壓縮</a>
-    <button class="tile" id="h-chk"><i>🔄</i>檢查更新</button>
-  </div>
+  <div class="hbox"><div class="ht">快速小工具</div><div class="hgrid">
+    <a class="tile c1" href="tools.html#trim"><i>✂️</i>剪裁</a>
+    <a class="tile c2" href="tools.html#merge"><i>🔗</i>合併</a>
+    <a class="tile c3" href="tools.html#mp3"><i>🎵</i>轉MP3</a>
+    <a class="tile c4" href="tools.html#sub"><i>💬</i>加字幕</a>
+    <a class="tile c5" href="tools.html#zip"><i>📦</i>壓縮</a>
+    <button class="tile c6" id="h-chk"><i>🔄</i>檢查更新</button>
+  </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1120-H（首頁工具格）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1120-I（首頁美化）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -864,7 +872,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1120-H', upd = document.getElementById('upd');
+  const VER = '1120-I', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
