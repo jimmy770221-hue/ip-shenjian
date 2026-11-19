@@ -113,8 +113,10 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   <p>免費・不用註冊・不用上傳<br>影片只在你的手機裡處理</p>
   <button class="hbtn" id="h-start">開始剪輯</button>
   <button class="hbtn sub" id="h-cont" style="display:none">繼續剛剛的剪輯</button>
-  <a class="hbtn sub" href="tools.html">🧰 快速小工具（轉MP3、壓縮…）</a>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1120-F（修正時間軸走不到最後）</div>
+  <button class="hbtn sub" id="h-chk">🔄 檢查更新</button>
+  <div id="h-chk-st" style="margin-top:8px;font-size:13px;color:var(--sub);min-height:18px"></div>
+  <a class="hbtn sub" href="tools.html" style="margin-top:6px">🧰 快速小工具（轉MP3、壓縮…）</a>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1120-G（首頁可手動檢查更新）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -851,7 +853,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1120-F', upd = document.getElementById('upd');
+  const VER = '1120-G', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
@@ -869,6 +871,19 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
     } catch (e) {}
     busy = false;
   }
+  const st = document.getElementById('h-chk-st'), btn = document.getElementById('h-chk');
+  btn.addEventListener('click', async () => {
+    st.style.color = ''; st.textContent = '檢查中…'; btn.disabled = true;
+    try {
+      const r = await fetch('index.html?chk=' + Date.now(), { cache: 'no-store' });
+      const m = /版本 ([0-9A-Za-z\-]+)/.exec(await r.text());
+      if (!m) throw new Error('x');
+      if (m[1] === VER) { st.style.color = '#2ec27e'; st.textContent = '✅ 已經是最新版（' + VER + '）'; }
+      else if (state.clips.length && !confirm('有新版本（' + m[1] + '）。更新後目前剪的內容會消失，確定要更新嗎？')) { st.textContent = '有新版本 ' + m[1] + '，你選擇先不更新'; }
+      else { st.textContent = '找到新版本 ' + m[1] + '，更新中…'; try { sessionStorage.removeItem('ipsj-rl'); } catch (e) {} reloadNew(); }
+    } catch (e) { st.style.color = '#ff6b6b'; st.textContent = '❌ 檢查失敗，請確認有連上網路'; }
+    btn.disabled = false;
+  });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
   window.addEventListener('pageshow', check);
   check();
