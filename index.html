@@ -22,7 +22,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .top a{color:var(--sub);font-size:20px;text-decoration:none;white-space:nowrap;padding:0 2px}
 .top select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 4px;font-size:13px}
 .top .exp{background:var(--main);color:#fff;border:0;border-radius:8px;padding:8px 12px;font-weight:800;font-size:15px;white-space:nowrap}
-.stage{flex:1;min-height:120px;background:#000;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.stage{touch-action:none;flex:1;min-height:120px;background:#000;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
 #cv{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain}
 .empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--sub);font-size:15px;padding:20px;pointer-events:none;line-height:1.7}
 .transport{display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--panel)}
@@ -116,7 +116,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <span class="logo">IP神剪</span>
     <b>I POWER 神剪輯</b>
     <a href="tools.html" title="快速小工具（轉MP3、壓縮…）">🧰</a>
-    <select id="ratio"><option value="9:16">9:16 直</option><option value="16:9">16:9 橫</option><option value="1:1">1:1 方</option></select>
+    <select id="ratio"><option value="9:16">9:16 直</option><option value="16:9">16:9 橫</option><option value="1:1">1:1 方</option><option value="4:3">4:3 橫</option><option value="3:4">3:4 直</option></select>
     <button class="exp" id="btn-export">匯出</button>
   </div>
   <div class="stage">
@@ -189,7 +189,7 @@ let history = [], redoStack = [], lastTouch = null;
 let cur = 0, playing = false, pps = 80, selText = null, selMusic = false, selTr = null, showAuto = false, dirty = true;
 function clearSel() { selText = null; selMusic = false; selTr = null; showAuto = false; }
 let L = [], total = 0;               // 排版結果
-const RATIO = { '9:16': [360, 640], '16:9': [640, 360], '1:1': [480, 480] };
+const RATIO = { '9:16': [360, 640], '16:9': [640, 360], '1:1': [480, 480], '4:3': [640, 480], '3:4': [480, 640] };
 
 const fmt = t => { t = Math.max(0, t); const m = Math.floor(t / 60), s = t - m * 60; return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1); };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -296,9 +296,10 @@ function drawText(g, W, H, x) {
   g.strokeStyle = (x.color === '#ff6b6b' || x.color === '#000000') ? '#ffffff' : '#000000'; g.fillStyle = x.color;
   lines.forEach((ln, i) => { g.strokeText(ln, W / 2, y0 + i * lh); g.fillText(ln, W / 2, y0 + i * lh); });
 }
-function drawContain(src, sw, sh) {
-  const W = cv.width, H = cv.height, s = Math.min(W / sw, H / sh), w = sw * s, h = sh * s;
-  g.drawImage(src, (W - w) / 2, (H - h) / 2, w, h);
+function drawContain(src, sw, sh, c) {
+  const W = cv.width, H = cv.height, z = (c && c.z) || 1, ox = (c && c.x) || 0, oy = (c && c.y) || 0;
+  const s = Math.min(W / sw, H / sh) * z, w = sw * s, h = sh * s;
+  g.drawImage(src, (W - w) / 2 + ox * W, (H - h) / 2 + oy * H, w, h);
 }
 function activeEntries() {
   const a = L.filter(e => cur >= e.start && cur < e.end);
@@ -316,8 +317,8 @@ function drawEntry(e) {
     if (a.kind === 'image') {
       const z = state.kb ? 1 + 0.12 * clamp((cur - e.start) / e.d, 0, 1) : 1;
       g.save(); g.translate(cv.width / 2, cv.height / 2); g.scale(z, z); g.translate(-cv.width / 2, -cv.height / 2);
-      drawContain(a.img, a.w, a.h); g.restore();
-    } else if (a.el.readyState >= 2) drawContain(a.el, a.w, a.h);
+      drawContain(a.img, a.w, a.h, e.c); g.restore();
+    } else if (a.el.readyState >= 2) drawContain(a.el, a.w, a.h, e.c);
   } catch (err) {}
 }
 function drawTrans(type, p, dA, dB) {
@@ -533,6 +534,7 @@ function renderCtx() {
     if (e) {
       const a = assets.get(e.c.asset);
       h += `<h4>目前選取：第 ${e.i + 1} 段（時間軸上橘色框）・${a.kind === 'image' ? '照片' : '影片'}・${e.d.toFixed(1)} 秒</h4>`;
+      h += `<div class="r2" style="margin:8px 0 2px"><button class="sm" id="fit-fill">🔍 畫面滿版</button><button class="sm" id="fit-reset">↺ 還原大小</button></div>`;
       if (a.kind === 'image') h += `<label>這張照片顯示幾秒</label><div class="r2"><input type="number" id="img-d" min="0.5" max="30" step="0.5" value="${e.d.toFixed(1)}"></div>`;
       else h += `<label class="chk"><input type="checkbox" id="clip-mute"${e.c.mute ? ' checked' : ''}> 這一段不要原本的聲音</label>`;
     } else h += `<h4>還沒有素材，請先按「＋素材」</h4>`;
@@ -564,6 +566,8 @@ function renderCtx() {
     on('#m-ok', 'click', () => { selMusic = false; renderTimeline(); renderCtx(); });
   } else {
     on('#img-d', 'change', e => { const en = clipAt(cur); commit(); en.c.out = en.c.in + clamp(+e.target.value || 3, 0.5, 30); afterEdit(cur); });
+    on('#fit-fill', 'click', () => { const en = clipAt(cur); if (!en) return; const a = assets.get(en.c.asset), W = cv.width, H = cv.height; commit(); en.c.z = Math.max(W / a.w, H / a.h) / Math.min(W / a.w, H / a.h); en.c.x = 0; en.c.y = 0; dirty = true; });
+    on('#fit-reset', 'click', () => { const en = clipAt(cur); if (!en) return; commit(); en.c.z = 1; en.c.x = 0; en.c.y = 0; dirty = true; });
     on('#clip-mute', 'change', e => { const en = clipAt(cur); commit(); en.c.mute = e.target.checked; renderTimeline(); syncMedia(); });
     on('#vol-v', 'input', e => { touch('vv'); state.vol.video = +e.target.value; e.target.previousElementSibling.textContent = '影片原聲音量 ' + Math.round(state.vol.video * 100) + '%'; syncMedia(); });
   }
@@ -656,7 +660,7 @@ $('#xp-fmt').onchange = e => { $('#xp-q').style.display = $('#xp-ql-l').style.di
 function exportDims(S) {
   const r = state.ratio, ev = n => { n = Math.round(n); return n % 2 ? n + 1 : n; };
   // S 是「短邊」：直式 720 = 720×1280、橫式 720 = 1280×720（跟手機一般說的 720p 一樣）
-  if (r === '9:16') return [S, ev(S * 16 / 9)]; if (r === '16:9') return [ev(S * 16 / 9), S]; return [S, S];
+  if (r === '9:16') return [S, ev(S * 16 / 9)]; if (r === '16:9') return [ev(S * 16 / 9), S]; if (r === '4:3') return [ev(S * 4 / 3), S]; if (r === '3:4') return [S, ev(S * 4 / 3)]; return [S, S];
 }
 function textPng(x, W, H) {
   const c = document.createElement('canvas'); c.width = W; c.height = H; drawText(c.getContext('2d'), W, H, x);
@@ -694,10 +698,15 @@ $('#xp-go').onclick = async () => {
       const am = hasA ? '0:a' : '1:a';
       if (audioOnly) args.push('-vn', '-map', am, '-t', String(len), '-c:a', 'aac', '-ar', '44100', '-ac', '2');
       else {
-        let vf;
-        if (useKB) { const nf = Math.max(1, Math.round(len * 30)); vf = `scale=${W * 2}:${H * 2}:force_original_aspect_ratio=decrease,pad=${W * 2}:${H * 2}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,zoompan=z='1+0.12*(${off.toFixed(3)}+on/30)/${d.toFixed(3)}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${nf}:s=${W}x${H}:fps=30`; }
+        let vf, fcv = null;
+        const tz = c.z || 1, tx = c.x || 0, ty = c.y || 0, hasT = Math.abs(tz - 1) > 0.001 || Math.abs(tx) > 0.0005 || Math.abs(ty) > 0.0005;
+        const compose = (Wt, Ht) => `color=c=black:s=${Wt}x${Ht}:r=30[bg];[0:v]scale=${Wt}:${Ht}:force_original_aspect_ratio=decrease,scale=trunc(iw*${tz.toFixed(4)}/2)*2:trunc(ih*${tz.toFixed(4)}/2)*2,setsar=1[fg];[bg][fg]overlay=x=(main_w-overlay_w)/2+${(tx * Wt).toFixed(2)}:y=(main_h-overlay_h)/2+${(ty * Ht).toFixed(2)}:shortest=1,setsar=1`;
+        if (hasT && useKB) { const nf = Math.max(1, Math.round(len * 30)); fcv = `${compose(W * 2, H * 2)},zoompan=z='1+0.12*(${off.toFixed(3)}+on/30)/${d.toFixed(3)}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${nf}:s=${W}x${H}:fps=30,format=yuv420p[vout]`; }
+        else if (hasT) { fcv = `${compose(W, H)},fps=30,format=yuv420p[vout]`; }
+        else if (useKB) { const nf = Math.max(1, Math.round(len * 30)); vf = `scale=${W * 2}:${H * 2}:force_original_aspect_ratio=decrease,pad=${W * 2}:${H * 2}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,zoompan=z='1+0.12*(${off.toFixed(3)}+on/30)/${d.toFixed(3)}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${nf}:s=${W}x${H}:fps=30`; }
         else vf = `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=30`;
-        args.push('-vf', vf + ',format=yuv420p', '-map', '0:v', '-map', am, '-t', String(len), ...X264, '-crf', '23', '-c:a', 'aac', '-ar', '44100', '-ac', '2');
+        if (fcv) args.push('-filter_complex', fcv, '-map', '[vout]', '-map', am); else args.push('-vf', vf + ',format=yuv420p', '-map', '0:v', '-map', am);
+        args.push( '-t', String(len), ...X264, '-crf', '23', '-c:a', 'aac', '-ar', '44100', '-ac', '2');
       }
       args.push(outName);
       if (await f.exec(args) !== 0) throw new Error(`第 ${i + 1} 段處理失敗`);
@@ -804,6 +813,32 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 // ===== 防止雙擊／雙指縮放 =====
 (function () {
   ['gesturestart', 'gesturechange', 'gestureend'].forEach(n => document.addEventListener(n, e => e.preventDefault(), { passive: false }));
+})();
+
+// ===== 預覽畫面：兩指縮放、一指拖移（只作用在目前這一段） =====
+(function () {
+  const stage = document.querySelector('.stage'), ptr = new Map();
+  let target = null, start = null, committed = false;
+  const dispK = () => { const r = cv.getBoundingClientRect(); return Math.min(r.width / cv.width, r.height / cv.height) || 1; };
+  const info = () => {
+    const pts = [...ptr.values()];
+    if (pts.length >= 2) return { n: 2, cx: (pts[0].x + pts[1].x) / 2, cy: (pts[0].y + pts[1].y) / 2, d: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) };
+    return { n: 1, cx: pts[0].x, cy: pts[0].y, d: 0 };
+  };
+  const reset = () => { if (!ptr.size) { target = null; start = null; committed = false; return; } const en = clipAt(cur); target = en ? en.c : null; start = info(); start.z = target && target.z || 1; start.x = target && target.x || 0; start.y = target && target.y || 0; };
+  stage.addEventListener('pointerdown', e => { if (!L.length) return; ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { stage.setPointerCapture(e.pointerId); } catch (x) {} reset(); });
+  stage.addEventListener('pointermove', e => {
+    if (!ptr.has(e.pointerId) || !target) return;
+    ptr.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const now = info(); if (now.n !== start.n) { reset(); return; }
+    const k = dispK(), dx = (now.cx - start.cx) / (k * cv.width), dy = (now.cy - start.cy) / (k * cv.height);
+    const nz = now.n === 2 && start.d > 10 ? clamp(start.z * now.d / start.d, 0.3, 5) : start.z;
+    const nx = clamp(start.x + dx, -1.5, 1.5), ny = clamp(start.y + dy, -1.5, 1.5);
+    if (!committed && (Math.abs(nz - start.z) > 0.005 || Math.abs(nx - start.x) > 0.003 || Math.abs(ny - start.y) > 0.003)) { commit(); committed = true; }
+    if (committed) { target.z = nz; target.x = nx; target.y = ny; dirty = true; }
+  });
+  const up = e => { ptr.delete(e.pointerId); reset(); };
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
 })();
 </script>
 </body>
