@@ -84,8 +84,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .tplb{flex:0 0 auto;width:62px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:6px 4px 4px;font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:4px}
 .tplb svg{width:30px;height:40px}
 .tplb svg rect{fill:#5b86ff55;stroke:#8fb0ff;stroke-width:.8}
-.tabs4{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px}
-.tabs4 .sm{padding:9px 2px;font-size:12px}
+.tabs4{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:8px}
+.tabs4 .sm{padding:9px 0;font-size:11.5px}
 .trg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .trg .sm{padding:10px 4px}
 #home{position:fixed;inset:0;z-index:60;background:#07070d;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 22px;text-align:center;overflow:hidden;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
@@ -162,7 +162,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-B（拼貼疊影）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-C（去背、遮罩、混合、背景模糊）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -422,31 +422,73 @@ function layerEl(l) {
   return e;
 }
 function lyRect(l) { const W = cv.width, H = cv.height, cw = l.w * W, ch = cw / l.ar; return { cw, ch, x: l.x * W - cw / 2, y: l.y * H - ch / 2 }; }
-function drawLayer(l, outline) {
+const MASKS = [['', '無'], ['circle', '圓形'], ['round', '圓角'], ['heart', '愛心'], ['star', '星形'], ['diamond', '菱形'], ['fadeb', '下淡出'], ['fadet', '上淡出'], ['fadel', '左淡出'], ['fader', '右淡出']];
+const BLENDS = [['', '正常'], ['screen', '濾色（變亮，做光影）'], ['multiply', '正片疊底（變暗）'], ['overlay', '疊加（增加對比）'], ['lighten', '變亮'], ['darken', '變暗'], ['lighter', '線性加亮']];
+const FF_BLEND = { screen: 'screen', multiply: 'multiply', overlay: 'overlay', lighten: 'lighten', darken: 'darken', lighter: 'addition' };
+const BLEND_NEUTRAL = { screen: 'black', multiply: 'white', overlay: '0x808080', lighten: 'black', darken: 'white', lighter: 'black' };
+function drawMaskShape(c, shape, w, h) {   // 白色＝顯示；預覽與匯出共用同一個畫法
+  c.fillStyle = '#fff'; const m = Math.min(w, h);
+  if (shape === 'circle') { c.beginPath(); c.ellipse(w / 2, h / 2, w / 2, h / 2, 0, 0, 7); c.fill(); }
+  else if (shape === 'round') { const r = m * 0.18; c.beginPath(); c.moveTo(r, 0); c.arcTo(w, 0, w, h, r); c.arcTo(w, h, 0, h, r); c.arcTo(0, h, 0, 0, r); c.arcTo(0, 0, w, 0, r); c.closePath(); c.fill(); }
+  else if (shape === 'diamond') { c.beginPath(); c.moveTo(w / 2, 0); c.lineTo(w, h / 2); c.lineTo(w / 2, h); c.lineTo(0, h / 2); c.closePath(); c.fill(); }
+  else if (shape === 'star') { c.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 0.2 : 0.5, an = -Math.PI / 2 + i * Math.PI / 5; const px = w / 2 + Math.cos(an) * r * w * 1.0, py = h / 2 + Math.sin(an) * r * h * 1.0; i ? c.lineTo(px, py) : c.moveTo(px, py); } c.closePath(); c.fill(); }
+  else if (shape === 'heart') { c.beginPath(); c.moveTo(w / 2, h * 0.95); c.bezierCurveTo(-w * 0.15, h * 0.55, w * 0.1, h * 0.02, w / 2, h * 0.3); c.bezierCurveTo(w * 0.9, h * 0.02, w * 1.15, h * 0.55, w / 2, h * 0.95); c.closePath(); c.fill(); }
+  else if (shape.startsWith('fade')) {
+    const k = shape[4], gr = k === 'b' ? c.createLinearGradient(0, h * 0.4, 0, h) : k === 't' ? c.createLinearGradient(0, h * 0.6, 0, 0) : k === 'l' ? c.createLinearGradient(w * 0.6, 0, 0, 0) : c.createLinearGradient(w * 0.4, 0, w, 0);
+    gr.addColorStop(0, '#fff'); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = gr; c.fillRect(0, 0, w, h);
+  } else c.fillRect(0, 0, w, h);
+}
+const mkc = document.createElement('canvas'), mkg = mkc.getContext('2d');
+function ck2uv(r, g, b) { return [((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128, ((112 * r - 94 * g - 18 * b + 128) >> 8) + 128]; }
+function hexRgb(h) { const n = parseInt((h || '#00ff00').slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function applyKey(l, rx, ry, rw, rh) {
+  const k = l.ck, kc = hexRgb(k.c), [ku, kv] = ck2uv(kc[0], kc[1], kc[2]), sim = k.s, bl = Math.max(k.b, 0.0001);
+  const im = fxg.getImageData(rx, ry, rw, rh), d = im.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (!d[i + 3]) continue; const [u, v] = ck2uv(d[i], d[i + 1], d[i + 2]);
+    const diff = Math.sqrt((u - ku) * (u - ku) + (v - kv) * (v - kv)) / 255, a = (diff - sim) / bl;
+    d[i + 3] = d[i + 3] * (a < 0 ? 0 : a > 1 ? 1 : a);
+  }
+  fxg.putImageData(im, rx, ry);
+}
+function drawLayer(l) {
   const a = assets.get(l.asset); if (!a) return;
   const { cw, ch, x, y } = lyRect(l), src = a.kind === 'image' ? a.img : layerEl(l);
-  const ready = a.kind === 'image' || src.readyState >= 2, fx = hasFx(l);
-  let T = g;
-  if (fx) { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); T = fxg; }
-  T.save(); if (T === g) T.globalAlpha = l.op == null ? 1 : l.op;
-  T.beginPath(); T.rect(x, y, cw, ch); T.clip(); T.fillStyle = '#000'; T.fillRect(x, y, cw, ch);
+  const ready = a.kind === 'image' || src.readyState >= 2, fx = hasFx(l), op = l.op == null ? 1 : l.op;
+  const heavy = fx || l.ck || l.mk || l.bm; let T = g;
+  if (heavy) { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); T = fxg; }
+  T.save(); if (T === g) T.globalAlpha = op;
+  T.beginPath(); T.rect(x, y, cw, ch); T.clip(); if (!l.ck) { T.fillStyle = '#000'; T.fillRect(x, y, cw, ch); }
   if (ready) {
     const rot = l.rot || 0, sw2 = rot % 180 ? a.h : a.w, sh2 = rot % 180 ? a.w : a.h;
-    const s = (l.fit === 'contain' ? Math.min(cw / sw2, ch / sh2) : Math.max(cw / sw2, ch / sh2)) * (l.iz || 1);
+    const sc = (l.fit === 'contain' ? Math.min(cw / sw2, ch / sh2) : Math.max(cw / sw2, ch / sh2)) * (l.iz || 1);
     T.translate(x + cw / 2 + (l.ix || 0) * cw, y + ch / 2 + (l.iy || 0) * ch); T.rotate(rot * Math.PI / 180); T.scale(l.fh ? -1 : 1, l.fv ? -1 : 1);
-    try { T.drawImage(src, -a.w * s / 2, -a.h * s / 2, a.w * s, a.h * s); } catch (er) {}
+    try { T.drawImage(src, -a.w * sc / 2, -a.h * sc / 2, a.w * sc, a.h * sc); } catch (er) {}
   }
   T.restore();
-  if (fx) {
-    const rx = Math.max(0, Math.floor(x)), ry = Math.max(0, Math.floor(y)), rw = Math.min(cv.width - rx, Math.ceil(cw) + 1), rh = Math.min(cv.height - ry, Math.ceil(ch) + 1);
-    if (rw > 0 && rh > 0) { try { applyFx(l, rx, ry, rw, rh); g.save(); g.globalAlpha = l.op == null ? 1 : l.op; g.drawImage(fxc, rx, ry, rw, rh, rx, ry, rw, rh); g.restore(); } catch (er) {} }
-  }
+  if (!heavy) return;
+  const rx = Math.max(0, Math.floor(x)), ry = Math.max(0, Math.floor(y)), rw = Math.min(cv.width - rx, Math.ceil(cw) + 1), rh = Math.min(cv.height - ry, Math.ceil(ch) + 1);
+  if (rw <= 0 || rh <= 0) return;
+  try {
+    if (l.ck) applyKey(l, rx, ry, rw, rh);
+    if (fx) applyFx(l, rx, ry, rw, rh);
+    if (l.mk) { mkc.width = Math.ceil(cw); mkc.height = Math.ceil(ch); mkg.clearRect(0, 0, mkc.width, mkc.height); drawMaskShape(mkg, l.mk, mkc.width, mkc.height); fxg.save(); fxg.globalCompositeOperation = 'destination-in'; fxg.drawImage(mkc, x, y); fxg.restore(); }
+    g.save(); g.globalAlpha = op; if (l.bm) g.globalCompositeOperation = l.bm; g.drawImage(fxc, rx, ry, rw, rh, rx, ry, rw, rh); g.restore();
+  } catch (er) {}
+}
+const blc = document.createElement('canvas'), blg = blc.getContext('2d');
+function drawBlurBg(T, src, sw, sh, c) {
+  const W = cv.width, H = cv.height, k = 14, bw = Math.max(8, Math.round(W / k)), bh = Math.max(8, Math.round(H / k)); blc.width = bw; blc.height = bh;
+  const rot = (c && c.rot) || 0, sw2 = rot % 180 ? sh : sw, sh2 = rot % 180 ? sw : sh, sc = Math.max(bw / sw2, bh / sh2);
+  blg.save(); blg.translate(bw / 2, bh / 2); blg.rotate(rot * Math.PI / 180); blg.scale(c && c.fh ? -1 : 1, c && c.fv ? -1 : 1); blg.drawImage(src, -sw * sc / 2, -sh * sc / 2, sw * sc, sh * sc); blg.restore();
+  T.save(); T.imageSmoothingEnabled = true; T.imageSmoothingQuality = 'high'; T.drawImage(blc, 0, 0, W, H); T.fillStyle = 'rgba(0,0,0,.18)'; T.fillRect(0, 0, W, H); T.restore();
 }
 function drawEntry(e) {
   const a = assets.get(e.c.asset); if (!a) return;
   const fx = hasFx(e.c); let T = g;
   if (fx) { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); T = fxg; }
   try {
+    if (e.c.bb && !(state.kb && a.kind === 'image') && !((e.c.z && e.c.z !== 1) || e.c.x || e.c.y)) { const sb = a.kind === 'image' ? a.img : (a.el.readyState >= 2 ? a.el : null); if (sb) drawBlurBg(T, sb, a.w, a.h, e.c); }
     if (a.kind === 'image') {
       const z = state.kb ? 1 + 0.12 * clamp((cur - e.start) / e.d, 0, 1) : 1;
       T.save(); T.translate(cv.width / 2, cv.height / 2); T.scale(z, z); T.translate(-cv.width / 2, -cv.height / 2);
@@ -763,7 +805,8 @@ function fxHtml() {
   } else {
     h += `<div class="r2"><button class="sm" data-x="rot">↻ 轉 90°</button><button class="sm" data-x="fh">⇋ 左右翻轉</button></div>
     <div class="r2" style="margin-top:8px"><button class="sm" data-x="fv">⇅ 上下翻轉</button><button class="sm" data-x="reset">還原</button></div>
-    <p class="hint">目前：旋轉 ${c.rot || 0}°${c.fh ? '・左右翻轉' : ''}${c.fv ? '・上下翻轉' : ''}</p>`;
+    <label class="chk"><input type="checkbox" id="fx-bb"${c.bb ? ' checked' : ''}> 🌫 背景模糊填滿（畫面沒填滿時，黑邊改成模糊的同一畫面）</label>
+    <p class="hint">目前：旋轉 ${c.rot || 0}°${c.fh ? '・左右翻轉' : ''}${c.fv ? '・上下翻轉' : ''}　（有縮放或照片推近時，背景模糊不會作用）</p>`;
   }
   return h + `<button class="sm ok" id="fx-ok" style="width:100%;margin-top:8px">完成</button>`;
 }
@@ -784,6 +827,7 @@ function bindFx(on) {
     else { delete c.rot; delete c.fh; delete c.fv; }
     dirty = true; renderCtx();
   });
+  on('#fx-bb', 'change', ev => { commit(); if (ev.target.checked) c.bb = true; else delete c.bb; dirty = true; });
   on('#fx-ok', 'click', () => { showFx = false; renderTimeline(); renderCtx(); });
 }
 function renderTimelineLight2() { const d = document.querySelector(`#row-v .clip[data-i="${fxIdx}"] span`), e = L[fxIdx]; if (d && e) { const a = assets.get(e.c.asset); d.textContent = `${a.kind === 'image' ? '🖼 ' : ''}${e.i + 1}・${e.d.toFixed(1)}秒${e.c.sp && e.c.sp !== 1 ? ' ⚡' + e.c.sp + 'x' : ''}${e.c.rev ? ' ↺' : ''}${hasFx(e.c) ? ' 🎨' : ''}`; } }
@@ -811,7 +855,7 @@ function lyHtml() {
     ${sliderHtml('gx', gx)}`;
   }
   const a = assets.get(l.asset), isV = a.kind === 'video', idx = state.layers.indexOf(l), arm = R_OPTS.find(r => Math.abs(r[1] - l.ar) < 0.01);
-  let h = `<h4>🧩 第 ${idx + 1} 格・${esc(a.name)}</h4><div class="tabs4">${[['p', '📐 版位'], ['f', '🎨 濾鏡'], ['x', '🔄 變換'], ['t', '⏱ 時間']].map(t => `<button class="sm${lyTab === t[0] ? ' ok' : ''}" data-ltab="${t[0]}">${t[1]}</button>`).join('')}</div>`;
+  let h = `<h4>🧩 第 ${idx + 1} 格・${esc(a.name)}</h4><div class="tabs4">${[['p', '📐 版位'], ['f', '🎨 濾鏡'], ['e', '✨ 特效'], ['x', '🔄 變換'], ['t', '⏱ 時間']].map(t => `<button class="sm${lyTab === t[0] ? ' ok' : ''}" data-ltab="${t[0]}">${t[1]}</button>`).join('')}</div>`;
   if (lyTab === 'p') {
     h += `<div class="r2"><div><label>格子比例</label><select id="ly-ar">${R_OPTS.map(r => `<option value="${r[1]}"${arm && arm[1] === r[1] ? ' selected' : ''}>${r[0]}</option>`).join('')}<option value="orig">原素材比例</option>${arm ? '' : '<option value="keep" selected>目前（依範本）</option>'}</select></div>
     <div><label>畫面填法</label><select id="ly-fit"><option value="cover"${l.fit !== 'contain' ? ' selected' : ''}>填滿（會裁邊）</option><option value="contain"${l.fit === 'contain' ? ' selected' : ''}>完整顯示（可能有黑邊）</option></select></div></div>
@@ -824,6 +868,15 @@ function lyHtml() {
   } else if (lyTab === 'f') {
     h += `<div class="fchips">${Object.entries(FXP).map(([k, p]) => `<button class="sm${(l.fp || 'none') === k ? ' ok' : ''}" data-lfp="${k}">${p.n}</button>`).join('')}</div>${sliderHtml('lf', l)}
     <button class="sm" id="lf-reset" style="margin-top:8px;width:100%">重設這一格的濾鏡</button>`;
+  } else if (lyTab === 'e') {
+    const k = l.ck || {};
+    h += `<label class="chk"><input type="checkbox" id="ck-on"${l.ck ? ' checked' : ''}> 🟩 綠幕去背（把某個顏色變透明）</label>`;
+    if (l.ck) h += `<div class="r2"><div><label>去掉的顏色</label><input type="color" id="ck-c" value="${k.c}" style="width:100%;height:38px"></div><div><label>快選</label><div class="r2"><button class="sm" data-ckq="#00ff00">綠</button><button class="sm" data-ckq="#0000ff">藍</button></div></div></div>
+      <label>去除範圍<b id="v-cks">${Math.round(k.s * 100)}</b></label><input type="range" id="ck-s" min="0.05" max="0.7" step="0.01" value="${k.s}">
+      <label>邊緣柔化<b id="v-ckb">${Math.round(k.b * 100)}</b></label><input type="range" id="ck-b" min="0" max="0.4" step="0.01" value="${k.b}">
+      <p class="hint">背景顏色沒去乾淨：把「去除範圍」調大。人物邊緣被吃掉：調小。</p>`;
+    h += `<label>🔷 遮罩形狀（只顯示形狀裡面的畫面）</label><div class="fchips">${MASKS.map(m => `<button class="sm${(l.mk || '') === m[0] ? ' ok' : ''}" data-mk="${m[0]}">${m[1]}</button>`).join('')}</div>
+    <label>🎭 混合模式（和下面的畫面疊在一起的方式）</label><select id="ly-bm">${BLENDS.map(m => `<option value="${m[0]}"${(l.bm || '') === m[0] ? ' selected' : ''}>${m[1]}</option>`).join('')}</select>`;
   } else if (lyTab === 'x') {
     h += `<div class="r2"><button class="sm" data-lx="rot">↻ 轉 90°</button><button class="sm" data-lx="fh">⇋ 左右翻轉</button></div>
     <div class="r2" style="margin-top:8px"><button class="sm" data-lx="fv">⇅ 上下翻轉</button><button class="sm" data-lx="reset">還原</button></div>`;
@@ -860,6 +913,15 @@ function bindLy(on) {
   all('[data-lfp]').forEach(b => b.onclick = () => { commit(); if (b.dataset.lfp === 'none') delete l.fp; else l.fp = b.dataset.lfp; dirty = true; renderCtx(); });
   bindSliders(on, 'lf', l);
   on('#lf-reset', 'click', () => { commit(); delete l.fp; delete l.fb; delete l.fc; delete l.fs; dirty = true; renderCtx(); });
+  on('#ck-on', 'change', e => { commit(); if (e.target.checked) l.ck = { c: '#00ff00', s: 0.3, b: 0.1 }; else delete l.ck; dirty = true; renderCtx(); });
+  if (l.ck) {
+    on('#ck-c', 'input', e => { touch('ckc' + l.id); l.ck.c = e.target.value; dirty = true; });
+    all('[data-ckq]').forEach(b => b.onclick = () => { commit(); l.ck.c = b.dataset.ckq; dirty = true; renderCtx(); });
+    on('#ck-s', 'input', e => { touch('cks' + l.id); l.ck.s = +e.target.value; $('#v-cks').textContent = Math.round(l.ck.s * 100); dirty = true; });
+    on('#ck-b', 'input', e => { touch('ckb' + l.id); l.ck.b = +e.target.value; $('#v-ckb').textContent = Math.round(l.ck.b * 100); dirty = true; });
+  }
+  all('[data-mk]').forEach(b => b.onclick = () => { commit(); if (b.dataset.mk) l.mk = b.dataset.mk; else delete l.mk; dirty = true; renderCtx(); });
+  on('#ly-bm', 'change', e => { commit(); if (e.target.value) l.bm = e.target.value; else delete l.bm; dirty = true; });
   all('[data-lx]').forEach(b => b.onclick = () => { commit(); const k = b.dataset.lx; if (k === 'rot') { l.rot = ((l.rot || 0) + 90) % 360; if (!l.rot) delete l.rot; } else if (k === 'fh') { if (l.fh) delete l.fh; else l.fh = true; } else if (k === 'fv') { if (l.fv) delete l.fv; else l.fv = true; } else { delete l.rot; delete l.fh; delete l.fv; } dirty = true; renderCtx(); });
   all('[data-lsp]').forEach(b => b.onclick = () => { commit(); const v = +b.dataset.lsp, a = assets.get(l.asset); if (v === 1) delete l.sp; else l.sp = v; l.len = Math.min(Math.max(0.3, l.len), (a.dur - l.in) / spd(l)); re(); });
   on('#ly-s', 'change', e => { commit(); l.start = Math.max(0, +e.target.value || 0); re(); });
@@ -980,6 +1042,10 @@ function textPng(x, W, H) {
   const c = document.createElement('canvas'); c.width = W; c.height = H; drawText(c.getContext('2d'), W, H, x);
   return new Promise(r => c.toBlob(async b => r(new Uint8Array(await b.arrayBuffer())), 'image/png'));
 }
+function maskPng(shape, w, h) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, w, h); drawMaskShape(x, shape, w, h);
+  return new Promise(r => c.toBlob(async b => r(new Uint8Array(await b.arrayBuffer())), 'image/png'));
+}
 function extOf(n) { const m = /\.([a-z0-9]+)$/i.exec(n || ''); return m ? m[1].toLowerCase() : 'bin'; }
 async function hasAudio(f, name) { ffLog = []; try { await f.exec(['-i', name, '-t', '0.1', '-f', 'null', '-']); } catch (e) {} return ffLog.some(l => /Stream #.*Audio:/.test(l)); }
 const X264 = ['-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p'];
@@ -1029,6 +1095,7 @@ $('#xp-go').onclick = async () => {
         const compose = (Wt, Ht) => `color=c=black:s=${Wt}x${Ht}:r=30[bg];[0:v]${pre}scale=${Wt}:${Ht}:force_original_aspect_ratio=decrease,${fxs}scale=trunc(iw*${tz.toFixed(4)}/2)*2:trunc(ih*${tz.toFixed(4)}/2)*2,setsar=1[fg];[bg][fg]overlay=x=(main_w-overlay_w)/2+${(tx * Wt).toFixed(2)}:y=(main_h-overlay_h)/2+${(ty * Ht).toFixed(2)}:shortest=1,setsar=1`;
         if (hasT && useKB) { const nf = Math.max(1, Math.round(len * 30)); fcv = `${compose(W * 2, H * 2)},zoompan=z='1+0.12*(${off.toFixed(3)}+on/30)/${d.toFixed(3)}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${nf}:s=${W}x${H}:fps=30,format=yuv420p[vout]`; }
         else if (hasT) { fcv = `${compose(W, H)},fps=30,format=yuv420p[vout]`; }
+        else if (c.bb && !useKB) { const rad = Math.max(10, Math.round(Math.min(W, H) / 18)); fcv = `[0:v]${pre}${fxs}split[bs][fs];[bs]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},boxblur=${rad}:2,lutyuv=y=val*0.82[bg];[fs]scale=${W}:${H}:force_original_aspect_ratio=decrease,setsar=1[fg];[bg][fg]overlay=x=(main_w-overlay_w)/2:y=(main_h-overlay_h)/2,setsar=1,fps=30,format=yuv420p[vout]`; }
         else if (useKB) { const nf = Math.max(1, Math.round(len * 30)); vf = `${pre}scale=${W * 2}:${H * 2}:force_original_aspect_ratio=decrease,${fxs}pad=${W * 2}:${H * 2}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,zoompan=z='1+0.12*(${off.toFixed(3)}+on/30)/${d.toFixed(3)}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${nf}:s=${W}x${H}:fps=30`; }
         else vf = `${pre}scale=${W}:${H}:force_original_aspect_ratio=decrease,${fxs}pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=30`;
         if (fcv) args.push('-filter_complex', fcv, '-map', '[vout]', '-map', am); else args.push('-vf', vf + ',format=yuv420p', '-map', '0:v', '-map', am);
@@ -1100,6 +1167,7 @@ $('#xp-go').onclick = async () => {
         it.i = idx++;
         if (it.la.kind === 'image') args.push('-loop', '1', '-framerate', '30', '-t', it.l.len.toFixed(3), '-i', it.ln);
         else args.push('-ss', it.l.in.toFixed(3), '-t', (it.l.len * spd(it.l)).toFixed(3), '-i', it.ln);
+        if (it.l.mk) { const mw = ev(it.l.w * W), mh = ev(mw / it.l.ar), mn = `mk${it.i}.png`; await f.writeFile(mn, await maskPng(it.l.mk, mw, mh)); files.push(mn); it.m = idx++; args.push('-loop', '1', '-framerate', '30', '-t', it.l.len.toFixed(3), '-i', mn); }
       }
       let mi = -1; if (music) { const ma = assets.get(music.asset); const mn = `music.${extOf(ma.name)}`; await f.writeFile(mn, await fetchFile(ma.file)); files.push(mn); args.push('-i', mn); mi = idx; }
       const parts = []; let vmap = '0:v';
@@ -1112,12 +1180,24 @@ $('#xp-go').onclick = async () => {
           const w2 = Math.max(2, Math.round(sw2 * sc)), h2 = Math.max(2, Math.round(sh2 * sc)), sp = la.kind === 'video' ? spd(l) : 1, op = l.op == null ? 1 : l.op;
           const geo = [sp !== 1 ? `setpts=(PTS-STARTPTS)/${sp}` : 'setpts=PTS-STARTPTS']; if (l.fh) geo.push('hflip'); if (l.fv) geo.push('vflip');
           if (rot === 90) geo.push('transpose=1'); else if (rot === 180) geo.push('hflip,vflip'); else if (rot === 270) geo.push('transpose=2');
-          geo.push(`scale=${w2}:${h2}`); if (hasFx(l)) geo.push(fxString(l)); geo.push('fps=30');
+          geo.push(`scale=${w2}:${h2}`);
+          if (l.ck) geo.push(`chromakey=color=0x${l.ck.c.slice(1)}:similarity=${l.ck.s.toFixed(3)}:blend=${Math.max(l.ck.b, 0.0001).toFixed(3)}`);
+          if (hasFx(l)) geo.push(fxString(l)); geo.push('fps=30');
           const ox = Math.round((cw - w2) / 2 + (l.ix || 0) * cw), oy = Math.round((ch - h2) / 2 + (l.iy || 0) * ch);
-          parts.push(`color=c=black:s=${cw}x${ch}:r=30[lc${k}]`, `[${it.i}:v]${geo.join(',')}[ls${k}]`,
-            `[lc${k}][ls${k}]overlay=x=${ox}:y=${oy}:shortest=1${op < 0.999 ? `,format=yuva420p,colorchannelmixer=aa=${op.toFixed(2)}` : ''},setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
+          const useAlpha = op < 0.999 && !l.bm;
+          parts.push(l.ck ? `color=c=black@0:s=${cw}x${ch}:r=30,format=yuva420p[lc${k}]` : `color=c=black:s=${cw}x${ch}:r=30[lc${k}]`, `[${it.i}:v]${geo.join(',')}[ls${k}]`);
+          let cell = `[lc${k}][ls${k}]overlay=x=${ox}:y=${oy}:shortest=1${l.ck ? ':format=auto' : ''}${useAlpha ? `,format=yuva420p,colorchannelmixer=aa=${op.toFixed(2)}` : ''}`;
+          if (l.mk) {
+            parts.push(`${cell}[cl${k}]`, `[${it.m}:v]format=gray[mg${k}]`);
+            if (l.ck) parts.push(`[cl${k}]split[c1${k}][c2${k}]`, `[c1${k}]alphaextract[ae${k}]`, `[ae${k}][mg${k}]blend=all_mode=multiply,format=gray[am${k}]`, `[c2${k}][am${k}]alphamerge,setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
+            else parts.push(`[cl${k}][mg${k}]alphamerge,setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
+          } else parts.push(`${cell},setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
           const ex = Math.round(l.x * W - cw / 2), ey = Math.round(l.y * H - ch / 2);
-          parts.push(`[${prev}][ly${k}]overlay=${ex}:${ey}:eof_action=pass[vl${k}]`); prev = `vl${k}`;
+          if (l.bm) {
+            parts.push(`color=c=${BLEND_NEUTRAL[l.bm]}:s=${W}x${H}:r=30:d=${TT.toFixed(3)}[bn${k}]`, `[bn${k}][ly${k}]overlay=${ex}:${ey}:eof_action=pass:format=auto,format=yuv420p[bf${k}]`,
+              `[${prev}]format=yuv420p[bp${k}]`, `[bp${k}][bf${k}]blend=all_mode=${FF_BLEND[l.bm]}:all_opacity=${op.toFixed(2)}:shortest=1[vl${k}]`);
+          } else parts.push(`[${prev}][ly${k}]overlay=${ex}:${ey}:eof_action=pass[vl${k}]`);
+          prev = `vl${k}`;
         });
         if (gfxOn) { parts.push(`[${prev}]${fxString(snap.gfx)}[vg]`); prev = 'vg'; }
         texts.forEach((x, k) => { const nx = `v${k + 1}`; parts.push(`[${prev}][${k + 1}:v]overlay=0:0:enable='between(t,${x.start.toFixed(2)},${(x.start + x.dur).toFixed(2)})'[${nx}]`); prev = nx; });
@@ -1212,7 +1292,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-B', upd = document.getElementById('upd');
+  const VER = '1121-C', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
