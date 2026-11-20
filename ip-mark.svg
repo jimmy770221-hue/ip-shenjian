@@ -1,1 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#10241f"/><g><path fill="#b9f5e3" d="M4 4h7L8 7v13H4Z"/><path fill="#75e3c4" fill-rule="evenodd" d="M13 4h4l4 4v4l-4 4h-3v4h-4V7Zm1 4v4h2l1-1V9l-1-1Z"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><defs>
+  <linearGradient id="brand-gradient" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+    <stop offset="0" stop-color="#5b86ff"/>
+    <stop offset=".55" stop-color="#a05bff"/>
+    <stop offset="1" stop-color="#ff5fa2"/>
+  </linearGradient>
+  <radialGradient id="brand-light" cx=".12" cy="0" r=".87">
+    <stop stop-color="#e4e8ff" stop-opacity=".34"/>
+    <stop offset="1" stop-color="#e4e8ff" stop-opacity="0"/>
+  </radialGradient>
+</defs><rect width="24" height="24" rx="6" fill="url(#brand-gradient)"/><rect width="24" height="24" rx="6" fill="url(#brand-light)"/><g><path fill="#ffffff" d="M4 4h7L8 7v13H4Z"/><path fill="#f4edff" fill-rule="evenodd" d="M13 4h4l4 4v4l-4 4h-3v4h-4V7Zm1 4v4h2l1-1V9l-1-1Z"/></g></svg>

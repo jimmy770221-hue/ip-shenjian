@@ -7,8 +7,8 @@
   --line: #364148;
   --text: #f3f7f6;
   --sub: #aab9ba;
-  --main: #75e3c4;
-  --ink: #09251e;
+  --main: #a78bfa;
+  --ink: #1b1031;
   --hot: #ffc882;
   --ok: #79dfad;
   --err: #ff9a9f;
@@ -41,7 +41,7 @@ button:disabled { cursor: default; }
   display: block;
   text-align: left;
   overflow: auto;
-  background: radial-gradient(ellipse at 80% 0%, #19332e 0%, transparent 46%), var(--bg);
+  background: radial-gradient(ellipse at 80% 0%, #2b2244 0%, transparent 46%), var(--bg);
   padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
 }
 #home .home-shell { width: min(100%, 640px); margin: clamp(8px, 6vh, 66px) auto 0; animation: none; }
@@ -49,10 +49,10 @@ button:disabled { cursor: default; }
 #home .hlogo, .top .logo {
   display: inline-grid;
   place-items: center;
-  background: #10241f;
+  background: #211637;
   color: var(--main);
   transform: none;
-  box-shadow: inset 0 0 0 1px #37554b;
+  box-shadow: inset 0 0 0 1px #574475;
   letter-spacing: 0;
 }
 #home .hlogo .ip-icon, .top .logo .ip-icon { stroke: none; width: 24px; height: 24px; }
@@ -60,12 +60,12 @@ button:disabled { cursor: default; }
 #home .home-hero {
   margin-top: 22px;
   padding: clamp(20px, 5vw, 36px);
-  border: 1px solid #38514d;
+  border: 1px solid #514365;
   border-radius: 24px;
-  background: linear-gradient(140deg, #243c36, #1a2327 72%);
+  background: linear-gradient(140deg, #33284a, #201d2b 72%);
 }
 #home h1 { margin: 0; color: var(--text); background: none; font-size: clamp(30px, 6vw, 48px); letter-spacing: -.04em; }
-#home .home-hero p { color: #b9ceca; font-size: 14px; margin: 8px 0 0; line-height: 1.55; }
+#home .home-hero p { color: #cec4df; font-size: 14px; margin: 8px 0 0; line-height: 1.55; }
 #home .hbtn { max-width: none; }
 #home #h-start {
   width: auto;
@@ -214,7 +214,7 @@ button:disabled { cursor: default; }
 .ctx .sm.ok, #pj .bigbtn:not(.x), #pj .it button.go,
 #xp .bigbtn:not(.x), #vp-ok { color: var(--ink) !important; }
 .ctx .sm.red, #pj .it button.del { color: var(--err); }
-.tplb svg rect { fill: #75e3c426; stroke: var(--main); }
+.tplb svg rect { fill: #a78bfa26; stroke: var(--main); }
 #pj, #xp { background: #090c0ec9; }
 #pj h3, #xp h3 { font-size: 19px; margin-bottom: 13px; }
 #pj .it { flex-wrap: wrap; }
@@ -246,7 +246,7 @@ button:disabled { cursor: default; }
 /* 快速小工具 */
 .ip-tools { --card: var(--panel); --main-d: var(--main); }
 .ip-tools header {
-  background: radial-gradient(ellipse at 80% 0%, #243c36, var(--panel) 72%);
+  background: radial-gradient(ellipse at 80% 0%, #33284a, var(--panel) 72%);
   color: var(--text);
   padding: calc(20px + env(safe-area-inset-top)) 16px 18px;
   text-align: left;
@@ -259,7 +259,7 @@ button:disabled { cursor: default; }
 .ip-tools .tab .ip-icon { margin-right: 4px; }
 .ip-tools .tab.on, .ip-tools button.btn { background: var(--main); color: var(--ink); }
 .ip-tools .card { box-shadow: none; border: 1px solid var(--line); }
-.ip-tools .pick { background: #1c2a29; border: 1px dashed #538579; color: var(--main); cursor: pointer; }
+.ip-tools .pick { background: #26213a; border: 1px dashed #7962ad; color: var(--main); cursor: pointer; }
 .ip-tools .pick:focus-within { outline: 2px solid var(--main); outline-offset: 2px; }
 .ip-tools .pick input { display: block; position: absolute; width: 1px; height: 1px; opacity: 0; }
 .ip-tools input[type=number], .ip-tools input[type=text], .ip-tools textarea, .ip-tools select,
@@ -276,3 +276,187 @@ button:disabled { cursor: default; }
 .ip-tools .bar i { background: var(--main); }
 .ip-tools .warn { background: #2d2720; border: 1px solid #64523c; color: var(--hot); line-height: 1.5; }
 
+
+/* 延續 Claude 1121-R 的多色光暈、品牌漸層與玻璃按鈕 */
+:root {
+  --bg: #14161f;
+  --panel: #1d2030;
+  --panel2: #262a3d;
+  --line: #3b4060;
+  --text: #f3f1ff;
+  --sub: #b3b8d7;
+  --ip-brand-gradient: linear-gradient(135deg, #5b86ff, #a05bff 55%, #ff5fa2);
+  --ip-action-gradient: linear-gradient(110deg, #523dd2, #8732cf 55%, #b52b85);
+  --ip-control-gradient: linear-gradient(135deg, #5265d4, #7543b8);
+  --ip-glass-gradient: linear-gradient(155deg, #373153, #222437 78%);
+}
+
+html, body, .ip-tools { background-color: var(--bg); }
+#home {
+  background:
+    radial-gradient(ellipse at 16% 5%, #8b5cff55, transparent 48%),
+    radial-gradient(ellipse at 100% 31%, #ff4f9a30, transparent 46%),
+    radial-gradient(ellipse at 0% 95%, #25c7ff22, transparent 52%),
+    #10101b;
+}
+#home .home-hero {
+  background:
+    radial-gradient(ellipse at 100% 0%, #9e4d952f, transparent 70%),
+    linear-gradient(145deg, #343059, #222840 78%);
+  border-color: #73649b;
+  box-shadow: 0 14px 34px #07051852, inset 0 1px #e1ccff20;
+}
+#home .home-hero p { color: #d3cae6; }
+#home h1 {
+  background: linear-gradient(90deg, #fff 10%, #e7d7ff 52%, #a8e8ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+#home .hlogo, .top .logo {
+  background: var(--ip-brand-gradient);
+  box-shadow: inset 0 1px #fff7, 0 4px 14px #7951d750;
+}
+#home #h-start {
+  background: var(--ip-action-gradient);
+  color: #fff;
+  box-shadow: 0 6px 23px #9d49e463, inset 0 1px #fff4;
+}
+#home .hbtn.sub, #home .tile {
+  background: var(--ip-glass-gradient);
+  border-color: #50486d;
+}
+#home .tile i, #home .hbtn.sub .ip-icon { color: #d0baff; }
+#home .tile.c2 i, #home .tile.c5 i { color: #b0c6ff; }
+#home .tile.c3 i, #home .tile.c6 i { color: #cbb3ff; }
+#home .tile.c4 i { color: #f6b5de; }
+
+.top .exp, .transport .play, .tlb.add, #cats-x, .sh-x,
+.ctx .sm.ok, #pj .bigbtn:not(.x), #pj .it button.go,
+#xp .bigbtn:not(.x), #vp-ok,
+.ip-tools .tab.on, .ip-tools button.btn:not(:disabled) {
+  background: var(--ip-control-gradient) !important;
+  color: #fff !important;
+  border-color: #9074e7;
+  box-shadow: inset 0 1px #e4d7ff40;
+}
+.top .exp, #xp .bigbtn#xp-go, .ip-tools button.btn:not(:disabled):not(.share) {
+  background: var(--ip-action-gradient) !important;
+}
+#xp .bigbtn.g, .ip-tools button.btn.share {
+  background: linear-gradient(135deg, #226d61, #317f5f) !important;
+  color: #fff !important;
+}
+.cat i, #cats-g .tb i { color: #c4b4ff; }
+.cat[data-g="music"] i, #cats-g [data-a="music"] i, #cats-g [data-a="au"] i { color: #a9d9ff; }
+.cat[data-g="text"] i, #cats-g [data-a="text"] i, #cats-g [data-a="st"] i { color: #f5b4dd; }
+.cat[data-g="cam"] i { color: #ffc1ce; }
+#cats-g .tb { background: var(--ip-glass-gradient); }
+.empty .ip-icon { color: #bfb0ff; }
+.tl { background: #191929; }
+.clip { background-color: #383e78; background-image: linear-gradient(130deg, #475999, #584384); border-color: #7b83bf; }
+.tblock { background: linear-gradient(120deg, #67469e, #883f87); border-color: #b579bf; }
+.mblock { background: linear-gradient(120deg, #235577, #286b64); border-color: #569b9e; }
+.vblock { background: linear-gradient(120deg, #843c6c, #9c435d); border-color: #cd748f; }
+.lblock { background: linear-gradient(120deg, #42538e, #594c91); border-color: #8485c4; }
+.playhead { background: #d5bbff; box-shadow: 0 0 6px #a86cff80; }
+.playhead::before { border-top-color: #d5bbff; }
+.tplb svg rect { fill: #a05bff38; stroke: #c3b2ff; }
+#xp .bar i, .ip-tools .bar i { background: var(--ip-brand-gradient); }
+#cm-r { background: linear-gradient(145deg, #ff95be, #ff697e) !important; }
+
+.ip-tools header {
+  background:
+    radial-gradient(ellipse at 85% 0%, #b65bab46, transparent 62%),
+    linear-gradient(120deg, #323e79, #302248);
+}
+.ip-tools header a { color: #ede1ff; }
+.ip-tools .tab { background: var(--ip-glass-gradient); }
+.ip-tools .pick {
+  background: linear-gradient(135deg, #262a49, #30213f);
+  border-color: #8771b1;
+  color: #dfceff;
+}
+.ip-tools .warn { background: linear-gradient(130deg, #362835, #312538); border-color: #765165; }
+
+@media (hover: hover) {
+  #home .tile:hover, #home .hbtn.sub:hover, .cat:hover {
+    background: linear-gradient(155deg, #464067, #292947 78%);
+  }
+}
+
+/* 依 1121-G 參考畫面調整首頁的光暈與玻璃按鈕 */
+#home {
+  background:
+    radial-gradient(ellipse 86% 45% at 18% 9%, #7546cfb0, transparent 100%),
+    radial-gradient(ellipse 69% 48% at 96% 35%, #be358782, transparent 100%),
+    radial-gradient(ellipse 77% 48% at 30% 100%, #007da9a0, transparent 100%),
+    #0c0b16;
+}
+#home .home-shell { width: min(100%, 520px); margin-top: clamp(8px, 3vh, 32px); }
+#home .home-brand { justify-content: center; }
+#home .home-brand .hlogo {
+  width: clamp(74px, 23vw, 96px);
+  height: clamp(70px, 21vw, 89px);
+  border-radius: 25%;
+  box-shadow: inset 0 1px 1px #fffc, 0 12px 32px #9a51ed60;
+}
+#home .home-brand .hlogo .ip-icon { width: 58%; height: 58%; }
+#home .home-hero {
+  margin-top: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  text-align: center;
+}
+#home h1 { font-size: clamp(25px, 6vw, 39px); letter-spacing: .01em; }
+#home .home-hero p { font-size: 12px; margin: 6px 0 0; }
+#home #h-start {
+  width: 100%;
+  min-height: clamp(66px, 20vw, 86px);
+  margin-top: 19px;
+  padding: 9px 22px 9px 12px;
+  border-radius: 999px;
+  background: linear-gradient(108deg, #6855fa, #9244eb 67%, #a248eb);
+  box-shadow: 0 10px 28px #913cff70, inset 0 1px 1px #fff8;
+  font-size: clamp(17px, 5vw, 23px);
+  gap: 14px;
+}
+#home #h-start .pl {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #fff;
+  color: #8343db;
+  box-shadow: 0 4px 12px #3e1c8270;
+}
+#home #h-start .ar { font-size: 27px; }
+#home .home-links { margin-top: 12px; }
+#home .hbtn.sub {
+  background: linear-gradient(155deg, #ffffff1e, #ffffff0c);
+  border-color: #ffffff30;
+}
+#home .hbox { margin-top: 19px; }
+#home .hgrid { gap: 13px 7px; }
+#home .tile, #home .tile:hover {
+  flex-direction: column;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: center;
+}
+#home .tile i, #home .tile:active i, #home .tile:hover i {
+  width: clamp(51px, 16vw, 68px);
+  height: clamp(51px, 16vw, 68px);
+  border-radius: 29%;
+  background: linear-gradient(153deg, #ffffff21, #d3ddff0d);
+  border: 1px solid #ffffff29;
+  color: #fff;
+  box-shadow: inset 0 1px 0 #fff2, 0 6px 15px #0504174d;
+}
+#home .tile i svg { width: 46%; height: 46%; }
+#home .tile:active i, #home .tile:focus-visible i { background: linear-gradient(150deg, #9d6aff66, #f764ae30); }
+#home .hfoot { text-align: center; margin-top: 0; }
