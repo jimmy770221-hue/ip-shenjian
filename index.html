@@ -176,7 +176,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-N（內建小音效）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-O（剪輯範本）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -212,6 +212,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   <div class="quick"><button id="q-text">🅣 添加文字</button><button id="q-music" class="m">🎵 添加音樂</button></div>
   <div class="toolbar" id="toolbar">
     <button class="tb" data-a="add"><i>＋</i>素材</button>
+    <button class="tb" data-a="tpl"><i>🎬</i>範本</button>
     <button class="tb" data-a="auto"><i>✨</i>幻燈片</button>
     <button class="tb" data-a="fx"><i>🎛</i>調整</button>
     <button class="tb" data-a="ly"><i>🧩</i>拼貼</button>
@@ -942,7 +943,8 @@ const ops = {
   au() { clearSel(); showAu = true; renderTimeline(); renderCtx(); dirty = true; },
   st() { clearSel(); showSt = true; renderTimeline(); renderCtx(); dirty = true; },
   ef() { clearSel(); showEf = true; renderTimeline(); renderCtx(); dirty = true; },
-  auto() { clearSel(); showAuto = true; renderTimeline(); renderCtx(); },
+  auto() { clearSel(); showAuto = true; autoMode = 'slide'; renderTimeline(); renderCtx(); },
+  tpl() { clearSel(); showAuto = true; autoMode = 'tpl'; renderTimeline(); renderCtx(); },
   undo, redo
 };
 $('#toolbar').addEventListener('click', e => { const b = e.target.closest('.tb'); if (!b || b.disabled) return; pause(); ops[b.dataset.a](); });
@@ -1470,7 +1472,9 @@ function bindTr(on) {
   on('#tr-all', 'click', () => { if (!c.tr) return toast('請先選一個效果'); commit(); const tr = { ...c.tr }; state.clips.forEach((x, i) => { if (i > 0) x.tr = { ...tr }; }); relayout(); renderTimeline(); renderCtx(); toast('已套用到全部'); });
   on('#tr-ok', 'click', () => { selTr = null; renderTimeline(); renderCtx(); });
 }
+let autoMode = 'slide';
 function autoHtml() {
+  if (autoMode === 'tpl') return tplHtml();
   const hasM = !!state.music;
   return `<h4>✨ 一鍵幻燈片：自動幫所有素材加上換頁效果</h4>
   <label>換頁風格</label><select id="au-style">${AUTO_STYLES.map((x, i) => `<option value="${i}">${x[0]}</option>`).join('')}</select>
@@ -1481,6 +1485,7 @@ function autoHtml() {
   <div class="r2" style="margin-top:8px"><button class="sm ok" id="au-go">套用</button><button class="sm" id="au-x">取消</button></div>`;
 }
 function bindAuto(on) {
+  if (autoMode === 'tpl') return bindTpl(on);
   on('#au-x', 'click', () => { showAuto = false; renderCtx(); });
   on('#au-go', 'click', () => {
     if (L.length < 2) return toast('至少要 2 個素材才有換頁效果');
@@ -1501,6 +1506,66 @@ function bindAuto(on) {
     }
     showAuto = false; relayout(); renderAll(); setCur(0);
     toast(fit ? '已套用，總長約 ' + fmt(total) : '已套用幻燈片效果');
+  });
+}
+/* ===== 剪輯範本（社團活動回顧）：選好素材後一鍵套用節奏、換頁、片頭片尾字、配樂卡拍 ===== */
+const CLUBTPL = [
+  { n: '🎉 活潑熱鬧', tr: ['circleopen', 'radial', 'slideleft', 'slideup', 'circleclose'], dur: 0.6, cap: 4, ph: 2.5, c: '#ffe14d', end: '#ff6b6b' },
+  { n: '🌸 溫馨回憶', tr: ['fade', 'fadewhite'], dur: 1.0, cap: 5, ph: 3, c: '#ffffff', end: '#ffffff' },
+  { n: '⚡ 動感節奏', tr: ['wipeleft', 'wiperight', 'fadewhite', 'slidedown'], dur: 0.4, cap: 3, ph: 2, c: '#4dd2ff', end: '#ffe14d' }
+];
+function tplHtml() {
+  const hasM = !!state.music;
+  return `<h4>🎬 剪輯範本：先「＋素材」選好照片影片，再一鍵套用</h4>
+  <label>範本風格</label><select id="tp-st">${CLUBTPL.map((x, i) => `<option value="${i}">${x.n}</option>`).join('')}</select>
+  <label>活動名稱（片頭大字）</label><input type="text" id="tp-title" maxlength="20" placeholder="例如：暑期營隊回顧">
+  <label>日期或副標（選填，片頭小字）</label><input type="text" id="tp-sub" maxlength="24" placeholder="例如：2026.07.20">
+  <label>片尾文字</label><input type="text" id="tp-end" maxlength="20" value="謝謝大家">
+  <label class="chk"><input type="checkbox" id="tp-beat"${hasM ? ' checked' : ' disabled'}> 換頁對準配樂節拍${hasM ? '' : '（先加配樂才能用）'}</label>
+  <label class="chk"><input type="checkbox" id="tp-sfx" checked> 片頭加「噹噹」音效</label>
+  <p class="hint">每段影片會依風格縮短（活潑約 4 秒、溫馨約 5 秒、動感約 3 秒），想改可以再用「裁左／右邊」調整，不滿意按「復原」。</p>
+  <div class="r2" style="margin-top:8px"><button class="sm ok" id="tp-go">套用範本</button><button class="sm" id="tp-x">取消</button></div>`;
+}
+function bindTpl(on) {
+  on('#tp-x', 'click', () => { showAuto = false; renderCtx(); });
+  on('#tp-go', 'click', async () => {
+    if (!state.clips.length) return toast('請先按「＋素材」加入照片和影片');
+    const T = CLUBTPL[+$('#tp-st').value], title = $('#tp-title').value.trim() || '活動回顧', sub = $('#tp-sub').value.trim(), endT = $('#tp-end').value.trim();
+    const beat = $('#tp-beat').checked && !!state.music, sfx = $('#tp-sfx').checked;
+    if (beat && !(state.beats || []).length) { await detectBeats(); }
+    commit();
+    // 1. 每段上限秒數＋換頁
+    state.clips.forEach((c, i) => {
+      const a = assets.get(c.asset), sp = spd(c);
+      if (a.kind === 'image') c.out = c.in + Math.min(3, T.cap);
+      else if (!c.rev && (c.out - c.in) / sp > T.cap) c.out = c.in + T.cap * sp;
+      else if (c.rev && (c.out - c.in) / sp > T.cap) c.in = c.out - T.cap * sp;
+      if (i === 0) delete c.tr; else c.tr = { type: T.tr[(i - 1) % T.tr.length], dur: T.dur };
+      delete c.kf;
+    });
+    relayout();
+    // 2. 換頁落在節拍上
+    const bt = (state.beats || []).slice().sort((x, y) => x - y);
+    if (beat && bt.length) {
+      for (let i = 0; i < state.clips.length - 1; i++) {
+        relayout(); const e = L[i], c = e.c, a = assets.get(c.asset), sp = spd(c), minEnd = e.start + 1.5, maxEnd = e.start + T.cap * 1.6;
+        const cand = bt.filter(t => t >= minEnd && t <= maxEnd), b = cand.sort((x, y) => Math.abs(x - e.start - T.cap) - Math.abs(y - e.start - T.cap))[0]; if (b == null) continue;
+        const len = b - e.start;
+        if (a.kind === 'image') c.out = c.in + len;
+        else if (!c.rev) { const need = c.in + len * sp; if (need <= (a.dur || 1e9)) c.out = need; }
+        else { const need = c.out - len * sp; if (need >= 0) c.in = need; }
+      }
+    }
+    relayout();
+    // 3. 片頭片尾文字（再套用會取代上一次範本的字）
+    state.texts = state.texts.filter(x => !x.tpl);
+    const td = Math.min(T.ph, Math.max(1, total * 0.4));
+    state.texts.push({ id: uid++, tpl: 1, text: title, start: 0.2, dur: td, color: T.c, size: 11, pos: 'middle', an: 'pop', sh: 1 });
+    if (sub) state.texts.push({ id: uid++, tpl: 1, text: sub, start: 0.5, dur: Math.max(0.8, td - 0.3), color: '#ffffff', size: 5, pos: 'middle', ty: 0.12, an: 'fade', sh: 1 });
+    if (endT) { const ed = Math.min(2.5, Math.max(1, total * 0.3)); state.texts.push({ id: uid++, tpl: 1, text: endT, start: Math.max(0, total - ed), dur: ed, color: T.end, size: 10, pos: 'middle', an: 'rise', sh: 1 }); }
+    showAuto = false; renderAll(); setCur(0);
+    if (sfx) { cur = 0; await sfxAdd('tada'); }
+    toast('範本已套用，總長約 ' + fmt(total) + '，按播放看看！');
   });
 }
 function renderTimelineLight() { const d = document.querySelector(`.tblock[data-tid="${selText}"]`); const t = state.texts.find(x => x.id === selText); if (d && t) d.textContent = 'T ' + t.text.replace(/\n/g, ' '); }
@@ -1959,7 +2024,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-N', upd = document.getElementById('upd');
+  const VER = '1121-O', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
