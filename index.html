@@ -47,6 +47,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .tblock.sel{border-color:var(--hot)}
 .mblock{background:#1f8f6a;border:2px solid #1f8f6a}
 .mblock.sel{border-color:var(--hot)}
+.vblock{background:#b8467a;border:2px solid #b8467a}
+.ruler b.bt{position:absolute;top:8px;width:3px;height:12px;background:#ffb347;border-radius:2px;margin-left:-1px}
 .playhead{position:absolute;left:50%;top:0;bottom:0;width:2px;background:#fff;margin-left:-1px;pointer-events:none;z-index:3;box-shadow:0 0 4px rgba(0,0,0,.6)}
 .playhead::before{content:"";position:absolute;top:0;left:-5px;border:6px solid transparent;border-top-color:#fff}
 .quick{display:flex;gap:8px;padding:4px 8px;background:var(--bg)}
@@ -162,7 +164,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-E（文字樣式、貼圖、變速曲線）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-F（音訊效果、錄音配音、節拍標記）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -190,6 +192,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
       <div class="row" id="row-l" style="height:0"></div>
       <div class="row" id="row-t" style="height:0"></div>
       <div class="row" id="row-m" style="height:0"></div>
+      <div class="row" id="row-vo" style="height:0"></div>
     </div></div>
     <div class="playhead"></div>
   </div>
@@ -201,6 +204,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tb" data-a="ly"><i>🧩</i>拼貼</button>
     <button class="tb" data-a="kf"><i>🎞</i>動畫</button>
     <button class="tb" data-a="st"><i>😀</i>貼圖</button>
+    <button class="tb" data-a="au"><i>🎧</i>音訊</button>
     <button class="tb" data-a="ef"><i>🌈</i>特效包</button>
     <button class="tb" data-a="split"><i>✂️</i>分割</button>
     <button class="tb" data-a="trimL"><i>⇤</i>裁左邊</button>
@@ -247,10 +251,10 @@ const assets = new Map();           // id -> {id,kind,file,url,el,img,w,h,dur,na
 let uid = 1;
 let state = { ratio: '9:16', clips: [], layers: [], texts: [], music: null, kb: false, vol: { video: 1, music: 0.6 } };
 let history = [], redoStack = [], lastTouch = null;
-let showSt = false, showEf = false, showKf = false, kfMode = 'clip', kfLyId = null, kfIdx = -1;
+let showAu = false, showSt = false, showEf = false, showKf = false, kfMode = 'clip', kfLyId = null, kfIdx = -1;
 let showFx = false, fxTab = 'f', fxIdx = -1, showLy = false, selLy = null, lyTab = 'p', pendingTpl = null;
 let cur = 0, playing = false, pps = 80, selText = null, selMusic = false, selTr = null, showAuto = false, dirty = true;
-function clearSel() { showSt = false; showEf = false; showKf = false; showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
+function clearSel() { showAu = false; showSt = false; showEf = false; showKf = false; showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
 let L = [], total = 0;               // 排版結果
 const FXP = {
   none: { n: '原圖', b: 0, ct: 1, sa: 1, r: 1, g: 1, bl: 1 },
@@ -671,6 +675,14 @@ function syncMedia() {
     else if (!el.paused) el.pause();
     if (!playing && mw >= 0 && mw < m.dur && Math.abs(el.currentTime - mw) > 0.05) el.currentTime = mw;
   }
+  syncVo();
+}
+function syncVo() {
+  for (const v of (state.vo || [])) {
+    const a = assets.get(v.asset); if (!a || !a.el) continue; const el = a.el, mw = cur - v.offset; el.volume = clamp(v.vol == null ? 1 : v.vol, 0, 1);
+    if (playing && mw >= 0 && mw < a.dur) { if (el.paused || Math.abs(el.currentTime - mw) > 0.3) { el.currentTime = mw; el.play().catch(() => {}); } }
+    else if (!el.paused) el.pause();
+  }
 }
 let playT0 = 0, wall0 = 0;
 function play() {
@@ -728,6 +740,7 @@ function renderTimeline() {
   // 尺標
   const step = pps >= 160 ? 0.5 : pps >= 80 ? 1 : pps >= 40 ? 2 : 5;
   let rh = ''; for (let t = 0; t <= total + 0.001; t += step) rh += `<i style="left:${t * pps}px">${t % 1 ? t.toFixed(1) : t}s</i>`;
+  rh += (state.beats || []).map(t => `<b class="bt" style="left:${t * pps}px"></b>`).join('');
   $('#ruler').style.width = W + 'px'; $('#ruler').innerHTML = rh;
   // 影片軌
   const rv = $('#row-v'); rv.style.width = W + 'px';
@@ -754,6 +767,8 @@ function renderTimeline() {
     rm.style.height = '28px';
     rm.innerHTML = `<div class="mblock${selMusic ? ' sel' : ''}" data-m="1" style="left:${state.music.offset * pps}px;width:${Math.max(30, w - 2)}px">🎵 ${esc(m.name)}</div>`;
   } else { rm.style.height = '0'; rm.innerHTML = ''; }
+  const rvo = $('#row-vo'), vos = state.vo || []; rvo.style.width = W + 'px';
+  if (vos.length) { rvo.style.height = '28px'; rvo.innerHTML = vos.map(v => { const a = assets.get(v.asset); return a ? `<div class="mblock vblock" style="left:${v.offset * pps}px;width:${Math.max(30, Math.min(a.dur, Math.max(0, total - v.offset)) * pps - 2)}px">🎙 ${esc(a.name)}</div>` : ''; }).join(''); } else { rvo.style.height = '0'; rvo.innerHTML = ''; }
   setScroll(cur); updateActive();
   const qm = document.getElementById('q-music'); if (qm) qm.textContent = state.music ? '🎵 更換音樂' : '🎵 添加音樂';
 }
@@ -811,6 +826,7 @@ const ops = {
   fx() { clearSel(); showFx = true; renderTimeline(); renderCtx(); },
   ly() { clearSel(); showLy = true; renderTimeline(); renderCtx(); dirty = true; },
   kf() { const m = (showLy && selLy) ? 'ly' : 'clip', id = selLy; clearSel(); showKf = true; kfMode = m; kfLyId = id; renderTimeline(); renderCtx(); dirty = true; },
+  au() { clearSel(); showAu = true; renderTimeline(); renderCtx(); dirty = true; },
   st() { clearSel(); showSt = true; renderTimeline(); renderCtx(); dirty = true; },
   ef() { clearSel(); showEf = true; renderTimeline(); renderCtx(); dirty = true; },
   auto() { clearSel(); showAuto = true; renderTimeline(); renderCtx(); },
@@ -831,6 +847,7 @@ function renderCtx() {
   const t = selText && state.texts.find(x => x.id === selText);
   if (showAuto) { h += autoHtml(); }
   else if (selTr !== null && L[selTr]) { h += trHtml(); }
+  else if (showAu) { h += auHtml(); }
   else if (showSt) { h += stHtml(); }
   else if (showKf) { h += kfHtml(); }
   else if (showEf) { h += efHtml(); }
@@ -871,11 +888,12 @@ function renderCtx() {
     h += `<label class="chk"><input type="checkbox" id="kb"${state.kb ? ' checked' : ''}> 照片慢慢推近（較動感，匯出會比較慢）</label>`;
   }
   box.innerHTML = h;
-  box.classList.toggle('edit', !!(showAuto || showSt || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
+  box.classList.toggle('edit', !!(showAuto || showAu || showSt || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
   const on = (id, ev, fn) => { const el = box.querySelector(id); if (el) el.addEventListener(ev, fn); };
   on('#kb', 'change', e => { commit(); state.kb = e.target.checked; dirty = true; });
   if (showAuto) bindAuto(on);
   else if (selTr !== null && L[selTr]) bindTr(on);
+  else if (showAu) bindAu(on);
   else if (showSt) bindSt(on);
   else if (showKf) bindKf(on);
   else if (showEf) bindEf(on);
@@ -1032,6 +1050,96 @@ function bindSt(on) {
     state.texts.push(x); clearSel(); selText = x.id; renderTimeline(); renderCtx(); dirty = true;
   });
   on('#st-ok', 'click', () => { showSt = false; renderTimeline(); renderCtx(); });
+}
+
+/* ===== 音訊：效果、錄音配音、節拍標記 ===== */
+const AU_VOICE = [['', '原聲'], ['kid', '小精靈（變尖）'], ['deep', '大叔（變低）'], ['giant', '巨人（很低）'], ['echo', '山谷回音'], ['robot', '機器人'], ['phone', '電話筒']];
+const AU_EQ = [['', '不調整'], ['bass', '重低音'], ['voice', '人聲清晰'], ['bright', '明亮高音']];
+const pitchF = f => `aresample=44100,asetrate=${Math.round(44100 * f)},aresample=44100,atempo=${(1 / f).toFixed(4)}`;
+function audFilters(a) {
+  const o = []; if (!a) return o;
+  if (a.nr) o.push('highpass=f=80', 'afftdn=nf=-25');
+  if (a.eq === 'bass') o.push('bass=g=8'); else if (a.eq === 'voice') o.push('highpass=f=100', 'equalizer=f=3000:t=q:w=1:g=4'); else if (a.eq === 'bright') o.push('treble=g=6');
+  if (a.voice === 'kid') o.push(pitchF(1.35)); else if (a.voice === 'deep') o.push(pitchF(0.8)); else if (a.voice === 'giant') o.push(pitchF(0.65));
+  else if (a.voice === 'echo') o.push('aecho=0.8:0.88:60:0.4'); else if (a.voice === 'robot') o.push('aecho=0.8:0.9:15:0.7'); else if (a.voice === 'phone') o.push('highpass=f=400', 'lowpass=f=3000');
+  if (a.norm) o.push('dynaudnorm');
+  return o;
+}
+const hasAud = a => !!a && (a.nr || a.eq || a.voice || a.norm || a.fi > 0 || a.fo > 0);
+function auHtml() {
+  const a = state.aud || {}, vos = state.vo || [], bt = state.beats || [];
+  return `<h4>🎧 音訊</h4>
+  <label>🎤 變聲（只改影片原本的聲音）</label><select id="au-voice">${AU_VOICE.map(o => `<option value="${o[0]}"${(a.voice || '') === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>
+  <label>🎚 均衡（調音色）</label><select id="au-eq">${AU_EQ.map(o => `<option value="${o[0]}"${(a.eq || '') === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>
+  <label class="chk"><input type="checkbox" id="au-nr"${a.nr ? ' checked' : ''}> 🔇 基本降噪（減少沙沙的背景雜音）</label>
+  <label class="chk"><input type="checkbox" id="au-norm"${a.norm ? ' checked' : ''}> 📏 音量平均（大聲小聲拉近）</label>
+  <div class="r2"><div><label>聲音淡入<b id="v-au-fi">${(a.fi || 0).toFixed(1)}秒</b></label><input type="range" id="au-fi" min="0" max="5" step="0.5" value="${a.fi || 0}"></div><div><label>聲音淡出<b id="v-au-fo">${(a.fo || 0).toFixed(1)}秒</b></label><input type="range" id="au-fo" min="0" max="5" step="0.5" value="${a.fo || 0}"></div></div>
+  <p class="hint">這些聲音效果要等「匯出」後的成品才聽得到，預覽播放不會變。</p>
+  <label>🎙 錄音配音（從目前時間開始錄，建議戴耳機，不然會錄到影片的聲音）</label>
+  <div class="r2"><button class="sm${rec ? ' red' : ' ok'}" id="au-rec">${rec ? '⏹ 停止錄音' : '🎙 開始錄音'}</button><button class="sm" id="au-play">▶ 從這裡播放</button></div>
+  ${vos.length ? vos.map((v, i) => `<div class="r2" style="margin-top:6px;align-items:center"><span style="font-size:13px">🎙 ${esc((assets.get(v.asset) || {}).name || '')}（${v.offset.toFixed(1)}秒起）</span><button class="sm red" data-vodel="${i}">刪除</button></div><input type="range" data-vovol="${i}" min="0" max="1" step="0.05" value="${v.vol == null ? 1 : v.vol}">`).join('') : ''}
+  <label>🥁 節拍標記（剪輯點，會顯示在時間尺上）${bt.length ? '：已標 ' + bt.length + ' 個' : ''}</label>
+  <div class="r2"><button class="sm" id="bt-add">📍 在目前位置標記</button><button class="sm" id="bt-auto">🎵 從配樂自動找節拍</button></div>
+  <div class="r2" style="margin-top:6px"><button class="sm" id="bt-cut">✂️ 依標記把影片切開</button><button class="sm red" id="bt-clr">清除標記</button></div>
+  <div class="r2" style="margin-top:8px"><button class="sm ok" id="au-ok">完成</button></div>`;
+}
+let rec = null;
+async function addVo(file, start, dur) {
+  const a = { id: uid++, file, url: URL.createObjectURL(file), name: file.name, kind: 'audio', dur }, au = new Audio(); au.preload = 'auto'; au.src = a.url; a.el = au; assets.set(a.id, a);
+  commit(); state.vo = state.vo || []; state.vo.push({ id: uid++, asset: a.id, offset: +start.toFixed(2), vol: 1 }); renderTimeline();
+}
+async function recStart() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') return toast('這個瀏覽器不支援錄音');
+  if (!total) return toast('請先加入影片或照片');
+  let stream; try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { return toast('沒有取得麥克風權限，請在瀏覽器允許使用麥克風'); }
+  const mt = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '', mr = new MediaRecorder(stream, mt ? { mimeType: mt } : undefined), chunks = [];
+  mr.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  const r = { mr, start: cur, t0: Date.now() }; rec = r;
+  mr.onstop = async () => {
+    stream.getTracks().forEach(t => t.stop()); const dur = (Date.now() - r.t0) / 1000, type = mr.mimeType || 'audio/webm';
+    const file = new File([new Blob(chunks, { type })], `配音${(state.vo || []).length + 1}.${/mp4/.test(type) ? 'm4a' : 'webm'}`, { type }); rec = null;
+    await addVo(file, r.start, dur); if (showAu) renderCtx(); toast('錄音完成');
+  };
+  mr.start(); play(); renderCtx();
+}
+function recStop() { if (!rec) return; pause(); rec.mr.stop(); }
+async function detectBeats() {
+  if (!state.music) return toast('請先加入配樂');
+  const m = assets.get(state.music.asset); toast('分析中，請稍等…');
+  let buf; try { const ac = new (window.AudioContext || window.webkitAudioContext)(); buf = await ac.decodeAudioData(await m.file.arrayBuffer()); ac.close && ac.close(); } catch (e) { return toast('這個音樂檔分析不了'); }
+  const ch = buf.getChannelData(0), sr = buf.sampleRate, win = Math.round(sr * 0.02), n = Math.floor(ch.length / win), en = new Float32Array(n);
+  for (let i = 0; i < n; i++) { let sum = 0; for (let j = i * win; j < (i + 1) * win; j++) sum += ch[j] * ch[j]; en[i] = Math.sqrt(sum / win); }
+  const fl = new Float32Array(n); for (let i = 1; i < n; i++) fl[i] = Math.max(0, en[i] - en[i - 1]);
+  const out = [], K = 50; let last = -1;
+  for (let i = 2; i < n - 2; i++) {
+    let mean = 0, c = 0; for (let j = Math.max(0, i - K); j < Math.min(n, i + K); j++) { mean += fl[j]; c++; } mean /= c;
+    if (fl[i] > mean * 2 + 1e-4 && fl[i] >= fl[i - 1] && fl[i] >= fl[i + 1] && (last < 0 || (i - last) * 0.02 >= 0.3)) { out.push(+(i * 0.02 + state.music.offset).toFixed(2)); last = i; }
+  }
+  const lst = out.filter(t => t > 0.1 && t < total - 0.1);
+  if (!lst.length) return toast('沒有找到明顯的節拍，可以自己手動標記');
+  commit(); state.beats = [...new Set([...(state.beats || []), ...lst])].sort((a, b) => a - b); renderTimeline(); if (showAu) renderCtx(); toast('找到 ' + lst.length + ' 個節拍點');
+}
+function bindAu(on) {
+  const a = () => (state.aud = state.aud || {});
+  on('#au-voice', 'change', e => { commit(); if (e.target.value) a().voice = e.target.value; else delete a().voice; });
+  on('#au-eq', 'change', e => { commit(); if (e.target.value) a().eq = e.target.value; else delete a().eq; });
+  on('#au-nr', 'change', e => { commit(); if (e.target.checked) a().nr = 1; else delete a().nr; });
+  on('#au-norm', 'change', e => { commit(); if (e.target.checked) a().norm = 1; else delete a().norm; });
+  [['fi', 'v-au-fi'], ['fo', 'v-au-fo']].forEach(([k, id]) => on('#au-' + k, 'input', e => { touch('au' + k); a()[k] = +e.target.value; if (!a()[k]) delete a()[k]; $('#' + id).textContent = (+e.target.value).toFixed(1) + '秒'; }));
+  on('#au-rec', 'click', () => { if (rec) recStop(); else recStart(); });
+  on('#au-play', 'click', () => { if (playing) pause(); else play(); });
+  document.querySelectorAll('#ctx [data-vodel]').forEach(b => b.onclick = () => { commit(); const v = state.vo.splice(+b.dataset.vodel, 1)[0]; const as = v && assets.get(v.asset); if (as && as.el) as.el.pause(); renderTimeline(); renderCtx(); });
+  document.querySelectorAll('#ctx [data-vovol]').forEach(el => el.addEventListener('input', () => { touch('vov' + el.dataset.vovol); state.vo[+el.dataset.vovol].vol = +el.value; syncVo(); }));
+  on('#bt-add', 'click', () => { if (!total) return; commit(); const t = +cur.toFixed(2); state.beats = [...new Set([...(state.beats || []), t])].sort((x, y) => x - y); renderTimeline(); renderCtx(); });
+  on('#bt-auto', 'click', detectBeats);
+  on('#bt-cut', 'click', () => {
+    const bt = (state.beats || []).slice().sort((x, y) => x - y); if (!bt.length) return toast('還沒有標記');
+    commit(); let n = 0;
+    for (const t of bt) { const e = clipAt(t); if (!e) continue; const local = t - e.start; if (local < 0.1 || e.d - local < 0.1) continue; const c = e.c, x = { ...c, id: uid++ }, ls = local * spd(c); delete x.kf; if (c.rev) { c.in = c.out - ls; x.out = c.out - ls; } else { x.in = c.in + ls; c.out = c.in + ls; } state.clips.splice(e.i + 1, 0, x); relayout(); n++; }
+    afterEdit(cur); toast(n ? '已切成 ' + (n + 1) + ' 段（至少）' : '標記的位置都太靠近片段邊緣，沒有切');
+  });
+  on('#bt-clr', 'click', () => { if (!(state.beats || []).length) return; commit(); state.beats = []; renderTimeline(); renderCtx(); });
+  on('#au-ok', 'click', () => { if (rec) recStop(); showAu = false; renderTimeline(); renderCtx(); });
 }
 function efHtml() {
   const ef = (state.gfx && state.gfx.ef) || {};
@@ -1359,7 +1467,8 @@ $('#xp-go').onclick = async () => {
     }
     const gfxOn = !audioOnly && snap.gfx && hasFx(snap.gfx), efOn = !audioOnly && !!snap.gfx && hasEf(snap.gfx.ef), layerAudio = lyInfo.filter(x => x.hasSnd);
     const needV = !audioOnly && (texts.length > 0 || lyInfo.length > 0 || gfxOn || efOn || padT > 0);
-    const needA = !!music || Math.abs(V1 - 1) > 0.001 || layerAudio.length > 0 || padT > 0;
+    const vos = (snap.vo || []).filter(v => assets.get(v.asset) && v.offset < TT - 0.05), aud = snap.aud, audOn = hasAud(aud);
+    const needA = !!music || Math.abs(V1 - 1) > 0.001 || layerAudio.length > 0 || padT > 0 || vos.length > 0 || audOn;
     let outName, mime;
     if (!audioOnly && !needV && !needA) { outName = base; mime = 'video/mp4'; }
     else if (audioOnly && !needA) {
@@ -1376,6 +1485,7 @@ $('#xp-go').onclick = async () => {
         else args.push('-ss', it.l.in.toFixed(3), '-t', (it.l.len * spd(it.l)).toFixed(3), '-i', it.ln);
         if (it.l.mk) { const mw = ev(it.l.w * W), mh = ev(mw / it.l.ar), mn = `mk${it.i}.png`; await f.writeFile(mn, await maskPng(it.l.mk, mw, mh)); files.push(mn); it.m = idx++; args.push('-loop', '1', '-framerate', '30', '-t', it.l.len.toFixed(3), '-i', mn); }
       }
+      for (const v of vos) { const va = assets.get(v.asset), vn = `vo${idx}.${extOf(va.name)}`; await f.writeFile(vn, await fetchFile(va.file)); files.push(vn); args.push('-i', vn); v.i = idx++; }
       let mi = -1; if (music) { const ma = assets.get(music.asset); const mn = `music.${extOf(ma.name)}`; await f.writeFile(mn, await fetchFile(ma.file)); files.push(mn); args.push('-i', mn); mi = idx; }
       const parts = []; let vmap = '0:v';
       if (needV) {
@@ -1424,10 +1534,12 @@ $('#xp-go').onclick = async () => {
       let amap = '0:a';
       if (needA) {
         const aL = [];
-        parts.push(`[0:a]${padT > 0 ? `apad=pad_dur=${padT.toFixed(3)},` : ''}volume=${V1}[a0]`); aL.push('[a0]');
+        const afx = audFilters(aud); parts.push(`[0:a]${padT > 0 ? `apad=pad_dur=${padT.toFixed(3)},` : ''}${afx.length ? afx.join(',') + ',' : ''}volume=${V1}[a0]`); aL.push('[a0]');
         layerAudio.forEach(it => { const sp = spd(it.l); parts.push(`[${it.i}:a]${sp !== 1 ? atempoStr(sp) + ',' : ''}adelay=${Math.round(it.l.start * 1000)}:all=1[la${it.i}]`); aL.push(`[la${it.i}]`); });
         if (music) { const ms = Math.round(music.offset * 1000); parts.push(`[${mi}:a]volume=${Vm}${ms > 0 ? `,adelay=${ms}:all=1` : ''}[am]`); aL.push('[am]'); }
+        vos.forEach(v => { parts.push(`[${v.i}:a]aresample=44100,volume=${v.vol == null ? 1 : v.vol}${v.offset > 0 ? `,adelay=${Math.round(v.offset * 1000)}:all=1` : ''}[vo${v.i}]`); aL.push(`[vo${v.i}]`); });
         if (aL.length > 1) { parts.push(`${aL.join('')}amix=inputs=${aL.length}:duration=first:normalize=0[aout]`); amap = '[aout]'; } else amap = aL[0];
+        if (aud && (aud.fi > 0 || aud.fo > 0)) { const fl = []; if (aud.fi > 0) fl.push(`afade=t=in:st=0:d=${aud.fi}`); if (aud.fo > 0) fl.push(`afade=t=out:st=${Math.max(0, TT - aud.fo).toFixed(3)}:d=${aud.fo}`); parts.push(`${amap}${fl.join(',')}[afo]`); amap = '[afo]'; }
       }
       if (parts.length) args.push('-filter_complex', parts.join(';'));
       if (audioOnly) { args.push('-vn', '-map', amap, '-t', TT.toFixed(3), '-c:a', 'libmp3lame', '-q:a', '2', 'out.mp3'); outName = 'out.mp3'; mime = 'audio/mpeg'; }
@@ -1510,7 +1622,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-E', upd = document.getElementById('upd');
+  const VER = '1121-F', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
