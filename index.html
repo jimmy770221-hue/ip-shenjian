@@ -677,7 +677,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-Y（預覽音樂更順）</div>
+  <div class="hfoot">版本 1121-Z（配樂預覽更穩）</div>
   </main>
 </div>
 <div id="app">
@@ -1256,6 +1256,21 @@ function renderFrame() {
   if (selLy && showLy && !xsrc) { const l = state.layers.find(x => x.id === selLy); if (l && cur >= l.start && cur < l.start + l.len) { const r = lyRect(l); g.save(); g.setLineDash([8, 5]); g.lineWidth = 3; g.strokeStyle = '#ffb347'; g.strokeRect(r.x + 1.5, r.y + 1.5, r.cw - 3, r.ch - 3); g.restore(); } }
 }
 // 播放中校正：只有偏差很大、而且離上次校正超過1秒才跳轉，避免音樂/聲音一直被打斷（斷斷續續）
+// 配樂改用 WebAudio 解碼後播放（比 <audio> 穩，手機預覽不會斷斷續續）；太長的音樂（>6分鐘）維持原本方式
+let mbSrc = null, mbT0 = 0, mbOff = 0, mbGain = null, mbAsset = null;
+function musicBufStop() { if (mbSrc) { try { mbSrc.onended = null; mbSrc.stop(); } catch (e) {} try { mbSrc.disconnect(); } catch (e) {} mbSrc = null; } }
+function musicDecode(m) {
+  m.bufTry = true; if (!m.dur || m.dur > 360) return;
+  try { const c = awCtx(); m.file.arrayBuffer().then(ab => new Promise((ok, no) => c.decodeAudioData(ab, ok, no))).then(b => { m.buf = b; }).catch(() => {}); } catch (e) {}
+}
+function musicBuf(m, mw) {   // 回傳 true 表示已由 WebAudio 負責
+  if (!playing || mw < 0 || mw >= m.dur) { musicBufStop(); return !!m.buf; }
+  const c = awCtx(); if (!mbGain) { mbGain = c.createGain(); mbGain.connect(awMaster); }
+  mbGain.gain.value = clamp(state.vol.music, 0, 1);
+  if (mbSrc && mbAsset === m) { const exp = mbOff + (c.currentTime - mbT0); if (Math.abs(exp - mw) < 0.35) return true; }
+  musicBufStop(); const src = c.createBufferSource(); src.buffer = m.buf; src.connect(mbGain); src.start(0, Math.min(mw, m.buf.duration - 0.01));
+  mbSrc = src; mbAsset = m; mbT0 = c.currentTime; mbOff = mw; return true;
+}
 function needSeek(el, t, tol) {
   if (el.paused) return true; if (el.seeking) return false;
   const now = performance.now(); if (el._sk && now - el._sk < 1200) return false;
@@ -1290,8 +1305,10 @@ function syncMedia() {
   if (state.music) {
     const m = assets.get(state.music.asset), el = m.el, mw = cur - state.music.offset;
     el.volume = clamp(state.vol.music, 0, 1);
-    if (playing && mw >= 0 && mw < m.dur) { if (needSeek(el, mw, 0.6)) { el.currentTime = mw; } if (el.paused) el.play().catch(() => {}); }
-    else if (!el.paused) el.pause();
+    if (m.buf && musicBuf(m, mw)) { if (!el.paused) el.pause(); }   // 已解碼：用 WebAudio 播，不會斷斷續續
+    else if (playing && mw >= 0 && mw < m.dur) { musicBufStop(); if (needSeek(el, mw, 0.6)) { el.currentTime = mw; } if (el.paused) el.play().catch(() => {}); }
+    else { musicBufStop(); if (!el.paused) el.pause(); }
+    if (!m.buf && !m.bufTry && playing) musicDecode(m);
     if (!playing && mw >= 0 && mw < m.dur && Math.abs(el.currentTime - mw) > 0.05) el.currentTime = mw;
   }
   syncVo(); awSync();
@@ -1360,8 +1377,8 @@ function play() {
   state.layers.forEach(l => { const a = assets.get(l.asset); if (a && a.kind === 'video') { const e = layerEl(l); if (!e.unlocked) { e.unlocked = true; const p = e.play(); if (p) p.then(() => e.pause()).catch(() => { e.unlocked = false; }); } } });
   playing = true; playT0 = cur; wall0 = performance.now(); $('#b-play').textContent = '⏸';
 }
-function pause() { if (!playing) return; playing = false; $('#b-play').textContent = '▶'; assets.forEach(a => { if (a.el && !a.el.paused) a.el.pause(); }); lyEls.forEach(e => { if (!e.paused) e.pause(); }); syncMedia(); dirty = true; }
-function stopAtEnd() { playing = false; $('#b-play').textContent = '▶'; assets.forEach(a => { if (a.el && !a.el.paused) a.el.pause(); }); lyEls.forEach(e => { if (!e.paused) e.pause(); }); }
+function pause() { if (!playing) return; playing = false; musicBufStop(); $('#b-play').textContent = '▶'; assets.forEach(a => { if (a.el && !a.el.paused) a.el.pause(); }); lyEls.forEach(e => { if (!e.paused) e.pause(); }); syncMedia(); dirty = true; }
+function stopAtEnd() { playing = false; musicBufStop(); $('#b-play').textContent = '▶'; assets.forEach(a => { if (a.el && !a.el.paused) a.el.pause(); }); lyEls.forEach(e => { if (!e.paused) e.pause(); }); }
 function setCur(t, fromScroll) {
   cur = clamp(t, 0, total); if (playing && !fromScroll) { playT0 = cur; wall0 = performance.now(); }
   if (!fromScroll) setScroll(cur);
@@ -2498,7 +2515,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-Y';
+const VER_NOW = '1121-Z';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2671,7 +2688,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-Y', upd = document.getElementById('upd');
+  const VER = '1121-Z', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
