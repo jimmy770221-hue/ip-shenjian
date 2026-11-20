@@ -1,12 +1,156 @@
 {
-  "styles": [
-    { "id": "party", "name": "活力派對", "emoji": "🎉", "tracks": [] },
-    { "id": "warm", "name": "溫馨回憶", "emoji": "🌸", "tracks": [] },
-    { "id": "beat", "name": "動感節奏", "emoji": "⚡", "tracks": [] },
-    { "id": "cute", "name": "可愛俏皮", "emoji": "🧸", "tracks": [] },
-    { "id": "travel", "name": "旅行輕快", "emoji": "🌴", "tracks": [] },
-    { "id": "touch", "name": "感動抒情", "emoji": "🎻", "tracks": [] },
-    { "id": "retro", "name": "復古街機", "emoji": "🕹️", "tracks": [] },
-    { "id": "funny", "name": "搞笑歡樂", "emoji": "🤪", "tracks": [] }
-  ]
+ "styles": [
+  {
+   "id": "party",
+   "name": "活力派對",
+   "emoji": "🎉",
+   "tracks": [
+    {
+     "file": "party-01a.mp3",
+     "name": "活力派對 01"
+    },
+    {
+     "file": "party-01b.mp3",
+     "name": "活力派對 01（B版）"
+    },
+    {
+     "file": "party-02a.mp3",
+     "name": "活力派對 02"
+    },
+    {
+     "file": "party-02b.mp3",
+     "name": "活力派對 02（B版）"
+    }
+   ]
+  },
+  {
+   "id": "warm",
+   "name": "溫馨回憶",
+   "emoji": "🌸",
+   "tracks": [
+    {
+     "file": "warm-01a.mp3",
+     "name": "溫馨回憶 01"
+    },
+    {
+     "file": "warm-01b.mp3",
+     "name": "溫馨回憶 01（B版）"
+    },
+    {
+     "file": "warm-02a.mp3",
+     "name": "溫馨回憶 02"
+    },
+    {
+     "file": "warm-02b.mp3",
+     "name": "溫馨回憶 02（B版）"
+    }
+   ]
+  },
+  {
+   "id": "beat",
+   "name": "動感節奏",
+   "emoji": "⚡",
+   "tracks": [
+    {
+     "file": "beat-01a.mp3",
+     "name": "動感節奏 01"
+    },
+    {
+     "file": "beat-01b.mp3",
+     "name": "動感節奏 01（B版）"
+    },
+    {
+     "file": "beat-02a.mp3",
+     "name": "動感節奏 02"
+    },
+    {
+     "file": "beat-02b.mp3",
+     "name": "動感節奏 02（B版）"
+    }
+   ]
+  },
+  {
+   "id": "cute",
+   "name": "可愛俏皮",
+   "emoji": "🧸",
+   "tracks": [
+    {
+     "file": "cute-01a.mp3",
+     "name": "可愛俏皮 01"
+    },
+    {
+     "file": "cute-01b.mp3",
+     "name": "可愛俏皮 01（B版）"
+    },
+    {
+     "file": "cute-02a.mp3",
+     "name": "可愛俏皮 02"
+    },
+    {
+     "file": "cute-02b.mp3",
+     "name": "可愛俏皮 02（B版）"
+    }
+   ]
+  },
+  {
+   "id": "travel",
+   "name": "旅行輕快",
+   "emoji": "🌴",
+   "tracks": [
+    {
+     "file": "travel-01a.mp3",
+     "name": "旅行輕快 01"
+    },
+    {
+     "file": "travel-01b.mp3",
+     "name": "旅行輕快 01（B版）"
+    }
+   ]
+  },
+  {
+   "id": "touch",
+   "name": "感動抒情",
+   "emoji": "🎻",
+   "tracks": [
+    {
+     "file": "touch-01a.mp3",
+     "name": "感動抒情 01"
+    },
+    {
+     "file": "touch-01b.mp3",
+     "name": "感動抒情 01（B版）"
+    }
+   ]
+  },
+  {
+   "id": "retro",
+   "name": "復古街機",
+   "emoji": "🕹️",
+   "tracks": [
+    {
+     "file": "retro-01a.mp3",
+     "name": "復古街機 01"
+    },
+    {
+     "file": "retro-01b.mp3",
+     "name": "復古街機 01（B版）"
+    }
+   ]
+  },
+  {
+   "id": "funny",
+   "name": "搞笑歡樂",
+   "emoji": "🤪",
+   "tracks": [
+    {
+     "file": "funny-01a.mp3",
+     "name": "搞笑歡樂 01"
+    },
+    {
+     "file": "funny-01b.mp3",
+     "name": "搞笑歡樂 01（B版）"
+    }
+   ]
+  }
+ ]
 }
