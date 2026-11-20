@@ -176,7 +176,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-M（定格＋封面）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-N（內建小音效）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -1197,11 +1197,45 @@ function auHtml() {
   <label>🎙 錄音配音與更多音軌（建議錄音時戴耳機，不然會錄到影片的聲音）</label>
   <div class="r2"><button class="sm${rec ? ' red' : ' ok'}" id="au-rec">${rec ? '⏹ 停止錄音' : '🎙 開始錄音'}</button><button class="sm" id="au-play">▶ 從這裡播放</button></div>
   <div class="r2" style="margin-top:6px"><button class="sm" id="au-track">＋ 加入音效／另一首音樂（放在目前位置）</button></div>
+  <label>🔔 內建小音效（點一下會試聽，並加在目前位置；沒有版權問題）</label>
+  <div class="r2" style="flex-wrap:wrap;gap:6px">${SFX.map(x => `<button class="sm" data-sfx="${x[0]}">${x[1]}</button>`).join('')}</div>
   ${vos.length ? vos.map((v, i) => `<div class="r2" style="margin-top:6px;align-items:center"><span style="font-size:13px">🎙 ${esc((assets.get(v.asset) || {}).name || '')}（${v.offset.toFixed(1)}秒起）</span><button class="sm" data-voat="${i}">起點＝目前位置</button><button class="sm red" data-vodel="${i}">刪除</button></div><input type="range" data-vovol="${i}" min="0" max="1" step="0.05" value="${v.vol == null ? 1 : v.vol}">`).join('') : ''}
   <label>🥁 節拍標記（剪輯點，會顯示在時間尺上）${bt.length ? '：已標 ' + bt.length + ' 個' : ''}</label>
   <div class="r2"><button class="sm" id="bt-add">📍 在目前位置標記</button><button class="sm" id="bt-auto">🎵 從配樂自動找節拍</button></div>
   <div class="r2" style="margin-top:6px"><button class="sm" id="bt-cut">✂️ 依標記把影片切開</button><button class="sm red" id="bt-clr">清除標記</button></div>
   <div class="r2" style="margin-top:8px"><button class="sm ok" id="au-ok">完成</button></div>`;
+}
+/* ===== 內建小音效（用程式即時合成，沒有版權問題）===== */
+const SFX = [
+  ['ding', '🔔 叮', 0.9], ['gong', '🥁 登愣', 1.2], ['whoosh', '💨 嗖', 0.8], ['boom', '💥 砰', 1.0],
+  ['clap', '👏 鼓掌', 2.0], ['coin', '🪙 得分', 0.6], ['fail', '😵 失敗', 1.1], ['shutter', '📸 喀嚓', 0.3],
+  ['pop', '🎈 啵', 0.2], ['tada', '🎉 噹噹', 1.5]
+];
+function sfxMake(k) {
+  const sr = 44100, dur = SFX.find(x => x[0] === k)[2], n = Math.floor(sr * dur), o = new Float32Array(n);
+  let seed = 12345; const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296 * 2 - 1;
+  const tone = (f0, f1, t0, len, vol, type, dec) => { const i0 = Math.floor(t0 * sr), L2 = Math.floor(len * sr); let ph = 0; for (let i = 0; i < L2 && i0 + i < n; i++) { const t = i / L2, f = f0 + (f1 - f0) * t; ph += 2 * Math.PI * f / sr; const w = type === 'sq' ? (Math.sin(ph) > 0 ? 0.6 : -0.6) : Math.sin(ph); o[i0 + i] += w * vol * Math.exp(-t * dec) * Math.min(1, i / 80); } };
+  const noise = (t0, len, vol, dec, lp) => { const i0 = Math.floor(t0 * sr), L2 = Math.floor(len * sr); let y = 0; for (let i = 0; i < L2 && i0 + i < n; i++) { const t = i / L2; y += (rnd() - y) * lp; o[i0 + i] += y * vol * Math.exp(-t * dec); } };
+  if (k === 'ding') { tone(1318, 1318, 0, 0.9, 0.5, 's', 5); tone(2636, 2636, 0, 0.9, 0.2, 's', 7); }
+  else if (k === 'gong') { tone(110, 100, 0, 1.2, 0.6, 's', 3); tone(220, 200, 0, 1.2, 0.3, 's', 4); tone(331, 300, 0, 1.2, 0.2, 's', 5); noise(0, 0.1, 0.3, 6, 0.3); }
+  else if (k === 'whoosh') { const L2 = Math.floor(0.8 * sr); let y = 0; for (let i = 0; i < L2; i++) { const t = i / L2, lp = 0.03 + 0.5 * Math.sin(Math.PI * t) ** 2; y += (rnd() - y) * lp; o[i] = y * Math.sin(Math.PI * t) * 1.6; } }
+  else if (k === 'boom') { tone(90, 30, 0, 1.0, 0.9, 's', 3.5); noise(0, 0.25, 0.6, 8, 0.2); }
+  else if (k === 'clap') { for (let c = 0; c < 28; c++) noise(Math.random() * 1.7, 0.06, 0.35 + Math.random() * 0.3, 7, 0.55); }
+  else if (k === 'coin') { tone(988, 988, 0, 0.1, 0.4, 'sq', 1); tone(1319, 1319, 0.09, 0.5, 0.4, 'sq', 5); }
+  else if (k === 'fail') { [[392, 0], [370, 0.22], [349, 0.44], [330, 0.66]].forEach(([f, t], i) => tone(f, f * (i === 3 ? 0.8 : 0.97), t, i === 3 ? 0.45 : 0.22, 0.45, 'sq', i === 3 ? 3 : 1)); }
+  else if (k === 'shutter') { noise(0, 0.05, 0.9, 5, 0.6); noise(0.12, 0.08, 0.7, 5, 0.4); }
+  else if (k === 'pop') { tone(900, 250, 0, 0.12, 0.8, 's', 5); noise(0, 0.02, 0.4, 3, 0.8); }
+  else if (k === 'tada') { [[523, 0, 0.14], [659, 0.14, 0.14], [784, 0.28, 0.14], [1047, 0.42, 1.0]].forEach(([f, t, l], i) => { tone(f, f, t, l, 0.35, 's', i === 3 ? 3 : 2); tone(f * 2, f * 2, t, l, 0.1, 's', 4); }); noise(0.42, 0.3, 0.15, 6, 0.7); }
+  let mx = 0; for (let i = 0; i < n; i++) mx = Math.max(mx, Math.abs(o[i])); const g = mx > 0 ? 0.85 / mx : 1;
+  const buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf), w = (off, str) => { for (let i = 0; i < str.length; i++) v.setUint8(off + i, str.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, o[i] * g)) * 32767, true);
+  return new File([buf], '音效_' + SFX.find(x => x[0] === k)[1].replace(/^\S+\s/, '') + '.wav', { type: 'audio/wav' });
+}
+async function sfxAdd(k) {
+  if (!total) return toast('請先加入影片或照片');
+  const f = sfxMake(k); try { const pa = new Audio(URL.createObjectURL(f)); pa.play().catch(() => {}); } catch (er) {}
+  await addTrack(f);
 }
 let auBusy = false, auPl = null;
 async function auPreview() {
@@ -1279,6 +1313,7 @@ function bindAu(on) {
   on('#au-rec', 'click', () => { if (rec) recStop(); else recStart(); });
   on('#au-track', 'click', () => $('#f-track').click());
   document.querySelectorAll('#ctx [data-voat]').forEach(b => b.onclick = () => { commit(); state.vo[+b.dataset.voat].offset = +cur.toFixed(2); renderTimeline(); renderCtx(); syncMedia(); });
+  document.querySelectorAll('#ctx [data-sfx]').forEach(b => b.onclick = () => sfxAdd(b.dataset.sfx));
   on('#au-play', 'click', () => { if (playing) pause(); else play(); });
   document.querySelectorAll('#ctx [data-vodel]').forEach(b => b.onclick = () => { commit(); const v = state.vo.splice(+b.dataset.vodel, 1)[0]; const as = v && assets.get(v.asset); if (as && as.el) as.el.pause(); renderTimeline(); renderCtx(); });
   document.querySelectorAll('#ctx [data-vovol]').forEach(el => el.addEventListener('input', () => { touch('vov' + el.dataset.vovol); state.vo[+el.dataset.vovol].vol = +el.value; syncVo(); }));
@@ -1924,7 +1959,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-M', upd = document.getElementById('upd');
+  const VER = '1121-N', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
