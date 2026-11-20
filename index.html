@@ -677,7 +677,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AF（配樂庫擴充）</div>
+  <div class="hfoot">版本 1121-AG（預覽更清晰）</div>
   </main>
 </div>
 <div id="app">
@@ -972,7 +972,14 @@ async function addMusic(file) {
 
 /* ================= 預覽引擎 ================= */
 const cv = $('#cv'), g = cv.getContext('2d');
-function applyRatio() { const [w, h] = RATIO[state.ratio]; cv.width = w; cv.height = h; dirty = true; }
+let pvK = 1, pvIdle = 0;   // 預覽清晰度：播放中用小畫布（順暢），暫停一下就用 2 倍畫布重畫（清楚）
+function applyRatio() { const [w, h] = RATIO[state.ratio]; cv.width = w * pvK; cv.height = h * pvK; dirty = true; }
+function pvAuto(now) {
+  if (exporting || xsrc) return;
+  if (playing) { pvIdle = 0; if (pvK !== 1) { pvK = 1; applyRatio(); } return; }
+  if (!pvIdle) pvIdle = now;
+  if (pvK !== 2 && now - pvIdle > 300) { pvK = 2; applyRatio(); }
+}
 const textAnc = {}, textAncEx = {};
 function drawText(g, W, H, x, tl) {
   const fs = Math.round(H * x.size / 100);
@@ -1413,6 +1420,7 @@ function setCur(t, fromScroll) {
   syncMedia(); dirty = true; updateTime(); updateActive();
 }
 function tick(now) {
+  pvAuto(now);
   if (playing) {
     cur = playT0 + (now - wall0) / 1000;
     if (cur >= total) { cur = total; stopAtEnd(); }
@@ -2562,7 +2570,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AF';
+const VER_NOW = '1121-AG';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2770,7 +2778,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AF', upd = document.getElementById('upd');
+  const VER = '1121-AG', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
