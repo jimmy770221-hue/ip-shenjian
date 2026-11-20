@@ -677,7 +677,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AC（漫畫貼紙）</div>
+  <div class="hfoot">版本 1121-AD（配樂庫）</div>
   </main>
 </div>
 <div id="app">
@@ -738,6 +738,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tb" data-a="fx"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3ZM20 3v4m-2-2h4"/></svg></i>調整</button>
     <button class="tb" data-a="kf"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9zM9 12h6m-3-3v6"/></svg></i>動畫</button>
     <button class="tb" data-a="clip"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8m-8 4h5"/></svg></i>片段設定</button>
+    <button class="tb" data-a="lib"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h12M4 11h12M4 16h7"/><path d="M19 8v9"/><ellipse cx="17" cy="17.5" rx="2" ry="1.6"/></svg></i>配樂庫</button>
     <button class="tb" data-a="music"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V6l10-2v11"/><ellipse cx="6.5" cy="17.5" rx="2.5" ry="2"/><ellipse cx="16.5" cy="15.5" rx="2.5" ry="2"/></svg></i>配樂</button>
     <button class="tb" data-a="au"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h3l2-5 4 10 3-8 2 3h4"/></svg></i>音訊與音效</button>
     <button class="tb" data-a="text"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7V5h14v2m-7-2v14m-4 0h8"/></svg></i>加文字</button>
@@ -1556,6 +1557,7 @@ const ops = {
     state.texts.push(x); clearSel(); selText = x.id; renderTimeline(); renderCtx(); dirty = true;
   },
   music() { $('#f-music').click(); },
+  lib() { libOpen(); },
   fx() { clearSel(); showFx = true; renderTimeline(); renderCtx(); },
   ly() { clearSel(); showLy = true; renderTimeline(); renderCtx(); dirty = true; },
   kf() { const m = (showLy && selLy) ? 'ly' : 'clip', id = selLy; clearSel(); showKf = true; kfMode = m; kfLyId = id; renderTimeline(); renderCtx(); dirty = true; },
@@ -1567,10 +1569,10 @@ const ops = {
   tpl() { clearSel(); showAuto = true; autoMode = 'tpl'; renderTimeline(); renderCtx(); },
   undo, redo
 };
-const PANEL_OPS = new Set(['fx', 'ly', 'kf', 'au', 'st', 'ef', 'auto', 'tpl', 'clip', 'text', 'cam']);
+const PANEL_OPS = new Set(['lib', 'fx', 'ly', 'kf', 'au', 'st', 'ef', 'auto', 'tpl', 'clip', 'text', 'cam']);
 document.addEventListener('click', e => { const b = e.target.closest('.tb'); if (!b || b.disabled || !ops[b.dataset.a]) return; pause(); ops[b.dataset.a](); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); });
 /* ===== 底部浮出：分類面板＋設定面板（不擠壓預覽）===== */
-const CATS = { edit: ['編輯', ['split', 'freeze', 'trimL', 'trimR', 'del', 'mvL', 'mvR', 'fx', 'kf', 'clip']], music: ['音樂', ['music', 'au']], text: ['文字', ['text', 'st']], fx: ['特效', ['ef', 'ly', 'auto', 'tpl']] };
+const CATS = { edit: ['編輯', ['split', 'freeze', 'trimL', 'trimR', 'del', 'mvL', 'mvR', 'fx', 'kf', 'clip']], music: ['音樂', ['lib', 'music', 'au']], text: ['文字', ['text', 'st']], fx: ['特效', ['ef', 'ly', 'auto', 'tpl']] };
 let catKey = null;
 function closeCats() { const g = $('#cats-g'), pool = $('#tbpool'); [...g.children].forEach(b => pool.appendChild(b)); $('#cats').classList.remove('on'); catKey = null; }
 function openCat(k) {
@@ -2560,7 +2562,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AC';
+const VER_NOW = '1121-AD';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2718,6 +2720,41 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
   stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
 })();
 
+/* ===== 配樂庫：音樂放在 music/ 資料夾，學生按「使用」才下載那一首（APP 不會變大）===== */
+let libBox = null, libPrev = null, libData = null;
+function libStop() { if (libPrev) { try { libPrev.pause(); } catch (e) {} libPrev = null; } }
+function libClose() { libStop(); if (libBox) { libBox.remove(); libBox = null; } }
+async function libOpen() {
+  libClose(); pause();
+  libBox = document.createElement('div');
+  libBox.style.cssText = 'position:fixed;left:0;right:0;bottom:0;top:12%;z-index:9000;background:#1a1c28;color:#fff;border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.5);display:flex;flex-direction:column;padding:14px;font-size:15px';
+  libBox.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><b style="font-size:17px">🎵 配樂庫</b><button id="lib-x" style="background:#2c2f45;color:#fff;border:0;border-radius:10px;padding:8px 14px;font-size:15px">關閉</button></div><div id="lib-tabs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px"></div><div id="lib-list" style="flex:1;overflow:auto"><p style="opacity:.7">載入中…</p></div>';
+  document.body.appendChild(libBox); libBox.querySelector('#lib-x').onclick = libClose;
+  try {
+    if (!libData) { const r = await fetch('music/manifest.json?v=' + Date.now(), { cache: 'no-store' }); if (!r.ok) throw 0; libData = await r.json(); }
+  } catch (e) { libBox.querySelector('#lib-list').innerHTML = '<p>要連上網路才能打開配樂庫喔。</p>'; return; }
+  const tabs = libBox.querySelector('#lib-tabs'); let curId = (libData.styles.find(x => x.tracks.length) || libData.styles[0]).id;
+  const draw = () => {
+    tabs.innerHTML = libData.styles.map(x => `<button data-id="${x.id}" style="flex:none;border:0;border-radius:18px;padding:8px 14px;font-size:14px;color:#fff;background:${x.id === curId ? 'var(--main,#7c5cff)' : '#2c2f45'}">${x.emoji} ${x.name}${x.tracks.length ? '' : '（準備中）'}</button>`).join('');
+    tabs.querySelectorAll('button').forEach(b => b.onclick = () => { curId = b.dataset.id; libStop(); draw(); });
+    const st = libData.styles.find(x => x.id === curId), box = libBox.querySelector('#lib-list');
+    if (!st.tracks.length) { box.innerHTML = '<p style="opacity:.7">這個風格的歌還在準備中，敬請期待！</p>'; return; }
+    box.innerHTML = st.tracks.map((t, i) => `<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #2c2f45"><button data-pv="${i}" style="flex:none;width:42px;height:42px;border-radius:21px;border:0;background:#2c2f45;color:#fff;font-size:16px">▶</button><span style="flex:1">${t.name}</span><button data-use="${i}" style="flex:none;border:0;border-radius:10px;padding:10px 16px;background:var(--main,#7c5cff);color:#fff;font-weight:700;font-size:15px">使用</button></div>`).join('');
+    box.querySelectorAll('[data-pv]').forEach(b => b.onclick = () => {
+      const t = st.tracks[+b.dataset.pv], url = 'music/' + t.file;
+      if (libPrev && libPrev._u === url && !libPrev.paused) { libStop(); box.querySelectorAll('[data-pv]').forEach(x => x.textContent = '▶'); return; }
+      libStop(); box.querySelectorAll('[data-pv]').forEach(x => x.textContent = '▶'); const au = new Audio(url); au._u = url; libPrev = au; b.textContent = '⏸';
+      au.onended = () => { b.textContent = '▶'; }; au.onerror = () => { toast('這首讀不到，請確認網路'); b.textContent = '▶'; }; au.play().catch(() => {});
+    });
+    box.querySelectorAll('[data-use]').forEach(b => b.onclick = async () => {
+      const t = st.tracks[+b.dataset.use]; libStop(); b.disabled = true; b.textContent = '下載中…';
+      try { const r = await fetch('music/' + t.file); if (!r.ok) throw 0; const bl = await r.blob(); const f = new File([bl], t.name + '.mp3', { type: 'audio/mpeg' }); libClose(); await addMusic(f); }
+      catch (e) { b.disabled = false; b.textContent = '使用'; toast('下載失敗，請確認網路再試一次'); }
+    });
+  };
+  draw();
+}
+
 /* ===== 小工具：在原頁面上蓋一層打開，返回就回到剛剛的地方（編輯中的作品不會消失）===== */
 (function () {
   let fr = null;
@@ -2733,7 +2770,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AC', upd = document.getElementById('upd');
+  const VER = '1121-AD', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());

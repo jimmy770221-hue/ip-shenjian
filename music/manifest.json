@@ -1,0 +1,12 @@
+{
+  "styles": [
+    { "id": "party", "name": "活力派對", "emoji": "🎉", "tracks": [] },
+    { "id": "warm", "name": "溫馨回憶", "emoji": "🌸", "tracks": [] },
+    { "id": "beat", "name": "動感節奏", "emoji": "⚡", "tracks": [] },
+    { "id": "cute", "name": "可愛俏皮", "emoji": "🧸", "tracks": [] },
+    { "id": "travel", "name": "旅行輕快", "emoji": "🌴", "tracks": [] },
+    { "id": "touch", "name": "感動抒情", "emoji": "🎻", "tracks": [] },
+    { "id": "retro", "name": "復古街機", "emoji": "🕹️", "tracks": [] },
+    { "id": "funny", "name": "搞笑歡樂", "emoji": "🤪", "tracks": [] }
+  ]
+}
