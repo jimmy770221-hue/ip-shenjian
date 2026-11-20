@@ -730,7 +730,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AO（快速成片素材包）</div>
+  <div class="hfoot">版本 1121-AP（6 種實用轉場）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -1357,8 +1357,59 @@ function drawTrans(type, p, dA, dB) {
     case 'zoom': {   // 放大衝進下一段
       g.save(); g.translate(W / 2, H / 2); g.scale(1 + 0.5 * p, 1 + 0.5 * p); g.translate(-W / 2, -H / 2); dA(); g.restore();
       g.save(); g.globalAlpha = clamp(p * 1.6, 0, 1); g.translate(W / 2, H / 2); g.scale(1.3 - 0.3 * p, 1.3 - 0.3 * p); g.translate(-W / 2, -H / 2); dB(); g.restore(); g.globalAlpha = 1; break; }
+    case 'dissolve': case 'mosaic': {   // 溶解（細顆粒）／方塊馬賽克（大方塊）：隨機一格一格換成下一段
+      const nx = type === 'dissolve' ? 90 : 12, ny = Math.max(type === 'dissolve' ? 6 : 6, Math.round(nx * H / W)), cw = W / nx, ch = H / ny;
+      dA(); g.save(); g.beginPath();
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { if (trCellV(type, i, j, nx, ny) < p * (type === 'dissolve' ? 1 : 1.02)) g.rect(i * cw - 0.5, j * ch - 0.5, cw + 1, ch + 1); }
+      g.clip(); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); dB(); g.restore(); break; }
+    case 'blinds': {   // 百葉窗：8 條橫條，各自由上往下打開
+      dA(); g.save(); g.beginPath(); const bh = H / 8; for (let i = 0; i < 8; i++) g.rect(0, i * bh, W, bh * p + 0.5); g.clip(); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); dB(); g.restore(); break; }
+    case 'split': {   // 對開：從中間往左右打開
+      dA(); g.save(); g.beginPath(); g.rect(W * (0.5 - p / 2), 0, W * p, H); g.clip(); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); dB(); g.restore(); break; }
+    case 'pageturn': {   // 翻頁：折線由右往左掃過，折線旁有陰影
+      const e = 1.12 - 1.3 * p, sx = (x, y) => x / W * 0.9 + (1 - y / H) * 0.1;
+      const xa = y => (e - (1 - y / H) * 0.1) / 0.9 * W;   // 折線在高度 y 的 x 位置
+      const poly = (off) => { g.beginPath(); g.moveTo(xa(0) + off, 0); g.lineTo(xa(H) + off, H); g.lineTo(W + 2, H); g.lineTo(W + 2, 0); g.closePath(); };
+      dA();
+      const wd = 0.1 / 0.9 * W, wb = 0.06 / 0.9 * W;
+      g.save(); g.beginPath(); g.moveTo(xa(0) - wd, 0); g.lineTo(xa(H) - wd, H); g.lineTo(xa(H), H); g.lineTo(xa(0), 0); g.closePath(); g.clip();
+      let gr = g.createLinearGradient(xa(H / 2) - wd, 0, xa(H / 2), 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,0.5)'); g.fillStyle = gr; g.fillRect(0, 0, W, H); g.restore();
+      g.save(); poly(0); g.clip(); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); dB();
+      gr = g.createLinearGradient(xa(H / 2), 0, xa(H / 2) + wb, 0); gr.addColorStop(0, 'rgba(0,0,0,0.4)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, H); g.restore(); break; }
+    case 'whip': {   // 快速甩動：很快的推擠（前慢、中間飛快、後慢）
+      const q = trWhipE(p);
+      g.save(); g.translate(-W * q, 0); dA(); g.restore();
+      g.save(); g.translate(W * (1 - q), 0); dB(); g.restore(); break; }
     default: dB();
   }
+}
+function trCellV(type, i, j, nx, ny) {   // 每一格換畫面的「先後順序值」(0~1)，預覽與相容匯出用同一條公式
+  const h = Math.abs(Math.sin(i * 12.9898 + j * 78.233) * 43758.5453) % 1;
+  return type === 'dissolve' ? h : h * 0.55 + 0.45 * ((i / nx + j / ny) / 2);
+}
+const trWhipE = p => p < 0.5 ? 16 * Math.pow(p, 5) : 1 - Math.pow(-2 * p + 2, 5) / 2;
+// 相容匯出：新轉場用 ffmpeg 的 blend／overlay 算式做（公式與預覽相同）
+function trFilter(type, td, W, H) {
+  const P = `(T/${td})`;
+  const sel = m => `if(${m},B,A)`;
+  if (type === 'whip') {
+    const pp = `(t/${td})`, E = `if(lt(${pp},0.5),16*pow(${pp},5),1-pow(-2*${pp}+2,5)/2)`;
+    return `color=c=black:s=${W}x${H}:r=30:d=${td}[bg];[bg][0:v]overlay=x='-main_w*${E}':y=0:eval=frame[o1];[o1][1:v]overlay=x='main_w*(1-${E})':y=0:eval=frame:shortest=1,format=yuv420p[v]`;
+  }
+  let m, luma = null;
+  if (type === 'dissolve' || type === 'mosaic') {
+    const nx = type === 'dissolve' ? 90 : 12, ny = Math.max(6, Math.round(nx * H / W));
+    const i = `floor(X/W*${nx})`, j = `floor(Y/H*${ny})`, h = `mod(abs(sin(${i}*12.9898+${j}*78.233)*43758.5453),1)`;
+    const v = type === 'dissolve' ? h : `(${h}*0.55+0.45*((${i}/${nx}+${j}/${ny})/2))`;
+    m = `lt(${v},${P}*${type === 'dissolve' ? 1 : 1.02})`;
+  } else if (type === 'blinds') m = `lt(mod(Y/H*8,1),${P})`;
+  else if (type === 'split') m = `lt(abs(X/W-0.5)*2,${P})`;
+  else if (type === 'pageturn') {
+    const S = `(X/W*0.9+(1-Y/H)*0.1)`, E = `(1.12-1.3*${P})`;
+    m = `gt(${S},${E})`;
+    luma = `if(gt(${S},${E}),B*if(lt(${S}-${E},0.06),0.6+0.4*(${S}-${E})/0.06,1),A*if(gt(${S},${E}-0.1),0.5+0.5*(${E}-${S})/0.1,1))`;
+  } else return null;
+  return `[0:v]setpts=PTS-STARTPTS,format=gbrp[ta];[1:v]setpts=PTS-STARTPTS,format=gbrp[tb];[ta][tb]blend=all_expr='${luma || sel(m)}',format=yuv420p[v]`;   // 用 RGB 三個色版一起算，避免亮度與色度的遮罩對不齊
 }
 function renderFrame() {
   g.fillStyle = '#000'; g.fillRect(0, 0, cv.width, cv.height);
@@ -1903,8 +1954,8 @@ function renderCtx() {
   }
   on('#vol-m', 'input', e => { touch('vm'); state.vol.music = +e.target.value; e.target.previousElementSibling.textContent = '配樂音量 ' + Math.round(state.vol.music * 100) + '%'; syncMedia(); });
 }
-const TRS = [['fade', '淡入淡出', '🌫'], ['fadeblack', '黑場過渡', '⬛'], ['fadewhite', '閃白', '⬜'], ['slideleft', '向左推', '⬅️'], ['slideright', '向右推', '➡️'], ['slideup', '向上推', '⬆️'], ['slidedown', '向下推', '⬇️'], ['wipeleft', '向左擦拭', '◀️'], ['wiperight', '向右擦拭', '▶️'], ['circleopen', '圓形展開', '⭕'], ['circleclose', '圓形收合', '🎯'], ['radial', '時鐘擦拭', '🕐'], ['star', '星星放大', '⭐'], ['heart', '愛心放大', '💗'], ['torn', '撕紙', '📄'], ['zoom', '放大衝入', '🔍']];
-const AUTO_STYLES = [['🎲 隨機混合', TRS.map(t => t[0])], ['🌫 柔和淡入淡出', ['fade']], ['➡️ 推擠換頁', ['slideleft', 'slideright', 'slideup', 'slidedown']], ['🧹 擦拭換頁', ['wipeleft', 'wiperight']], ['⭕ 圓形與時鐘', ['circleopen', 'circleclose', 'radial']], ['⚡ 閃光動感', ['fadewhite', 'fadeblack']], ['🎈 派對形狀', ['star', 'heart', 'torn', 'zoom']]];
+const TRS = [['fade', '淡入淡出', '🌫'], ['fadeblack', '黑場過渡', '⬛'], ['fadewhite', '閃白', '⬜'], ['slideleft', '向左推', '⬅️'], ['slideright', '向右推', '➡️'], ['slideup', '向上推', '⬆️'], ['slidedown', '向下推', '⬇️'], ['wipeleft', '向左擦拭', '◀️'], ['wiperight', '向右擦拭', '▶️'], ['circleopen', '圓形展開', '⭕'], ['circleclose', '圓形收合', '🎯'], ['radial', '時鐘擦拭', '🕐'], ['star', '星星放大', '⭐'], ['heart', '愛心放大', '💗'], ['torn', '撕紙', '📄'], ['zoom', '放大衝入', '🔍'], ['dissolve', '溶解', '✨'], ['mosaic', '方塊馬賽克', '🟦'], ['blinds', '百葉窗', '🪟'], ['split', '對開', '🚪'], ['pageturn', '翻頁', '📖'], ['whip', '快速甩動', '💨']];
+const AUTO_STYLES = [['🎲 隨機混合', TRS.map(t => t[0])], ['🌫 柔和淡入淡出', ['fade']], ['➡️ 推擠換頁', ['slideleft', 'slideright', 'slideup', 'slidedown']], ['🧹 擦拭換頁', ['wipeleft', 'wiperight']], ['⭕ 圓形與時鐘', ['circleopen', 'circleclose', 'radial']], ['⚡ 閃光動感', ['fadewhite', 'fadeblack']], ['🎈 派對形狀', ['star', 'heart', 'torn', 'zoom']], ['✂️ 實用轉場', ['dissolve', 'mosaic', 'blinds', 'split', 'pageturn', 'whip']]];
 const SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3, 4];
 const RAMPS = [['up', '漸快', [0.5, 0.75, 1, 1.5, 2]], ['down', '漸慢', [2, 1.5, 1, 0.75, 0.5]], ['bullet', '慢快慢（子彈時間）', [1, 0.5, 0.25, 0.5, 1]], ['punch', '快慢快（重點放慢）', [2, 1, 0.5, 1, 2]], ['pulse', '忽快忽慢', [1, 0.5, 2, 0.5, 1]]];
 function fxHtml() {
@@ -2620,7 +2671,7 @@ $('#xp-go').onclick = async () => {
       stepStart(`正在製作第 ${k + 1} → ${k + 2} 段的換頁效果…`);
       const args = ['-i', `t${k}.${segExt}`, '-i', `h${k + 1}.${segExt}`];
       if (audioOnly) args.push('-filter_complex', `[0:a][1:a]acrossfade=d=${td}[a]`, '-map', '[a]', '-c:a', 'aac', '-ar', '44100', '-ac', '2');
-      else args.push('-filter_complex', `[0:v][1:v]xfade=transition=${({ star: 'circleopen', heart: 'circleopen', torn: 'wipeleft', zoom: 'zoomin' })[B.c.tr.type] || B.c.tr.type}:duration=${td}:offset=0,format=yuv420p[v];[0:a][1:a]acrossfade=d=${td}[a]`, '-map', '[v]', '-map', '[a]', ...X264, '-crf', '23', '-c:a', 'aac', '-ar', '44100', '-ac', '2');
+      else args.push('-filter_complex', `${trFilter(B.c.tr.type, td, W, H) || `[0:v][1:v]xfade=transition=${({ star: 'circleopen', heart: 'circleopen', torn: 'wipeleft', zoom: 'zoomin' })[B.c.tr.type] || B.c.tr.type}:duration=${td}:offset=0,format=yuv420p[v]`};[0:a][1:a]acrossfade=d=${td}[a]`, '-map', '[v]', '-map', '[a]', ...X264, '-crf', '23', '-c:a', 'aac', '-ar', '44100', '-ac', '2');
       args.push(xn);
       if (await f.exec(args) !== 0) throw new Error('換頁效果製作失敗');
       stepDone++; segs.push(xn); files.push(xn); list.push(xn);
@@ -2762,7 +2813,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AO';
+const VER_NOW = '1121-AP';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2890,6 +2941,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
     { id: 'travel', n: '✈️ 旅行日記', d: '推擠、放大，像 vlog', tr: ['slideleft', 'zoom', 'slideright', 'fade'], dur: 0.7, cap: 3.6, ph: 2.8, c: '#ffffff', end: '#ffffff', kb: 1 },
     { id: 'touch', n: '🥹 感動時刻', d: '慢慢推近、柔光淡入', tr: ['fade', 'fadewhite', 'fade'], dur: 1.2, cap: 5, ph: 3, c: '#ffffff', end: '#ffffff', kb: 1 },
     { id: 'retro', n: '📼 復古底片', d: '黑場過渡、撕紙感', tr: ['fadeblack', 'torn', 'fade'], dur: 0.8, cap: 3.5, ph: 2.8, c: '#ffd59a', end: '#ffd59a', kb: 1 },
+    { id: 'util', n: '✂️ 實用轉場', d: '溶解、馬賽克、百葉窗、對開、翻頁、甩動', tr: ['dissolve', 'mosaic', 'blinds', 'split', 'pageturn', 'whip'], dur: 0.6, cap: 3.5, ph: 2.6, c: '#ffffff', end: '#ffffff' },
     { id: 'funny', n: '😂 搞笑整人', d: '放大衝進、撕紙、搞笑貼紙', tr: ['zoom', 'star', 'torn', 'slidedown'], dur: 0.5, cap: 2.6, ph: 2.2, c: '#ffe14d', end: '#ff6b6b', stk: 1 }
   ];
   const QSTK = ['太好玩了！', '來！', '讚！', '笑死', '好吃！', '開心', '超可愛', '耶！'];
@@ -3280,7 +3332,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AO', upd = document.getElementById('upd');
+  const VER = '1121-AP', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
