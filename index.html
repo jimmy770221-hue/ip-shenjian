@@ -60,17 +60,41 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .quick{display:flex;gap:8px;padding:4px 8px;background:var(--bg)}
 .quick button{flex:1;background:var(--panel2);color:var(--text);border:1px dashed var(--line);border-radius:9px;padding:6px 4px;font-size:13px;font-weight:700}
 .quick button:active{background:var(--line)}
-.toolbar{display:flex;gap:4px;overflow-x:auto;padding:6px;background:var(--panel);scrollbar-width:none}
+/* toolbar 改為大分類（見後面 .toolbar） */
 .toolbar::-webkit-scrollbar{display:none}
 .tb{flex:0 0 auto;min-width:50px;background:transparent;border:0;color:var(--text);padding:3px 4px;border-radius:10px;font-size:10px;display:flex;flex-direction:column;align-items:center;gap:1px}
 .tb i{font-style:normal;font-size:17px;line-height:1}
 .tb:active{background:var(--panel2)}
 .tb:disabled{opacity:.35}
-.ctx{background:var(--panel);padding:6px 12px 8px;max-height:13vh;overflow-y:auto;border-top:1px solid var(--line);font-size:14px}
-.ctx.edit{max-height:30vh}
+.ctx{position:fixed;left:0;right:0;bottom:0;max-width:760px;margin:0 auto;z-index:57;display:none;background:var(--panel);padding:12px 14px calc(14px + env(safe-area-inset-bottom));max-height:42vh;overflow-y:auto;border-radius:20px 20px 0 0;box-shadow:0 -10px 30px #000c;font-size:14px;animation:shup .18s ease-out}
+.ctx.edit{max-height:42vh}
+@keyframes shup{from{transform:translateY(40px);opacity:.3}to{transform:none;opacity:1}}
+.sh-x{position:sticky;top:0;float:right;z-index:3;width:40px;height:40px;border-radius:50%;background:var(--main);color:#fff;border:0;font-size:20px;margin:0 0 4px 8px}
+#cats{position:fixed;left:0;right:0;bottom:0;max-width:760px;margin:0 auto;z-index:57;display:none;background:var(--panel);padding:12px 12px calc(14px + env(safe-area-inset-bottom));border-radius:20px 20px 0 0;box-shadow:0 -10px 30px #000c;animation:shup .18s ease-out}
+#cats.on{display:block}
+#cats .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#cats .hd b{font-size:15px}
+#cats-x{width:40px;height:40px;border-radius:50%;background:var(--main);color:#fff;border:0;font-size:20px}
+#cats-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px}
+#cats-g .tb{min-width:0;width:100%;background:var(--panel2);border-radius:14px;padding:12px 2px 9px;font-size:12px;gap:5px}
+#cats-g .tb i{font-size:24px}
+#lower{position:relative;z-index:5;background:var(--bg);transition:transform .18s ease-out}
+.cat{flex:1;background:var(--panel2);border:0;color:var(--text);border-radius:14px;padding:9px 2px 7px;font-size:13px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px}
+.cat i{font-style:normal;font-size:22px;line-height:1}.cat:active{background:var(--line)}
+.zb{position:absolute;top:1px;right:6px;z-index:4;display:flex;gap:4px}
+.zb button{width:30px;height:20px;border-radius:6px;border:1px solid var(--line);background:#1d2030ee;color:#fff;font-size:13px;line-height:1;padding:0}
+.transport .tb{min-width:38px;font-size:19px;padding:6px 4px;flex-direction:row}
+.transport .time{text-align:left;flex:1;white-space:nowrap;font-size:12px;min-width:0}.transport .time b{font-size:13px}
+#b-full{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:15px;font-weight:700;min-width:40px}
+#app.full .top,#app.full .tl,#app.full .toolbar,#app.full .quick,#app.full #ctx,#app.full #cats{display:none!important}
+#app.full #lower{transform:none!important}
+#app.full .transport .tb,#app.full #b-prev,#app.full #b-next{display:none}
+#app.full .transport{padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+.quick{display:none!important}
+.toolbar{display:flex;gap:8px;padding:8px 10px;background:var(--panel)}
+
 .ctx h4{margin:4px 0 6px;font-size:13px;color:var(--sub);font-weight:600}
 .ctx label{display:block;font-size:12px;color:var(--sub);margin:8px 0 3px}
-.ctx input[type=number],.ctx textarea,.ctx select{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px;font-size:16px;font-family:inherit}
+.ctx input[type=number],.ctx input[type=text],.ctx textarea,.ctx select{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px;font-size:16px;font-family:inherit}
 .ctx textarea{min-height:54px;resize:vertical}
 .ctx input[type=range]{width:100%;height:30px}
 .ctx .r2{display:flex;gap:8px}.ctx .r2>*{flex:1}
@@ -183,7 +207,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-Q（介面改版：加號與音量）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-R（介面改版：簡約版）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -198,12 +222,14 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <canvas id="cv" width="360" height="640"></canvas>
     <div class="empty" id="empty">按時間軸右邊的「＋」<br>選擇活動的影片和照片開始剪輯</div>
   </div>
+  <div id="lower">
   <div class="transport">
+    <div class="time"><b id="t-cur">0:00.0</b> / <span id="t-tot">0:00.0</span></div>
     <button id="b-prev">◀1格</button>
     <button class="play" id="b-play">▶</button>
     <button id="b-next">1格▶</button>
-    <div class="time"><b id="t-cur">0:00.0</b> / <span id="t-tot">0:00.0</span></div>
-    <button id="z-out">－</button><button id="z-in">＋</button>
+    <button class="tb" data-a="undo" title="復原">↩️</button><button class="tb" data-a="redo" title="重做">↪️</button>
+    <button id="b-full" title="放大預覽">⛶</button>
   </div>
   <div class="tl" id="tl">
     <div id="scroller"><div id="inner">
@@ -217,19 +243,20 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <div class="playhead"></div>
     <button class="tlb vol" id="tl-vol" title="音量">🔊</button>
     <button class="tlb add" id="tl-add" title="加入照片或影片">＋</button>
+    <div class="zb"><button id="z-out">－</button><button id="z-in">＋</button></div>
   </div>
   <div id="volp"></div>
+  </div>
   <div class="quick"><button id="q-text">🅣 添加文字</button><button id="q-music" class="m">🎵 添加音樂</button></div>
   <div class="toolbar" id="toolbar">
-    <button class="tb" data-a="cam"><i>📷</i>拍攝</button>
-    <button class="tb" data-a="tpl"><i>🎬</i>範本</button>
-    <button class="tb" data-a="auto"><i>✨</i>幻燈片</button>
-    <button class="tb" data-a="fx"><i>🎛</i>調整</button>
-    <button class="tb" data-a="ly"><i>🧩</i>拼貼</button>
-    <button class="tb" data-a="kf"><i>🎞</i>動畫</button>
-    <button class="tb" data-a="st"><i>😀</i>貼圖</button>
-    <button class="tb" data-a="au"><i>🎧</i>音訊</button>
-    <button class="tb" data-a="ef"><i>🌈</i>特效包</button>
+    <button class="cat" data-g="edit"><i>✂️</i>編輯</button>
+    <button class="cat" data-g="music"><i>🎵</i>音樂</button>
+    <button class="cat" data-g="text"><i>🅣</i>文字</button>
+    <button class="cat" data-g="fx"><i>✨</i>特效</button>
+    <button class="cat" data-g="cam"><i>📷</i>拍攝</button>
+  </div>
+  <div id="cats"><div class="hd"><b id="cats-t"></b><button id="cats-x">✓</button></div><div id="cats-g"></div></div>
+  <div id="tbpool" hidden>
     <button class="tb" data-a="split"><i>✂️</i>分割</button>
     <button class="tb" data-a="freeze"><i>❄️</i>定格</button>
     <button class="tb" data-a="trimL"><i>⇤</i>裁左邊</button>
@@ -237,10 +264,17 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tb" data-a="del"><i>🗑</i>刪除</button>
     <button class="tb" data-a="mvL"><i>◀</i>前移</button>
     <button class="tb" data-a="mvR"><i>▶</i>後移</button>
-    <button class="tb" data-a="text"><i>🅣</i>文字</button>
+    <button class="tb" data-a="fx"><i>🎛</i>調整</button>
+    <button class="tb" data-a="kf"><i>🎞</i>動畫</button>
+    <button class="tb" data-a="clip"><i>🛠</i>片段設定</button>
     <button class="tb" data-a="music"><i>🎵</i>配樂</button>
-    <button class="tb" data-a="undo"><i>↩️</i>復原</button>
-    <button class="tb" data-a="redo"><i>↪️</i>重做</button>
+    <button class="tb" data-a="au"><i>🎧</i>音訊與音效</button>
+    <button class="tb" data-a="text"><i>🅣</i>加文字</button>
+    <button class="tb" data-a="st"><i>😀</i>貼圖</button>
+    <button class="tb" data-a="ef"><i>🌈</i>特效包</button>
+    <button class="tb" data-a="ly"><i>🧩</i>拼貼</button>
+    <button class="tb" data-a="auto"><i>✨</i>幻燈片</button>
+    <button class="tb" data-a="tpl"><i>🎬</i>範本</button>
   </div>
   <div class="ctx" id="ctx"></div>
 </div>
@@ -289,10 +323,10 @@ const assets = new Map();           // id -> {id,kind,file,url,el,img,w,h,dur,na
 let uid = 1;
 let state = { ratio: '9:16', clips: [], layers: [], texts: [], music: null, kb: false, vol: { video: 1, music: 0.6 } };
 let history = [], redoStack = [], lastTouch = null;
-let showAu = false, showSt = false, showEf = false, showKf = false, kfMode = 'clip', kfLyId = null, kfIdx = -1;
+let showClip = false, showAu = false, showSt = false, showEf = false, showKf = false, kfMode = 'clip', kfLyId = null, kfIdx = -1;
 let showFx = false, fxTab = 'f', fxIdx = -1, showLy = false, selLy = null, lyTab = 'p', pendingTpl = null;
 let cur = 0, playing = false, pps = 80, selText = null, selMusic = false, selTr = null, showAuto = false, dirty = true;
-function clearSel() { showAu = false; showSt = false; showEf = false; showKf = false; showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
+function clearSel() { showClip = false; showAu = false; showSt = false; showEf = false; showKf = false; showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
 let L = [], total = 0;               // 排版結果
 const FXP = {
   none: { n: '原圖', b: 0, ct: 1, sa: 1, r: 1, g: 1, bl: 1 },
@@ -1007,10 +1041,34 @@ const ops = {
   st() { clearSel(); showSt = true; renderTimeline(); renderCtx(); dirty = true; },
   ef() { clearSel(); showEf = true; renderTimeline(); renderCtx(); dirty = true; },
   auto() { clearSel(); showAuto = true; autoMode = 'slide'; renderTimeline(); renderCtx(); },
+  clip() { clearSel(); showClip = true; renderTimeline(); renderCtx(); },
   tpl() { clearSel(); showAuto = true; autoMode = 'tpl'; renderTimeline(); renderCtx(); },
   undo, redo
 };
-$('#toolbar').addEventListener('click', e => { const b = e.target.closest('.tb'); if (!b || b.disabled) return; pause(); ops[b.dataset.a](); });
+const PANEL_OPS = new Set(['fx', 'ly', 'kf', 'au', 'st', 'ef', 'auto', 'tpl', 'clip', 'text', 'cam']);
+document.addEventListener('click', e => { const b = e.target.closest('.tb'); if (!b || b.disabled || !ops[b.dataset.a]) return; pause(); ops[b.dataset.a](); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); });
+/* ===== 底部浮出：分類面板＋設定面板（不擠壓預覽）===== */
+const CATS = { edit: ['✂️ 編輯', ['split', 'freeze', 'trimL', 'trimR', 'del', 'mvL', 'mvR', 'fx', 'kf', 'clip']], music: ['🎵 音樂', ['music', 'au']], text: ['🅣 文字', ['text', 'st']], fx: ['✨ 特效', ['ef', 'ly', 'auto', 'tpl']] };
+let catKey = null;
+function closeCats() { const g = $('#cats-g'), pool = $('#tbpool'); [...g.children].forEach(b => pool.appendChild(b)); $('#cats').classList.remove('on'); catKey = null; }
+function openCat(k) {
+  if (catKey === k) { closeCats(); layoutSheet(); return; }
+  closeCats(); clearSel(); renderTimeline(); renderCtx();
+  const g = $('#cats-g'), pool = $('#tbpool'); $('#cats-t').textContent = CATS[k][0];
+  CATS[k][1].forEach(a => { const b = pool.querySelector(`.tb[data-a="${a}"]`); if (b) g.appendChild(b); });
+  $('#cats').classList.add('on'); catKey = k; layoutSheet(); updateToolbar();
+}
+function layoutSheet() {
+  const lower = $('#lower'), ctx = $('#ctx');
+  if (ctx.style.display === 'block' && catKey) closeCats();
+  const sh = ctx.style.display === 'block' ? ctx : $('#cats').classList.contains('on') ? $('#cats') : null;
+  const tb = $('#toolbar').offsetHeight;
+  lower.style.transform = sh ? `translateY(-${Math.max(0, sh.offsetHeight - tb)}px)` : '';
+}
+document.querySelectorAll('#toolbar .cat').forEach(b => b.onclick = () => { pause(); if (b.dataset.g === 'cam') { closeCats(); clearSel(); renderTimeline(); renderCtx(); layoutSheet(); camOpen(); } else openCat(b.dataset.g); });
+$('#cats-x').onclick = () => { closeCats(); layoutSheet(); };
+if (window.ResizeObserver) { const ro = new ResizeObserver(() => layoutSheet()); ro.observe($('#ctx')); ro.observe($('#cats')); }
+$('#b-full').onclick = () => { const a = $('#app'), f = a.classList.toggle('full'); $('#b-full').textContent = f ? '⤡ 回到編輯' : '⛶'; if (f) { closeCats(); } layoutSheet(); };
 
 /* ===== 時間軸左右的快捷鈕：左＝音量、右＝加素材（仿 TikTok）===== */
 function volOpen() {
@@ -1039,6 +1097,10 @@ $('#ratio').onchange = e => { commit(); state.ratio = e.target.value; applyRatio
 const COLORS = [['#ffffff', '白'], ['#ffe14d', '黃'], ['#ff6b6b', '紅'], ['#4dd2ff', '藍'], ['#000000', '黑']];
 function renderCtx() {
   const box = $('#ctx'); let h = '';
+  { const t0 = selText && state.texts.find(x => x.id === selText);
+    const editing0 = !!(showAuto || showAu || showSt || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t0 || (selMusic && state.music));
+    if (!editing0 && !showClip) { box.innerHTML = ''; box.style.display = 'none'; box.classList.remove('edit'); layoutSheet(); return; }
+    box.style.display = 'block'; }
   const t = selText && state.texts.find(x => x.id === selText);
   if (showAuto) { h += autoHtml(); }
   else if (selTr !== null && L[selTr]) { h += trHtml(); }
@@ -1082,6 +1144,9 @@ function renderCtx() {
     h += `<label class="chk"><input type="checkbox" id="kb"${state.kb ? ' checked' : ''}> 照片慢慢推近（較動感，匯出會比較慢）</label>`;
   }
   box.innerHTML = h;
+  box.insertAdjacentHTML('afterbegin', '<button class="sh-x" id="ctx-x">✓</button>');
+  box.querySelector('#ctx-x').onclick = () => { clearSel(); renderTimeline(); renderCtx(); };
+  layoutSheet();
   box.classList.toggle('edit', !!(showAuto || showAu || showSt || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
   const on = (id, ev, fn) => { const el = box.querySelector(id); if (el) el.addEventListener(ev, fn); };
   on('#kb', 'change', e => { commit(); state.kb = e.target.checked; dirty = true; });
@@ -2102,7 +2167,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-Q', upd = document.getElementById('upd');
+  const VER = '1121-R', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
