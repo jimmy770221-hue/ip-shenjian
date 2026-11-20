@@ -30,7 +30,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .transport .play{background:var(--main);border-color:var(--main);font-size:18px;min-width:56px}
 .transport .time{flex:1;text-align:center;font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums}
 .transport .time b{color:var(--text);font-size:15px}
-.tl{position:relative;background:var(--bg);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.tl{min-height:236px;position:relative;background:var(--bg);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 #scroller{overflow-x:auto;overflow-y:hidden;touch-action:pan-x;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 #scroller::-webkit-scrollbar{display:none}
 #inner{position:relative;padding-bottom:6px}
@@ -70,7 +70,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .ctx.edit{max-height:42vh}
 @keyframes shup{from{transform:translateY(40px);opacity:.3}to{transform:none;opacity:1}}
 .sh-x{position:sticky;top:0;float:right;z-index:3;width:40px;height:40px;border-radius:50%;background:var(--main);color:#fff;border:0;font-size:20px;margin:0 0 4px 8px}
-#cats{position:fixed;left:0;right:0;bottom:0;max-width:760px;margin:0 auto;z-index:57;display:none;background:var(--panel);padding:12px 12px calc(14px + env(safe-area-inset-bottom));border-radius:20px 20px 0 0;box-shadow:0 -10px 30px #000c;animation:shup .18s ease-out}
+#cats{overflow-y:auto;position:fixed;left:0;right:0;bottom:0;max-width:760px;margin:0 auto;z-index:57;display:none;background:var(--panel);padding:12px 12px calc(14px + env(safe-area-inset-bottom));border-radius:20px 20px 0 0;box-shadow:0 -10px 30px #000c;animation:shup .18s ease-out}
 #cats.on{display:block}
 #cats .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#cats .hd b{font-size:15px}
 #cats-x{width:40px;height:40px;border-radius:50%;background:var(--main);color:#fff;border:0;font-size:20px}
@@ -685,7 +685,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AI（畫面軌道・分鏡圖）</div>
+  <div class="hfoot">版本 1121-AJ（時間軸固定）</div>
   </main>
 </div>
 <div id="app">
@@ -1633,12 +1633,13 @@ function openCat(k) {
   CATS[k][1].forEach(a => { const b = pool.querySelector(`.tb[data-a="${a}"]`); if (b) g.appendChild(b); });
   $('#cats').classList.add('on'); catKey = k; layoutSheet(); updateToolbar();
 }
-function layoutSheet() {
-  const lower = $('#lower'), ctx = $('#ctx');
+function layoutSheet() {   // 時間軸固定不動；工具面板從下面蓋上來，高度只到「主軌道」下方，所以預覽、時間尺、主軌道、播放頭都一直看得到
+  const lower = $('#lower'), ctx = $('#ctx'), cats = $('#cats');
   if (ctx.style.display === 'block' && catKey) closeCats();
-  const sh = ctx.style.display === 'block' ? ctx : $('#cats').classList.contains('on') ? $('#cats') : null;
-  const tb = $('#toolbar').offsetHeight;
-  lower.style.transform = sh ? `translateY(-${Math.max(0, sh.offsetHeight - tb)}px)` : '';
+  lower.style.transform = '';
+  const rv = $('#row-v'), top = rv ? rv.getBoundingClientRect().bottom + 6 : 0, mh = Math.max(170, Math.floor(innerHeight - top)) + 'px';
+  if (ctx.style.maxHeight !== mh) ctx.style.maxHeight = mh;
+  if (cats.style.maxHeight !== mh) cats.style.maxHeight = mh;
 }
 document.querySelectorAll('#toolbar .cat').forEach(b => b.onclick = () => { pause(); if (b.dataset.g === 'cam') { closeCats(); clearSel(); renderTimeline(); renderCtx(); layoutSheet(); camOpen(); } else openCat(b.dataset.g); });
 $('#cats-x').onclick = () => { closeCats(); layoutSheet(); };
@@ -2623,7 +2624,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AI';
+const VER_NOW = '1121-AJ';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2844,7 +2845,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AI', upd = document.getElementById('upd');
+  const VER = '1121-AJ', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
