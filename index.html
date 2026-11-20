@@ -677,7 +677,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AB（一鍵全自動套版）</div>
+  <div class="hfoot">版本 1121-AC（漫畫貼紙）</div>
   </main>
 </div>
 <div id="app">
@@ -989,10 +989,24 @@ function drawText(g, W, H, x, tl) {
   let al = 1, sc = 1, dy = 0;
   if (x.an && tl != null) { const p = Math.min(1, Math.max(0, tl / 0.35)); if (x.an === 'fade') al = p * Math.min(1, Math.max(0, (x.dur - tl) / 0.35)); else if (x.an === 'pop') { sc = 0.3 + 0.7 * p; al = p; } else if (x.an === 'rise') { dy = (1 - p) * H * 0.05; al = p; } }
   g.save(); g.globalAlpha *= al; if (dy) g.translate(0, dy); if (sc !== 1) { g.translate(cx, cy); g.scale(sc, sc); g.translate(-cx, -cy); }
-  const ow = x.ow == null ? 1 : x.ow;
+  const ow = x.bx ? 0 : (x.ow == null ? 1 : x.ow);
   g.lineWidth = Math.max(3, fs / 6) * ow;
   g.strokeStyle = (x.color === '#ff6b6b' || x.color === '#000000') ? '#ffffff' : '#000000';
   if (x.c2) { const gr = g.createLinearGradient(0, y0 - lh / 2, 0, y0 - lh / 2 + tot); gr.addColorStop(0, x.color); gr.addColorStop(1, x.c2); g.fillStyle = gr; } else g.fillStyle = x.color;
+  if (x.bx) {   // 漫畫對話框／爆炸框（像 Viva Video 的貼紙）
+    let mw = 0; lines.forEach(l => { mw = Math.max(mw, g.measureText(l).width); });
+    const pw = mw / 2 + fs * 0.7, ph = tot / 2 + fs * 0.45; g.save(); g.lineJoin = 'round';
+    if (x.bx === 'bubble') {
+      g.fillStyle = '#ffffff'; g.strokeStyle = '#222'; g.lineWidth = Math.max(3, fs / 9); g.beginPath();
+      g.moveTo(cx - pw + fs * .5, cy - ph); g.lineTo(cx + pw - fs * .5, cy - ph); g.quadraticCurveTo(cx + pw, cy - ph, cx + pw, cy - ph + fs * .5); g.lineTo(cx + pw, cy + ph - fs * .5); g.quadraticCurveTo(cx + pw, cy + ph, cx + pw - fs * .5, cy + ph);
+      g.lineTo(cx - pw * .1, cy + ph); g.lineTo(cx - pw * .45, cy + ph + fs * .9); g.lineTo(cx - pw * .4, cy + ph); g.lineTo(cx - pw + fs * .5, cy + ph); g.quadraticCurveTo(cx - pw, cy + ph, cx - pw, cy + ph - fs * .5); g.lineTo(cx - pw, cy - ph + fs * .5); g.quadraticCurveTo(cx - pw, cy - ph, cx - pw + fs * .5, cy - ph); g.closePath(); g.fill(); g.stroke();
+    } else {
+      const n = 16, ro = Math.max(pw, ph) * 1.25, ri = ro * 0.68; g.beginPath();
+      for (let i = 0; i < n * 2; i++) { const an = i * Math.PI / n - Math.PI / 2, r = i % 2 ? ri : ro; g.lineTo(cx + Math.cos(an) * r * (pw / Math.max(pw, ph)) * 1.1, cy + Math.sin(an) * r * (ph / Math.max(pw, ph)) * 1.25); }
+      g.closePath(); g.fillStyle = '#ffd400'; g.strokeStyle = '#e63946'; g.lineWidth = Math.max(4, fs / 7); g.fill(); g.stroke();
+    }
+    g.restore(); g.fillStyle = x.bx === 'bubble' ? '#222' : '#d62828';
+  }
   lines.forEach((ln, i) => {
     const yy = y0 + i * lh;
     if (ow > 0.01) { if (x.sh) { g.shadowColor = 'rgba(0,0,0,.75)'; g.shadowBlur = fs * 0.15; g.shadowOffsetX = g.shadowOffsetY = fs * 0.06; } g.strokeText(ln, cx, yy); g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetX = g.shadowOffsetY = 0; g.fillText(ln, cx, yy); }
@@ -1811,13 +1825,19 @@ function bindKf(on) {
 }
 const STICKERS = '😀 😂 🤣 😍 😎 🥳 😭 😱 🤔 👍 👏 🔥 ❤️ 💯 ⭐ ✨ 🎉 🎵 💥 👑 🌈 🍀 🌸 ☀️ 🌙 ⚡ 🎬 📸 🏆 💪 🙏 😈 👻 🐶 🐱 🐻 🦄 🍕 🍔 🧋 ⚽ 🏀 🚀 💎 🎁 ➡️ ⬆️ ❓ ❗ 💬'.split(' ');
 function stHtml() {
-  return `<h4>😀 貼圖・表情</h4><label>點一個，就會放到目前時間的畫面上（可以再改大小、位置、出現動畫）。</label><div class="fchips" style="max-height:170px;overflow:auto">${STICKERS.map(e => `<button class="sm" data-st="${e}" style="font-size:22px;padding:4px 8px">${e}</button>`).join('')}</div><div class="r2" style="margin-top:8px"><button class="sm ok" id="st-ok">完成</button></div>`;
+  return `<h4>😀 貼圖・表情</h4><label>點一個，就會放到目前時間的畫面上（可以再改大小、位置、出現動畫）。</label><div class="fchips" style="max-height:170px;overflow:auto">${STICKERS.map(e => `<button class="sm" data-st="${e}" style="font-size:22px;padding:4px 8px">${e}</button>`).join('')}</div><label style="margin-top:8px">漫畫貼紙（放上後可改文字）</label><div class="r2"><button class="sm" data-bx="bubble">💬 對話框</button><button class="sm" data-bx="burst">💥 爆炸框</button></div><div class="r2" style="margin-top:8px"><button class="sm ok" id="st-ok">完成</button></div>`;
 }
 function bindSt(on) {
   document.querySelectorAll('#ctx [data-st]').forEach(b => b.onclick = () => {
     if (!total) return toast('請先加入影片或照片');
     const start = Math.min(cur, Math.max(0, total - 0.5)), dur = Math.max(0.5, Math.min(3, total - start));
     commit(); const x = { id: uid++, text: b.dataset.st, start, dur, color: '#ffffff', size: 18, pos: 'middle', ow: 0, an: 'pop' };
+    state.texts.push(x); clearSel(); selText = x.id; renderTimeline(); renderCtx(); dirty = true;
+  });
+  document.querySelectorAll('#ctx [data-bx]').forEach(b => b.onclick = () => {
+    if (!total) return toast('請先加入影片或照片');
+    const start = Math.min(cur, Math.max(0, total - 0.5)), dur = Math.max(0.5, Math.min(2.5, total - start));
+    commit(); const x = { id: uid++, text: b.dataset.bx === 'bubble' ? '好玩！' : '來！', start, dur, color: '#222222', size: 7, pos: 'middle', ty: -0.18, ow: 0, an: 'pop', bx: b.dataset.bx };
     state.texts.push(x); clearSel(); selText = x.id; renderTimeline(); renderCtx(); dirty = true;
   });
   on('#st-ok', 'click', () => { showSt = false; renderTimeline(); renderCtx(); });
@@ -2164,7 +2184,7 @@ const CLUBTPL = [
   { n: '🎉 活潑熱鬧', tr: ['circleopen', 'radial', 'slideleft', 'slideup', 'circleclose'], dur: 0.6, cap: 4, ph: 2.5, c: '#ffe14d', end: '#ff6b6b' },
   { n: '🌸 溫馨回憶', tr: ['fade', 'fadewhite'], dur: 1.0, cap: 5, ph: 3, c: '#ffffff', end: '#ffffff' },
   { n: '⚡ 動感節奏', tr: ['wipeleft', 'wiperight', 'fadewhite', 'slidedown'], dur: 0.4, cap: 3, ph: 2, c: '#4dd2ff', end: '#ffe14d' },
-  { n: '🎂 派對快閃（星星／撕紙）', tr: ['star', 'torn', 'zoom', 'heart', 'circleopen'], dur: 0.55, cap: 2.5, ph: 2.2, c: '#ffe14d', end: '#ff6b9d', kb: 1 },
+  { n: '🎂 派對快閃（星星／撕紙）', tr: ['star', 'torn', 'zoom', 'heart', 'circleopen'], dur: 0.55, cap: 2.5, ph: 2.2, c: '#ffe14d', end: '#ff6b9d', kb: 1, stk: 1 },
   { n: '📖 故事字幕（慢推近）', tr: ['fade', 'zoom', 'fade', 'fadewhite'], dur: 0.7, cap: 3.5, ph: 2.5, c: '#ffffff', end: '#ffffff', kb: 1 }
 ];
 function tplHtml() {
@@ -2187,7 +2207,7 @@ function bindTpl(on) {
   on('#tp-auto', 'click', () => { const st = $('#tp-st'); st.value = String(Math.floor(Math.random() * CLUBTPL.length)); $('#tp-title').value = ''; $('#tp-sub').value = ''; $('#tp-end').value = ''; if ($('#tp-cap')) $('#tp-cap').value = ''; autoFlag = true; $('#tp-go').click(); });
   on('#tp-go', 'click', async () => {
     if (!state.clips.length) return toast('請先按時間軸右邊的「＋」加入照片和影片');
-    const T = CLUBTPL[+$('#tp-st').value], title = $('#tp-title').value.trim() || (autoFlag ? '' : '活動回顧'), sub = $('#tp-sub').value.trim(), endT = $('#tp-end').value.trim();
+    const autoSt = autoFlag; const T = CLUBTPL[+$('#tp-st').value], title = $('#tp-title').value.trim() || (autoFlag ? '' : '活動回顧'), sub = $('#tp-sub').value.trim(), endT = $('#tp-end').value.trim();
     const beat = $('#tp-beat').checked && !!state.music, sfx = $('#tp-sfx').checked, caps = ($('#tp-cap') ? $('#tp-cap').value : '').split('\n').map(x => x.trim()).filter(Boolean);
     if (T.kb) state.kb = true;
     if (beat && !(state.beats || []).length) { await detectBeats(); }
@@ -2221,6 +2241,10 @@ function bindTpl(on) {
     if (title) state.texts.push({ id: uid++, tpl: 1, text: title, start: 0.2, dur: td, color: T.c, size: 11, pos: 'middle', an: 'pop', sh: 1 });
     if (sub) state.texts.push({ id: uid++, tpl: 1, text: sub, start: 0.5, dur: Math.max(0.8, td - 0.3), color: '#ffffff', size: 5, pos: 'middle', ty: 0.12, an: 'fade', sh: 1 });
     if (endT) { const ed = Math.min(2.5, Math.max(1, total * 0.3)); state.texts.push({ id: uid++, tpl: 1, text: endT, start: Math.max(0, total - ed), dur: ed, color: T.end, size: 10, pos: 'middle', an: 'rise', sh: 1 }); }
+    if (T.stk || autoSt) {   // 自動加幾個漫畫貼紙（對話框／爆炸框），像 Viva Video
+      const PH = ['太好玩了！', '來！', '讚！', '笑死', '好吃！', '開心', '超可愛', '耶！'];
+      let k = 0; for (let i = 1; i < L.length; i++) { if ((i + 1) % 2) continue; const e = L[i], bx = k % 2 ? 'burst' : 'bubble'; state.texts.push({ id: uid++, tpl: 1, text: PH[(k * 3 + i) % PH.length], start: e.start + 0.3, dur: Math.max(0.8, Math.min(1.6, e.d - 0.5)), color: '#222222', size: 6.5, pos: 'middle', ty: -0.2, tx: k % 2 ? 0.14 : -0.14, ow: 0, an: 'pop', bx }); k++; }
+    }
     caps.forEach((t, i) => { const e = L[i]; if (!e) return; state.texts.push({ id: uid++, tpl: 1, text: t, start: e.start + 0.15, dur: Math.max(0.8, Math.min(3.2, e.d - 0.3)), color: '#ffffff', size: 6.5, pos: 'bottom', ty: -0.12, an: 'fade', sh: 1 }); });
     showAuto = false; renderAll(); setCur(0);
     if (sfx) { cur = 0; await sfxAdd('tada'); }
@@ -2536,7 +2560,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AB';
+const VER_NOW = '1121-AC';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2709,7 +2733,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AB', upd = document.getElementById('upd');
+  const VER = '1121-AC', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
