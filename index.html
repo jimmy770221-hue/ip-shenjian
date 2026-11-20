@@ -730,7 +730,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AQ（匯出失敗顯示除錯資訊）</div>
+  <div class="hfoot">版本 1121-AR（修 iPhone 特殊音軌匯出失敗）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -2634,7 +2634,7 @@ $('#xp-go').onclick = async () => {
       const af = []; if (hasA && sp !== 1) { let sv = sp; while (sv > 2.0001) { af.push('atempo=2'); sv /= 2; } while (sv < 0.4999) { af.push('atempo=0.5'); sv /= 0.5; } af.push(`atempo=${sv.toFixed(4)}`); }
       const afA = af.length ? ['-af', af.join(',')] : [];
       if (!hasA) args.push('-f', 'lavfi', '-t', String(len), '-i', 'anullsrc=r=44100:cl=stereo');
-      const am = hasA ? '0:a' : '1:a';
+      const am = hasA ? '0:a:0' : '1:a';   // 只取第一條音軌（iPhone 新機型的影片有第二條特殊音軌，ffmpeg 解不開會整個失敗）
       if (audioOnly) args.push('-vn', '-map', am, ...afA, '-t', String(len), '-c:a', 'aac', '-ar', '44100', '-ac', '2');
       else {
         let vf, fcv = null;
@@ -2650,7 +2650,7 @@ $('#xp-go').onclick = async () => {
         else if (c.bb && !useKB) { const rad = Math.max(10, Math.round(Math.min(W, H) / 18)); fcv = `[0:v]${pre}${fxs}split[bs][fs];[bs]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},boxblur=${rad}:2,lutyuv=y=val*0.82[bg];[fs]scale=${W}:${H}:force_original_aspect_ratio=decrease,setsar=1[fg];[bg][fg]overlay=x=(main_w-overlay_w)/2:y=(main_h-overlay_h)/2,setsar=1,fps=30,format=yuv420p[vout]`; }
         else if (useKB) { const nf = Math.max(1, Math.round(len * 30)); vf = `${pre}scale=${W * 2}:${H * 2}:force_original_aspect_ratio=decrease,${fxs}pad=${W * 2}:${H * 2}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,zoompan=z='1+0.12*(${off.toFixed(3)}+on/30)/${d.toFixed(3)}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${nf}:s=${W}x${H}:fps=30`; }
         else vf = `${pre}scale=${W}:${H}:force_original_aspect_ratio=decrease,${fxs}pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:black,setsar=1,fps=30`;
-        if (fcv) args.push('-filter_complex', fcv, '-map', '[vout]', '-map', am); else args.push('-vf', vf + ',format=yuv420p', '-map', '0:v', '-map', am);
+        if (fcv) args.push('-filter_complex', fcv, '-map', '[vout]', '-map', am); else args.push('-vf', vf + ',format=yuv420p', '-map', '0:v:0', '-map', am);
         args.push(...afA, '-t', String(len), ...X264, '-crf', '23', '-c:a', 'aac', '-ar', '44100', '-ac', '2');
       }
       args.push(outName);
@@ -2813,7 +2813,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AQ';
+const VER_NOW = '1121-AR';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3332,7 +3332,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AQ', upd = document.getElementById('upd');
+  const VER = '1121-AR', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
