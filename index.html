@@ -130,6 +130,17 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 #upd{position:fixed;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));z-index:90;background:#ff9f43;color:#2a1300;font-weight:800;font-size:15px;padding:12px 14px;border-radius:14px;text-align:center;box-shadow:0 6px 20px #000a;display:none}
 .toast{position:fixed;left:50%;top:60px;transform:translateX(-50%);background:#000c;color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
 .toast.on{opacity:1}
+#pj{position:fixed;inset:0;background:#000b;z-index:70;display:none;align-items:flex-end;justify-content:center}#pj.on{display:flex}
+#pj .box{background:var(--panel);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:16px;max-height:92vh;overflow:auto}
+#pj h3{margin:0 0 10px}#pj label{display:block;font-size:13px;color:var(--sub);margin:10px 0 4px}
+#pj input[type=text]{width:100%;box-sizing:border-box;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:16px}
+#pj .bigbtn{display:block;width:100%;border:0;border-radius:12px;padding:13px;font-size:16px;font-weight:800;margin-top:10px;background:var(--main);color:#fff}
+#pj .bigbtn.x{background:var(--panel2);color:var(--text)}
+#pj .it{display:flex;gap:10px;align-items:center;background:var(--panel2);border-radius:12px;padding:8px;margin-top:8px}
+#pj .it img{width:40px;height:64px;object-fit:cover;border-radius:6px;background:#000;flex:none}
+#pj .it .nm{flex:1;min-width:0}#pj .it b{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pj .it small{color:var(--sub);font-size:12px}
+#pj .it button{border:0;border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700;background:var(--panel);color:var(--text)}#pj .it button.go{background:var(--main);color:#fff}#pj .it button.del{color:#ff6b6b}
+.top #btn-pj{background:none;border:0;font-size:20px;color:var(--sub);padding:0 4px}
 #xp{position:fixed;inset:0;background:#000b;z-index:40;display:none;align-items:flex-end;justify-content:center}
 #xp.on{display:flex}
 #xp .box{background:var(--panel);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:16px;max-height:92vh;overflow:auto}
@@ -155,6 +166,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   <div class="chips"><span>免費</span><span>免註冊</span><span>不上傳</span><span>手機裡處理</span></div>
   <button class="hbtn" id="h-start"><span class="pl"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3.5"/><path d="M10.5 9.5v5l4-2.5z"/></svg></span><span class="lb">開始剪輯</span><span class="ar">›</span></button>
   <button class="hbtn sub" id="h-cont" style="display:none">繼續剛剛的剪輯</button>
+  <button class="hbtn sub" id="h-proj">📁 我的專案（暫存的作品）</button>
   <div class="hbox"><div class="ht">快速小工具</div><div class="hgrid">
     <a class="tile c1" href="tools.html#trim"><i><svg viewBox="0 0 24 24"><circle cx="6" cy="6.5" r="2.6"/><circle cx="6" cy="17.5" r="2.6"/><path d="M8 8l12 10M8 16L20 6"/></svg></i>剪裁</a>
     <a class="tile c2" href="tools.html#merge"><i><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 1 0-5.6l2.4-2.4a4 4 0 0 1 5.6 5.6l-1.2 1.2M14 10a4 4 0 0 1 0 5.6L11.6 18a4 4 0 0 1-5.6-5.6l1.2-1.2"/></svg></i>合併</a>
@@ -164,13 +176,14 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-J（動畫曲線、平滑變速、多音軌）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-K（專案暫存）</div>
 </div>
 <div id="app">
   <div class="top">
     <span class="logo">IP神剪</span>
     <b>I POWER 神剪輯</b>
     <a href="tools.html" title="快速小工具（轉MP3、壓縮…）">🧰</a>
+    <button id="btn-pj" title="我的專案（暫存）">📁</button>
     <select id="ratio"><option value="9:16">9:16 直</option><option value="16:9">16:9 橫</option><option value="1:1">1:1 方</option><option value="4:3">4:3 橫</option><option value="3:4">3:4 直</option></select>
     <button class="exp" id="btn-export">匯出</button>
   </div>
@@ -225,6 +238,16 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 <input type="file" id="f-track" accept="audio/*,video/*" hidden>
 <div id="pool"></div>
 <div class="toast" id="toast"></div>
+
+<div id="pj"><div class="box">
+  <h3>📁 我的專案</h3>
+  <label>目前這個作品的名稱</label><input type="text" id="pj-name" maxlength="30" placeholder="例如：社團成果影片">
+  <button class="bigbtn" id="pj-save">💾 儲存（暫存起來，之後可以繼續編輯）</button>
+  <button class="bigbtn x" id="pj-new">＋ 開一個新的空白專案</button>
+  <label>已暫存的專案</label><div id="pj-list"></div>
+  <p class="hint" id="pj-st" style="font-size:12px;color:var(--sub)"></p>
+  <button class="bigbtn x" id="pj-close">關閉</button>
+</div></div>
 
 <div id="xp"><div class="box">
   <h3>匯出作品</h3>
@@ -1711,8 +1734,105 @@ $('#xp-go').onclick = async () => {
   }
 };
 
+
+/* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
+const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
+function pjOpen() {
+  return new Promise((res, rej) => {
+    if (PJ.db) return res(PJ.db);
+    const r = indexedDB.open('ipsj', 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore('projects', { keyPath: 'id' }); r.result.createObjectStore('blobs'); };
+    r.onsuccess = () => { PJ.db = r.result; res(PJ.db); }; r.onerror = () => rej(r.error);
+  });
+}
+const pjReq = (store, mode, fn) => pjOpen().then(db => new Promise((res, rej) => { const tx = db.transaction(store, mode); let q; try { q = fn(tx.objectStore(store)); } catch (e) { return rej(e); } tx.oncomplete = () => res(q && q.result); tx.onerror = tx.onabort = () => rej(tx.error); }));
+const pjHas = () => state.clips.length || state.layers.length;
+const pjDirty = () => !!pjHas() && JSON.stringify(state) !== PJ.savedStr;
+function pjUsed() {
+  const u = new Set(); state.clips.forEach(c => u.add(c.asset)); state.layers.forEach(l => u.add(l.asset)); if (state.music) u.add(state.music.asset); (state.vo || []).forEach(v => u.add(v.asset));
+  return [...u].filter(id => assets.get(id));
+}
+function pjThumb() { try { const c = document.createElement('canvas'); c.width = 72; c.height = Math.round(72 * cv.height / cv.width); c.getContext('2d').drawImage(cv, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.6); } catch (e) { return ''; } }
+let pjBusy = false;
+async function pjSave(name, quiet) {
+  if (pjBusy || exporting) return false; if (!pjHas()) { if (!quiet) toast('還沒有素材可以存'); return false; }
+  pjBusy = true;
+  try {
+    const id = PJ.cur || ('p' + Date.now()), used = pjUsed(), str = JSON.stringify(state);
+    for (const aid of used) {
+      const key = id + ':' + aid; if (PJ.stored.has(key)) continue; const a = assets.get(aid);
+      await pjReq('blobs', 'readwrite', st => st.put({ blob: a.file, name: a.name, type: a.file.type, kind: a.kind, dur: a.dur || 0 }, key)); PJ.stored.add(key);
+    }
+    const keys = await pjReq('blobs', 'readonly', st => st.getAllKeys(IDBKeyRange.bound(id + ':', id + ':￿')));
+    const keep = new Set(used.map(a => id + ':' + a)); const drop = (keys || []).filter(k => !keep.has(k));
+    if (drop.length) await pjReq('blobs', 'readwrite', st => { drop.forEach(k => st.delete(k)); });
+    const nm = (name || PJ.name || '').trim() || ('專案 ' + new Date().toLocaleDateString('zh-TW'));
+    await pjReq('projects', 'readwrite', st => st.put({ id, name: nm, updated: Date.now(), thumb: pjThumb(), state: str, uid, assets: used, dur: total, ratio: state.ratio }));
+    PJ.cur = id; PJ.name = nm; PJ.savedStr = str; try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+    if (!quiet) toast('已儲存「' + nm + '」');
+    return true;
+  } catch (e) {
+    if (!quiet) toast(e && e.name === 'QuotaExceededError' ? '手機的儲存空間不夠，存不下（影片太大）' : '儲存失敗：' + (e.message || e));
+    return false;
+  } finally { pjBusy = false; }
+}
+function pjReset() {
+  pause(); assets.forEach(a => { try { if (a.el && a.el.pause) a.el.pause(); URL.revokeObjectURL(a.url); } catch (e) {} });
+  assets.clear(); lyEls.clear(); $('#pool').innerHTML = ''; history = []; redoStack = []; lastTouch = null; clearSel(); cur = 0;
+}
+async function pjAskSave() {   // 開新的或換專案前，如果目前的還沒存，問一下
+  if (!pjDirty()) return true;
+  if (confirm('目前這個作品有還沒儲存的修改。\n\n按「確定」＝先儲存再繼續\n按「取消」＝不儲存，直接繼續（沒存的修改會消失）')) { const nm = PJ.cur ? null : (prompt('幫這個專案取個名字：', $('#pj-name').value || '') || ''); const ok = await pjSave(nm || undefined); return ok; }
+  return true;
+}
+async function pjLoad(id) {
+  const rec = await pjReq('projects', 'readonly', st => st.get(id)); if (!rec) return toast('找不到這個專案');
+  if (!(await pjAskSave())) return; pjClose(); toast('開啟中…');
+  pjReset(); const stored = new Set(); let miss = 0;
+  for (const aid of rec.assets) {
+    const b = await pjReq('blobs', 'readonly', st => st.get(id + ':' + aid)); if (!b) { miss++; continue; }
+    const file = new File([b.blob], b.name, { type: b.type }), a = { id: aid, file, url: URL.createObjectURL(file), name: b.name, kind: b.kind };
+    try {
+      if (a.kind === 'video') await loadVideo(a); else if (a.kind === 'image') await loadImage(a);
+      else { const au = new Audio(); au.preload = 'auto'; au.src = a.url; await new Promise(r => { au.onloadedmetadata = r; au.onerror = r; setTimeout(r, 4000); }); a.el = au; a.dur = isFinite(au.duration) && au.duration > 0 ? au.duration : b.dur; }
+    } catch (e) { miss++; continue; }
+    assets.set(aid, a); stored.add(id + ':' + aid);
+  }
+  state = JSON.parse(rec.state); uid = Math.max(uid, rec.uid || 1);
+  state.clips = state.clips.filter(c => assets.get(c.asset)); state.layers = (state.layers || []).filter(l => assets.get(l.asset)); if (state.music && !assets.get(state.music.asset)) state.music = null; if (state.vo) state.vo = state.vo.filter(v => assets.get(v.asset));
+  PJ.cur = id; PJ.name = rec.name; PJ.savedStr = JSON.stringify(state); PJ.stored = stored;
+  $('#ratio').value = state.ratio; applyRatio(); relayout(); renderAll(); setCur(0); if (window.__hideHome) window.__hideHome();
+  toast(miss ? '已開啟，但有 ' + miss + ' 個素材讀不到' : '已開啟「' + rec.name + '」');
+}
+async function pjNew() {
+  if (!(await pjAskSave())) return; pjClose(); pjReset();
+  state = { ratio: '9:16', clips: [], layers: [], texts: [], music: null, kb: false, vol: { video: 1, music: 0.6 } }; uid = 1;
+  PJ.cur = null; PJ.name = ''; PJ.savedStr = ''; PJ.stored = new Set(); $('#ratio').value = state.ratio; applyRatio(); relayout(); renderAll(); if (window.__hideHome) window.__hideHome(); toast('已開新專案，按「＋素材」加入影片');
+}
+const pjFmtSize = n => n > 1048576 ? (n / 1048576).toFixed(0) + ' MB' : Math.round(n / 1024) + ' KB';
+async function pjRender() {
+  const list = (await pjReq('projects', 'readonly', st => st.getAll())) || []; list.sort((a, b) => b.updated - a.updated);
+  $('#pj-list').innerHTML = list.length ? list.map(r => `<div class="it"><img src="${r.thumb || ''}" alt=""><div class="nm"><b>${esc(r.name)}${r.id === PJ.cur ? '（目前）' : ''}</b><small>${new Date(r.updated).toLocaleString('zh-TW', { hour12: false })}・${(r.dur || 0).toFixed(1)} 秒</small></div><button class="go" data-pjo="${r.id}">開啟</button><button data-pjr="${r.id}">改名</button><button class="del" data-pjd="${r.id}">刪除</button></div>`).join('') : '<p class="hint" style="font-size:13px;color:var(--sub)">還沒有暫存的專案</p>';
+  $('#pj-list').querySelectorAll('[data-pjo]').forEach(b => b.onclick = () => pjLoad(b.dataset.pjo));
+  $('#pj-list').querySelectorAll('[data-pjr]').forEach(b => b.onclick = async () => { const r = list.find(x => x.id === b.dataset.pjr), n = prompt('新的名稱：', r.name); if (n && n.trim()) { r.name = n.trim().slice(0, 30); await pjReq('projects', 'readwrite', st => st.put(r)); if (r.id === PJ.cur) { PJ.name = r.name; $('#pj-name').value = r.name; } pjRender(); } });
+  $('#pj-list').querySelectorAll('[data-pjd]').forEach(b => b.onclick = async () => {
+    const r = list.find(x => x.id === b.dataset.pjd); if (!confirm('確定要刪除「' + r.name + '」嗎？刪掉就找不回來了。')) return;
+    const keys = await pjReq('blobs', 'readonly', st => st.getAllKeys(IDBKeyRange.bound(r.id + ':', r.id + ':￿')));
+    await pjReq('blobs', 'readwrite', st => { (keys || []).forEach(k => st.delete(k)); }); await pjReq('projects', 'readwrite', st => { st.delete(r.id); });
+    if (r.id === PJ.cur) { PJ.cur = null; PJ.savedStr = ''; PJ.stored = new Set(); } pjRender();
+  });
+  try { const e = await navigator.storage.estimate(); $('#pj-st').textContent = `專案存在這支手機的瀏覽器裡（約已用 ${pjFmtSize(e.usage)}，還能用約 ${pjFmtSize(Math.max(0, e.quota - e.usage))}）。清除瀏覽器資料就會不見；iPhone 建議把網頁「加入主畫面」使用，比較不會被系統清掉。每 30 秒會自動更新已儲存過的專案。`; } catch (er) { $('#pj-st').textContent = '專案存在這支手機的瀏覽器裡，清除瀏覽器資料就會不見。每 30 秒會自動更新已儲存過的專案。'; }
+}
+function pjClose() { $('#pj').classList.remove('on'); }
+async function pjShow() { $('#pj-name').value = PJ.name; $('#pj').classList.add('on'); try { await pjRender(); } catch (e) { $('#pj-st').textContent = '這個瀏覽器不能用暫存功能（可能是無痕模式）'; } }
+$('#btn-pj').onclick = pjShow; $('#h-proj').onclick = pjShow; $('#pj-close').onclick = pjClose;
+$('#pj-save').onclick = async () => { const nm = $('#pj-name').value.trim(); if (await pjSave(nm || undefined)) { $('#pj-name').value = PJ.name; pjRender(); } };
+$('#pj-new').onclick = pjNew;
+setInterval(() => { if (PJ.cur && pjDirty() && !playing) pjSave(undefined, true); }, 30000);
+document.addEventListener('visibilitychange', () => { if (document.hidden && PJ.cur && pjDirty()) pjSave(undefined, true); });
+
 /* ================= 啟動 ================= */
-window.addEventListener('beforeunload', e => { if (state.clips.length && !exporting) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', e => { if (state.clips.length && !exporting && pjDirty()) { e.preventDefault(); e.returnValue = ''; } });
 window.ED = { get state() { return state; }, refresh() { relayout(); renderAll(); }, setCur, ops, get total() { return total; }, get L() { return L; } };
 applyRatio(); renderAll(); requestAnimationFrame(tick);
 
@@ -1765,7 +1885,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-J', upd = document.getElementById('upd');
+  const VER = '1121-K', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
