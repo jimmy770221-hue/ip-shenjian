@@ -677,7 +677,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-W（小工具返回修正）</div>
+  <div class="hfoot">版本 1121-X（點畫面收起工具）</div>
   </main>
 </div>
 <div id="app">
@@ -2492,7 +2492,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-W';
+const VER_NOW = '1121-X';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2626,7 +2626,8 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
   };
   const reset = () => { if (!ptr.size) { target = null; start = null; committed = false; return; } lyMode = !!(showLy && selLy); const en = clipAt(cur); target = lyMode ? (state.layers.find(x => x.id === selLy) || null) : (en ? en.c : null); start = info();
     if (lyMode && target) { start.z = target.w; start.x = target.x; start.y = target.y; } else { start.z = target && target.z || 1; start.x = target && target.x || 0; start.y = target && target.y || 0; } };
-  stage.addEventListener('pointerdown', e => { if (!L.length && !state.layers.length) return; ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { stage.setPointerCapture(e.pointerId); } catch (x) {} reset(); });
+  let tap0 = null;
+  stage.addEventListener('pointerdown', e => { if (!L.length && !state.layers.length) return; if (!ptr.size) tap0 = { x: e.clientX, y: e.clientY, t: Date.now() }; else tap0 = null; ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { stage.setPointerCapture(e.pointerId); } catch (x) {} reset(); });
   stage.addEventListener('pointermove', e => {
     if (!ptr.has(e.pointerId) || !target) return;
     ptr.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -2637,7 +2638,15 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
     if (!committed && (Math.abs(nz - start.z) > 0.005 || Math.abs(nx - start.x) > 0.003 || Math.abs(ny - start.y) > 0.003)) { commit(); committed = true; }
     if (committed) { if (lyMode) target.w = nz; else target.z = nz; target.x = nx; target.y = ny; dirty = true; }
   });
-  const up = e => { ptr.delete(e.pointerId); reset(); };
+  const up = e => {
+    const tp = tap0; tap0 = null;
+    if (e.type === 'pointerup' && tp && ptr.size === 1 && Math.hypot(e.clientX - tp.x, e.clientY - tp.y) < 8 && Date.now() - tp.t < 500) {   // 輕點預覽畫面＝收起下方的工具面板
+      const vb = $('#volp'), open = $('#cats').classList.contains('on') || $('#ctx').style.display === 'block' || (vb && vb.style.display === 'block');
+      if (vb && vb.style.display === 'block') vb.style.display = 'none';
+      if (open && !(showLy && selLy)) { closeCats(); clearSel(); renderTimeline(); renderCtx(); layoutSheet(); updateToolbar(); }
+    }
+    ptr.delete(e.pointerId); reset();
+  };
   stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
 })();
 
@@ -2656,7 +2665,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-W', upd = document.getElementById('upd');
+  const VER = '1121-X', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
