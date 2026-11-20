@@ -164,7 +164,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-G（音訊可試聽）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-H（快速匯出）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -232,6 +232,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <select id="xp-fmt"><option value="mp4">🎬 影片（MP4）</option><option value="mp3">🎵 只要聲音（MP3）</option></select>
     <label id="xp-ql-l">畫質</label>
     <select id="xp-q"><option value="480">省空間（480p，傳 LINE 用）</option><option value="720" selected>一般（720p，建議）</option><option value="1080">高畫質（1080p，最慢）</option></select>
+    <label id="xp-mode-l">匯出方式</label>
+    <select id="xp-mode"><option value="fast">⚡ 快速（用手機的影片晶片，預設）</option><option value="compat">🛡 相容（較慢，但最穩）</option></select>
     <p class="hint" id="xp-note"></p>
     <button class="bigbtn" id="xp-go">開始匯出</button>
   </div>
@@ -395,6 +397,7 @@ function drawContain(T, src, sw, sh, c) {
   T.save(); T.translate(W / 2 + ox * W, H / 2 + oy * H); T.rotate(rot * Math.PI / 180); T.scale(c && c.fh ? -1 : 1, c && c.fv ? -1 : 1);
   T.drawImage(src, -sw * s / 2, -sh * s / 2, sw * s, sh * s); T.restore();
 }
+let xsrc = null;   // 快速匯出時：每一格的影片畫面（key → canvas）
 const fxc = document.createElement('canvas'), fxg = fxc.getContext('2d', { willReadFrequently: true });
 function applyFx(c, rx, ry, rw, rh) {
   const q = fxP(c), W = rw == null ? fxc.width : rw, H = rw == null ? fxc.height : rh, im = fxg.getImageData(rx || 0, ry || 0, W, H), d = im.data;
@@ -562,8 +565,8 @@ function efParts(ef, prev, parts, W, H) {
 }
 function drawLayer(l) {
   const a = assets.get(l.asset); if (!a) return;
-  const { cw, ch, x, y } = lyRect(l), src = a.kind === 'image' ? a.img : layerEl(l);
-  const ready = a.kind === 'image' || src.readyState >= 2, fx = hasFx(l), op = l.op == null ? 1 : l.op, kk = kfAt(l, cur - l.start), tf = !kfIdent(kk);
+  const { cw, ch, x, y } = lyRect(l), src = a.kind === 'image' ? a.img : xsrc ? xsrc['l' + l.id] : layerEl(l);
+  const ready = a.kind === 'image' || (xsrc ? !!src : src.readyState >= 2), fx = hasFx(l), op = l.op == null ? 1 : l.op, kk = kfAt(l, cur - l.start), tf = !kfIdent(kk);
   const heavy = fx || l.ck || l.mk || l.bm || tf; let T = g;
   if (heavy) { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); T = fxg; }
   T.save(); if (T === g) T.globalAlpha = op;
@@ -598,12 +601,12 @@ function drawEntry(e) {
   if (fx) { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); T = fxg; }
   if (tf) { g.save(); applyTf(g, cv.width / 2, cv.height / 2, kk, cv.width, cv.height); g.globalAlpha *= kk.o; }
   try {
-    if (e.c.bb && !tf && !(state.kb && a.kind === 'image') && !((e.c.z && e.c.z !== 1) || e.c.x || e.c.y)) { const sb = a.kind === 'image' ? a.img : (a.el.readyState >= 2 ? a.el : null); if (sb) drawBlurBg(T, sb, a.w, a.h, e.c); }
+    if (e.c.bb && !tf && !(state.kb && a.kind === 'image') && !((e.c.z && e.c.z !== 1) || e.c.x || e.c.y)) { const sb = a.kind === 'image' ? a.img : xsrc ? xsrc['c' + e.c.id] : (a.el.readyState >= 2 ? a.el : null); if (sb) drawBlurBg(T, sb, xsrc && a.kind !== 'image' ? sb.width : a.w, xsrc && a.kind !== 'image' ? sb.height : a.h, e.c); }
     if (a.kind === 'image') {
       const z = state.kb ? 1 + 0.12 * clamp((cur - e.start) / e.d, 0, 1) : 1;
       T.save(); T.translate(cv.width / 2, cv.height / 2); T.scale(z, z); T.translate(-cv.width / 2, -cv.height / 2);
       drawContain(T, a.img, a.w, a.h, e.c); T.restore();
-    } else if (a.el.readyState >= 2) drawContain(T, a.el, a.w, a.h, e.c);
+    } else { const v = xsrc ? xsrc['c' + e.c.id] : (a.el.readyState >= 2 ? a.el : null); if (v) drawContain(T, v, xsrc ? v.width : a.w, xsrc ? v.height : a.h, e.c); }
   } catch (err) {}
   if (fx) { try { applyFx(e.c); g.drawImage(fxc, 0, 0); } catch (err) {} }
   if (tf) g.restore();
@@ -640,7 +643,7 @@ function renderFrame() {
   if (state.gfx && hasFx(state.gfx)) { try { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); fxg.drawImage(cv, 0, 0); applyFx(state.gfx); g.drawImage(fxc, 0, 0); } catch (er) {} }
   if (state.gfx && hasEf(state.gfx.ef)) { try { applyEf(state.gfx.ef, cur); } catch (er) {} }
   for (const x of state.texts) if (cur >= x.start && cur < x.start + x.dur) drawText(g, cv.width, cv.height, x, cur - x.start);
-  if (selLy && showLy) { const l = state.layers.find(x => x.id === selLy); if (l && cur >= l.start && cur < l.start + l.len) { const r = lyRect(l); g.save(); g.setLineDash([8, 5]); g.lineWidth = 3; g.strokeStyle = '#ffb347'; g.strokeRect(r.x + 1.5, r.y + 1.5, r.cw - 3, r.ch - 3); g.restore(); } }
+  if (selLy && showLy && !xsrc) { const l = state.layers.find(x => x.id === selLy); if (l && cur >= l.start && cur < l.start + l.len) { const r = lyRect(l); g.save(); g.setLineDash([8, 5]); g.lineWidth = 3; g.strokeStyle = '#ffb347'; g.strokeRect(r.x + 1.5, r.y + 1.5, r.cw - 3, r.ch - 3); g.restore(); } }
 }
 function syncMedia() {
   const act = activeEntries(), ts = transState(), want = new Map();
@@ -1357,7 +1360,8 @@ async function getFF() {
 }
 const xp = $('#xp'), xbar = $('#xp .bar'), xfill = xbar.querySelector('i'), xst = $('#xp-st');
 function xStatus(t, c) { xst.textContent = t; xst.className = 'st ' + (c || ''); }
-function xProg(p) { xbar.style.display = 'block'; xfill.style.width = Math.round(clamp(p, 0, 1) * 100) + '%'; }
+let progMode = 0;
+function xProg(p) { xbar.style.display = 'block'; if (progMode === 1) p = p * 0.2; else if (progMode === 2) p = 0.2 + p * 0.8; xfill.style.width = Math.round(clamp(p, 0, 1) * 100) + '%'; }
 $('#btn-export').onclick = () => {
   pause(); if (!total) return toast('還沒有素材可以匯出');
   $('#xp-opts').style.display = 'block'; $('#xp-res').innerHTML = ''; xStatus(''); xbar.style.display = 'none';
@@ -1365,7 +1369,7 @@ $('#btn-export').onclick = () => {
   xp.classList.add('on');
 };
 $('#xp-close').onclick = () => { if (exporting) { if (!confirm('正在匯出，確定要中止嗎？')) return; location.reload(); return; } xp.classList.remove('on'); };
-$('#xp-fmt').onchange = e => { $('#xp-q').style.display = $('#xp-ql-l').style.display = e.target.value === 'mp3' ? 'none' : 'block'; };
+$('#xp-fmt').onchange = e => { const m = e.target.value === 'mp3'; $('#xp-q').style.display = $('#xp-ql-l').style.display = $('#xp-mode').style.display = $('#xp-mode-l').style.display = m ? 'none' : 'block'; };
 function exportDims(S) {
   const r = state.ratio, ev = n => { n = Math.round(n); return n % 2 ? n + 1 : n; };
   // S 是「短邊」：直式 720 = 720×1280、橫式 720 = 1280×720（跟手機一般說的 720p 一樣）
@@ -1384,14 +1388,62 @@ async function hasAudio(f, name) { ffLog = []; try { await f.exec(['-i', name, '
 const X264 = ['-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p'];
 let exporting = false;
 
+/* ===== 快速匯出：用「畫面一格一格畫出來」＋手機硬體編碼（和預覽用同一套畫法，所以預覽什麼樣、成品就什麼樣）===== */
+async function fastVideo(LL, TT, W, H, S, audioBytes) {
+  const MB = await import('./lib/mediabunny.min.mjs');
+  const { Input, BlobSource, BufferSource, ALL_FORMATS, CanvasSink, Output, Mp4OutputFormat, BufferTarget, CanvasSource, EncodedAudioPacketSource, EncodedPacketSink, canEncodeVideo } = MB;
+  const FPS = 30, N = Math.max(1, Math.round(TT * FPS)), bitrate = Math.round(Math.min(14e6, Math.max(1.5e6, W * H * FPS * 0.12)));
+  if (!(await canEncodeVideo('avc', { width: W, height: H, bitrate }))) throw new Error('這支手機不能用快速匯出');
+  const saveCur = cur, need = {}, inputs = new Map();
+  const add = (key, a, t, k) => { const n = need[key] || (need[key] = { a, ts: [], ks: [] }); n.ts.push(t); n.ks.push(k); };
+  for (let k = 0; k < N; k++) {
+    cur = k / FPS;
+    for (const e of activeEntries()) { const a = assets.get(e.c.asset); if (a && a.kind === 'video') add('c' + e.c.id, a, clamp(e.c.in + Math.max(0, cur - e.start) * spd(e.c), e.c.in, Math.max(e.c.in, e.c.out - 0.001)), k); }
+    for (const l of state.layers) if (cur >= l.start && cur < l.start + l.len) { const a = assets.get(l.asset); if (a && a.kind === 'video') add('l' + l.id, a, clamp(l.in + (cur - l.start) * spd(l), 0, Math.max(0, (a.dur || 1e9) - 0.01)), k); }
+  }
+  const gens = {}, ptr = {};
+  try {
+    for (const key in need) {
+      const n = need[key]; let io = inputs.get(n.a.id);
+      if (!io) {
+        const input = new Input({ source: new BlobSource(n.a.file), formats: ALL_FORMATS }), track = await input.getPrimaryVideoTrack();
+        if (!track || !(await track.canDecode())) throw new Error('這支影片的格式手機沒辦法快速處理');
+        io = { input, track, first: await input.getFirstTimestamp([track]) }; inputs.set(n.a.id, io);
+      }
+      const sink = new CanvasSink(io.track, { width: Math.min(io.track.displayWidth, Math.max(W, H)) });
+      gens[key] = sink.canvasesAtTimestamps(n.ts.map(t => Math.max(t, io.first))); ptr[key] = 0;
+    }
+    const target = new BufferTarget(), output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target });
+    const vsrc = new CanvasSource(cv, { codec: 'avc', bitrate }); output.addVideoTrack(vsrc, { frameRate: FPS });
+    let asrc = null, at = null, cfg = null;
+    if (audioBytes) { const ain = new Input({ source: new BufferSource(audioBytes), formats: ALL_FORMATS }); at = await ain.getPrimaryAudioTrack(); if (at) { cfg = await at.getDecoderConfig(); asrc = new EncodedAudioPacketSource(at.codec); output.addAudioTrack(asrc); } }
+    await output.start();
+    if (asrc) { let first = true; for await (const pkt of new EncodedPacketSink(at).packets()) { await asrc.add(pkt, first ? { decoderConfig: cfg } : undefined); first = false; } asrc.close(); }
+    xStatus('正在畫出每一格畫面並編碼…'); cv.width = W; cv.height = H; xsrc = {}; let lastP = 0;
+    for (let k = 0; k < N; k++) {
+      cur = k / FPS;
+      for (const key in gens) { const n = need[key]; if (n.ks[ptr[key]] === k) { const r = await gens[key].next(); if (r.value && r.value.canvas) xsrc[key] = r.value.canvas; ptr[key]++; } }
+      renderFrame();
+      await vsrc.add(k / FPS, 1 / FPS);
+      if (k - lastP >= 10) { lastP = k; xProg(k / N); await new Promise(r => setTimeout(r, 0)); }
+    }
+    vsrc.close(); await output.finalize(); xProg(1);
+    return new Blob([target.buffer], { type: 'video/mp4' });
+  } finally {
+    xsrc = null; for (const io of inputs.values()) { try { io.input.dispose(); } catch (e) {} }
+    cur = saveCur; applyRatio(); dirty = true;
+  }
+}
+let noFastOnce = false;
 $('#xp-go').onclick = async () => {
-  const kind = $('#xp-fmt').value, S = +$('#xp-q').value, audioOnly = kind === 'mp3';
+  const kind = $('#xp-fmt').value, S = +$('#xp-q').value, isMp3 = kind === 'mp3', compat = $('#xp-mode').value === 'compat' || noFastOnce; noFastOnce = false;
+  const fast = !isMp3 && !compat && !!window.VideoEncoder && !state.clips.some(c => c.rev), audioOnly = isMp3 || fast;
   const [W, H] = exportDims(S), snap = JSON.parse(JSON.stringify(state)), LL = L.map(e => ({ ...e })), TT = total;
   exporting = true; $('#xp-opts').style.display = 'none'; $('#xp-res').innerHTML = ''; xProg(0);
   const files = []; let wake = null;
   try { wake = await navigator.wakeLock?.request('screen'); } catch (e) {}
   try {
-    xStatus('正在載入處理程式…（第一次約 30 秒）');
+    progMode = fast ? 1 : 0; xStatus('正在載入處理程式…（第一次約 30 秒）');
     const f = await getFF(); const prog = (a, b) => { onProg = p => xProg(a + p * (b - a)); };
     const names = {}, audioMap = {};
     const usedIds = [...new Set(LL.map(e => e.c.asset))];
@@ -1495,8 +1547,8 @@ $('#xp-go').onclick = async () => {
     if (!audioOnly && !needV && !needA) { outName = base; mime = 'video/mp4'; }
     else if (audioOnly && !needA) {
       xStatus('正在轉成 MP3…'); prog(0.8, 1);
-      if (await f.exec(['-i', base, '-vn', '-c:a', 'libmp3lame', '-q:a', '2', 'out.mp3']) !== 0) throw new Error('轉 MP3 失敗');
-      outName = 'out.mp3'; mime = 'audio/mpeg'; files.push(outName);
+      if (fast) { outName = base; mime = 'audio/mp4'; }
+      else { if (await f.exec(['-i', base, '-vn', '-c:a', 'libmp3lame', '-q:a', '2', 'out.mp3']) !== 0) throw new Error('轉 MP3 失敗'); outName = 'out.mp3'; mime = 'audio/mpeg'; files.push(outName); }
     } else {
       xStatus(audioOnly ? '正在混音…' : '正在合成畫面、文字與配樂…'); prog(0.8, 1);
       const args = ['-i', base]; let idx = 1;
@@ -1564,7 +1616,7 @@ $('#xp-go').onclick = async () => {
         if (aud && (aud.fi > 0 || aud.fo > 0)) { const fl = []; if (aud.fi > 0) fl.push(`afade=t=in:st=0:d=${aud.fi}`); if (aud.fo > 0) fl.push(`afade=t=out:st=${Math.max(0, TT - aud.fo).toFixed(3)}:d=${aud.fo}`); parts.push(`${amap}${fl.join(',')}[afo]`); amap = '[afo]'; }
       }
       if (parts.length) args.push('-filter_complex', parts.join(';'));
-      if (audioOnly) { args.push('-vn', '-map', amap, '-t', TT.toFixed(3), '-c:a', 'libmp3lame', '-q:a', '2', 'out.mp3'); outName = 'out.mp3'; mime = 'audio/mpeg'; }
+      if (audioOnly) { if (fast) { args.push('-vn', '-map', amap, '-t', TT.toFixed(3), '-c:a', 'aac', '-ar', '44100', '-b:a', '160k', 'out.m4a'); outName = 'out.m4a'; mime = 'audio/mp4'; } else { args.push('-vn', '-map', amap, '-t', TT.toFixed(3), '-c:a', 'libmp3lame', '-q:a', '2', 'out.mp3'); outName = 'out.mp3'; mime = 'audio/mpeg'; } }
       else {
         args.push('-map', vmap, '-map', amap, '-t', TT.toFixed(3));
         args.push(...(needV ? [...X264, '-crf', '23'] : ['-c:v', 'copy']), '-c:a', amap === '0:a' ? 'copy' : 'aac', '-movflags', '+faststart', 'out.mp4'); outName = 'out.mp4'; mime = 'video/mp4';
@@ -1573,19 +1625,23 @@ $('#xp-go').onclick = async () => {
       files.push(outName);
     }
     const data = await f.readFile(outName);
-    const blob = new Blob([data.buffer], { type: mime }), url = URL.createObjectURL(blob);
-    const fname = (audioOnly ? 'IP神剪配樂' : 'IP神剪作品') + (audioOnly ? '.mp3' : '.mp4');
+    let blob;
+    if (fast) { progMode = 2; try { blob = await fastVideo(LL, TT, W, H, S, data); } catch (er) { er.fast = true; throw er; } mime = 'video/mp4'; }
+    else blob = new Blob([data.buffer], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const fname = (isMp3 ? 'IP神剪配樂' : 'IP神剪作品') + (isMp3 ? '.mp3' : '.mp4');
     xbar.style.display = 'none'; xStatus('完成！檔案大小 ' + (blob.size > 1048576 ? (blob.size / 1048576).toFixed(1) + ' MB' : Math.round(blob.size / 1024) + ' KB'), 'ok');
-    $('#xp-res').innerHTML = (audioOnly ? `<audio controls src="${url}"></audio>` : `<video controls playsinline src="${url}"></video>`)
+    $('#xp-res').innerHTML = (isMp3 ? `<audio controls src="${url}"></audio>` : `<video controls playsinline src="${url}"></video>`)
       + `<a class="bigbtn" id="xp-dl" download="${fname}" href="${url}">⬇️ 下載 ${fname}</a><button class="bigbtn g" id="xp-share">📤 分享／存到手機相簿</button>`
       + `<p class="hint">iPhone：按「分享」後選「儲存影片」就會存進相簿。</p>`;
     $('#xp-share').onclick = async () => { const file = new File([blob], fname, { type: mime }); try { if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file] }); else toast('這個瀏覽器不支援分享，請按「下載」'); } catch (e) {} };
   } catch (e) {
     console.error(e, ffLog.slice(-12).join('\n'));
+    if (e.fast) { xStatus('快速匯出沒成功，自動改用相容模式重做…'); noFastOnce = true; setTimeout(() => $('#xp-go').onclick(), 300); return; }
     xbar.style.display = 'none'; xStatus('失敗了：' + (e.message || e) + '\n（可能是影片太長或手機記憶體不足，試試縮短作品或選「省空間」畫質）', 'err');
     $('#xp-opts').style.display = 'block';
   } finally {
-    onProg = null; exporting = false; try { wake && wake.release(); } catch (e) {}
+    onProg = null; exporting = false; progMode = 0; try { wake && wake.release(); } catch (e) {}
     if (ff) for (const n of files) { try { await ff.deleteFile(n); } catch (e) {} }
   }
 };
@@ -1644,7 +1700,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-G', upd = document.getElementById('upd');
+  const VER = '1121-H', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
