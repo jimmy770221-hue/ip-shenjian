@@ -112,6 +112,14 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .ctx label b{color:var(--text);font-weight:700;margin-left:6px}
 .lblock{position:absolute;height:24px;border-radius:6px;font-size:12px;line-height:24px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#d6527a;border:2px solid #d6527a}
 .lblock.sel{border-color:var(--hot)}
+.trkbg{position:absolute;left:0;height:52px;background:rgba(255,255,255,.05);border-radius:6px}
+.trklbl,.trkdel,.trkadd{position:sticky;left:4px;z-index:6;display:inline-block;height:22px;line-height:20px;margin-top:2px;padding:0 9px;border-radius:11px;background:#262a3d;border:1px solid #8485c4;color:#fff;font-size:12px;font-weight:700;white-space:nowrap}
+.trkdel{left:auto;margin-left:4px;padding:0 7px;color:#ffb3b3;border-color:#6b3a46}
+.trkadd{left:4px;height:24px;line-height:22px;margin:2px 0;background:#3a3470;border-color:#8485c4}
+#row-ladd{height:28px}
+#row-l .lblock{height:50px;padding:0;line-height:normal;border-radius:8px;border:2px solid #4a5284;background:#3a4166 center/auto 100% repeat-x;overflow:hidden;font-size:11px}
+#row-l .lblock.sel{border-color:var(--hot);box-shadow:0 0 0 1px var(--hot)}
+#row-l .lblock span{position:absolute;left:0;right:0;bottom:0;padding:2px 5px;background:rgba(0,0,0,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
 .tpls{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch}
 .tplb{flex:0 0 auto;width:62px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:6px 4px 4px;font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:4px}
 .tplb svg{width:30px;height:40px}
@@ -677,7 +685,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AH（選取才能編輯・任意旋轉）</div>
+  <div class="hfoot">版本 1121-AI（畫面軌道・分鏡圖）</div>
   </main>
 </div>
 <div id="app">
@@ -707,6 +715,7 @@ html, body, .ip-tools { background-color: var(--bg); }
       <div class="ruler" id="ruler"></div>
       <div class="row v" id="row-v"></div>
       <div class="row" id="row-l" style="height:0"></div>
+      <div class="row" id="row-ladd" style="display:none"><button class="trkadd" id="trk-add">＋ 新增畫面軌道（拼貼）</button></div>
       <div class="row" id="row-t" style="height:0"></div>
       <div class="row" id="row-m" style="height:0"></div>
       <div class="row" id="row-vo" style="height:0"></div>
@@ -834,8 +843,16 @@ function undo() { if (!history.length) return toast('沒有可以復原的了');
 function redo() { if (!redoStack.length) return toast('沒有可以重做的了'); history.push(JSON.stringify(state)); restore(redoStack.pop()); lastTouch = null; }
 
 /* ================= 版面計算 ================= */
+function normLy() {   // 畫面軌道：每一層放在哪一條軌道（trk）。軌道越高越在上面；舊作品沒有軌道就照以前的自動分層補上
+  const ls = state.layers || []; if (!ls.length && !state.ntrk) return;
+  const ends = [];
+  ls.forEach(l => { if (l.trk == null) { let k = ends.findIndex(e => e <= l.start + 0.001); if (k < 0) { k = ends.length; ends.push(0); } ends[k] = l.start + l.len; l.trk = k; } });
+  let mx = -1; ls.forEach(l => { if (l.trk > mx) mx = l.trk; });
+  state.ntrk = Math.max(state.ntrk || 0, mx + 1);
+  if (ls.some((l, i) => i && ls[i - 1].trk > l.trk)) state.layers = ls.map((l, i) => [l, i]).sort((a, b) => a[0].trk - b[0].trk || a[1] - b[1]).map(x => x[0]);
+}
 function relayout() {
-  L = [];
+  normLy(); L = [];
   state.clips.forEach((c, i) => {
     const d = (c.out - c.in) / spd(c); let td = 0;
     if (i > 0 && c.tr) { td = Math.min(c.tr.dur, 0.45 * Math.min(L[i - 1].d, d)); td = Math.round(td * 30) / 30; if (td < 0.2) td = 0; }
@@ -1488,10 +1505,11 @@ function renderTimeline() {
     return `<div class="clip${e.c.mute ? ' mute' : ''}" data-i="${e.i}" style="z-index:${e.i + 1};left:${e.start * pps}px;width:${Math.max(4, e.d * pps - 2)}px;${a.thumb ? `background-image:url(${a.thumb})` : ''}"><span>${a.kind === 'image' ? '🖼 ' : ''}${e.i + 1}・${e.d.toFixed(1)}秒${e.c.sp && e.c.sp !== 1 ? ' ⚡' + e.c.sp + 'x' : ''}${e.c.rev ? ' ↺' : ''}${hasFx(e.c) ? ' 🎨' : ''}</span></div>`;
   }).join('') + L.slice(1).map(e => `<div class="tmark${e.td > 0 ? ' on' : ''}${selTr === e.i ? ' sel' : ''}" data-ti="${e.i}" style="left:${(e.start + e.td / 2) * pps}px">${e.td > 0 ? '⟷' : '＋'}</div>`).join('');
   // 疊加層軌
-  const rl = $('#row-l'), lln = [];
-  const litems = state.layers.map((l, i) => { let ln = lln.findIndex(end => end <= l.start + 0.001); if (ln < 0) { ln = lln.length; lln.push(0); } lln[ln] = l.start + l.len; return { l, i, ln }; });
-  rl.style.height = lln.length ? lln.length * 28 + 'px' : '0'; rl.style.width = W + 'px';
-  rl.innerHTML = litems.map(({ l, i, ln }) => `<div class="lblock${selLy === l.id ? ' sel' : ''}" data-lid="${l.id}" style="top:${ln * 28}px;left:${l.start * pps}px;width:${Math.max(24, l.len * pps - 2)}px">🧩 第${i + 1}層・${esc(assets.get(l.asset) ? assets.get(l.asset).name : '')}</div>`).join('');
+  const rl = $('#row-l'), nt = state.ntrk || 0, ty = t => (nt - 1 - t) * 54;   // 高的軌道在上面
+  rl.style.height = nt ? nt * 54 + 'px' : '0'; rl.style.width = W + 'px';
+  let rlh = ''; for (let t = nt - 1; t >= 0; t--) rlh += `<div class="trkbg" style="top:${ty(t)}px;width:${W}px"><span class="trklbl" data-trk="${t}">${t + 1}＋</span>${state.layers.some(l => l.trk === t) ? '' : `<span class="trkdel" data-trkdel="${t}">✕</span>`}</div>`;
+  rl.innerHTML = rlh + state.layers.map((l, i) => `<div class="lblock${selLy === l.id ? ' sel' : ''}" data-lid="${l.id}" style="top:${ty(l.trk || 0)}px;left:${l.start * pps}px;width:${Math.max(24, l.len * pps - 2)}px;${(assets.get(l.asset) || {}).thumb ? `background-image:url(${assets.get(l.asset).thumb})` : ''}"><span>${assets.get(l.asset) && assets.get(l.asset).kind === 'image' ? '🖼 ' : ''}${(l.len).toFixed(1)}s・${esc(assets.get(l.asset) ? assets.get(l.asset).name : '')}</span></div>`).join('');
+  $('#row-ladd').style.display = L.length ? 'block' : 'none';
   // 文字軌（自動分層）
   const rt = $('#row-t'), lanes = [];
   const items = state.texts.slice().sort((a, b) => a.start - b.start).map(x => {
@@ -1519,10 +1537,15 @@ $('#row-v').addEventListener('click', e => {
   const own = L[en.i + 1] ? Math.max(0.001, L[en.i + 1].start - en.start) : en.d;
   const keepFx = showFx; pause(); setCur(en.start + clamp(x / pps, 0, own - 0.001)); clearSel(); showFx = keepFx; renderTimeline(); renderCtx();
 });
-$('#row-l').addEventListener('click', e => { const d = e.target.closest('.lblock'); if (!d) return; clearSel(); showLy = true; selLy = +d.dataset.lid; renderTimeline(); renderCtx(); dirty = true; });
+let pendingTrk = null;
+$('#row-l').addEventListener('click', e => {
+  const tl = e.target.closest('.trklbl'); if (tl) { pause(); pendingTpl = null; pendingTrk = +tl.dataset.trk; $('#f-layer').click(); return; }
+  const td = e.target.closest('.trkdel'); if (td) { const t = +td.dataset.trkdel; commit(); state.layers.forEach(l => { if (l.trk > t) l.trk--; }); state.ntrk = Math.max(0, (state.ntrk || 1) - 1); relayout(); renderTimeline(); dirty = true; return; }
+  const d = e.target.closest('.lblock'); if (!d) return; clearSel(); showLy = true; selLy = +d.dataset.lid; renderTimeline(); renderCtx(); dirty = true; });
 $('#row-t').addEventListener('click', e => { const d = e.target.closest('.tblock'); if (!d) return; clearSel(); selText = +d.dataset.tid; renderTimeline(); renderCtx(); });
 $('#row-m').addEventListener('click', e => { if (!e.target.closest('.mblock')) return; clearSel(); selMusic = true; renderTimeline(); renderCtx(); });
 function setPps(v) { pps = clamp(v, 12, 600); renderTimeline(); }
+$('#trk-add').onclick = () => { pause(); commit(); state.ntrk = (state.ntrk || 0) + 1; pendingTpl = null; pendingTrk = state.ntrk - 1; renderTimeline(); $('#f-layer').click(); };
 $('#z-in').onclick = () => setPps(pps * 1.5); $('#z-out').onclick = () => setPps(pps / 1.5);
 // 兩指縮放
 let pz = null;
@@ -2090,7 +2113,7 @@ function lyHtml() {
     h += `<div class="r2"><div><label>從第幾秒開始出現</label><input type="number" id="ly-s" step="0.1" min="0" value="${l.start.toFixed(1)}"></div><div><label>出現多久（秒）</label><input type="number" id="ly-d" step="0.1" min="0.3" value="${l.len.toFixed(1)}"></div></div>
     <div class="r2" style="margin-top:8px"><button class="sm" id="ly-ss">開始＝目前位置</button><button class="sm" id="ly-se">結束＝目前位置</button></div>
     ${isV ? `<label class="chk"><input type="checkbox" id="ly-snd"${l.mute === false ? ' checked' : ''}> 這一格要有聲音（預設靜音，免得好幾個聲音混在一起）</label>` : ''}
-    <div class="r2" style="margin-top:8px"><button class="sm" id="ly-up">⬆ 往上一層</button><button class="sm" id="ly-dn">⬇ 往下一層</button></div>
+    <div class="r2" style="margin-top:8px"><button class="sm" id="ly-up">⬆ 移到上一條軌道</button><button class="sm" id="ly-dn">⬇ 移到下一條軌道</button></div>
     <button class="sm red" id="ly-del" style="margin-top:8px;width:100%">刪除這一格</button>`;
   }
   return h + `<button class="sm ok" id="ly-back" style="width:100%;margin-top:8px">完成這一格</button>`;
@@ -2098,8 +2121,8 @@ function lyHtml() {
 function bindLy(on) {
   const l = selLy && state.layers.find(x => x.id === selLy), all = sel => document.querySelectorAll('#ctx ' + sel);
   if (!l) {
-    all('[data-tpl]').forEach(b => b.onclick = () => { pendingTpl = b.dataset.tpl; $('#f-layer').click(); });
-    on('#ly-add', 'click', () => { pendingTpl = null; $('#f-layer').click(); });
+    all('[data-tpl]').forEach(b => b.onclick = () => { pendingTpl = b.dataset.tpl; pendingTrk = null; $('#f-layer').click(); });
+    on('#ly-add', 'click', () => { pendingTpl = null; pendingTrk = null; $('#f-layer').click(); });
     on('#ly-ok', 'click', () => { showLy = false; selLy = null; renderTimeline(); renderCtx(); dirty = true; });
     all('[data-ly]').forEach(b => b.onclick = () => { selLy = +b.dataset.ly; lyTab = 'p'; const x = state.layers.find(q => q.id === selLy); if (x && !(cur >= x.start && cur < x.start + x.len)) setCur(x.start); renderTimeline(); renderCtx(); dirty = true; });
     all('[data-gfp]').forEach(b => b.onclick = () => { commit(); state.gfx = state.gfx || {}; if (b.dataset.gfp === 'none') delete state.gfx.fp; else state.gfx.fp = b.dataset.gfp; dirty = true; renderCtx(); });
@@ -2134,12 +2157,12 @@ function bindLy(on) {
   on('#ly-ss', 'click', () => { commit(); const end = l.start + l.len; l.start = cur; l.len = Math.max(0.3, end - cur); re(); });
   on('#ly-se', 'click', () => { if (cur - l.start < 0.3) return toast('結束要比開始晚'); commit(); l.len = cur - l.start; re(); });
   on('#ly-snd', 'change', e => { commit(); l.mute = !e.target.checked; syncMedia(); });
-  on('#ly-up', 'click', () => { const i = state.layers.indexOf(l); if (i >= state.layers.length - 1) return toast('已經在最上面'); commit(); [state.layers[i], state.layers[i + 1]] = [state.layers[i + 1], state.layers[i]]; renderTimeline(); renderCtx(); dirty = true; });
-  on('#ly-dn', 'click', () => { const i = state.layers.indexOf(l); if (i < 1) return toast('已經在最下面'); commit(); [state.layers[i], state.layers[i - 1]] = [state.layers[i - 1], state.layers[i]]; renderTimeline(); renderCtx(); dirty = true; });
+  on('#ly-up', 'click', () => { if ((l.trk || 0) >= (state.ntrk || 1) - 1) return toast('已經在最上面的軌道'); commit(); l.trk = (l.trk || 0) + 1; relayout(); renderTimeline(); renderCtx(); dirty = true; });
+  on('#ly-dn', 'click', () => { if ((l.trk || 0) < 1) return toast('已經在最下面的軌道'); commit(); l.trk = (l.trk || 0) - 1; relayout(); renderTimeline(); renderCtx(); dirty = true; });
   on('#ly-del', 'click', () => { commit(); state.layers = state.layers.filter(x => x !== l); const e0 = lyEls.get(l.id); if (e0) { e0.pause(); e0.remove(); lyEls.delete(l.id); } selLy = null; re(); });
   on('#ly-back', 'click', () => { selLy = null; renderTimeline(); renderCtx(); dirty = true; });
 }
-async function addLayers(files, tplKey) {
+async function addLayers(files, tplKey, want) {
   toast('匯入中…'); commit();
   const tpl = tplKey && TPLS.find(t => t.k === tplKey), W = cv.width, H = cv.height; let n = 0, last = null;
   for (const f of files) {
@@ -2147,7 +2170,11 @@ async function addLayers(files, tplKey) {
     try {
       const a = await makeAsset(f); let x = .5, y = .5, w = .5, ar = clamp(a.w / a.h, .3, 3);
       if (tpl) { const [cx, cy, cw, ch] = tpl.c[n]; x = cx; y = cy; w = cw; ar = (cw * W) / (ch * H); }
-      const l = { id: uid++, asset: a.id, start: cur, in: 0, len: a.kind === 'image' ? 3 : a.dur, x, y, w, ar, fit: 'cover', mute: true };
+      const ln = a.kind === 'image' ? 3 : a.dur, busy = (t, st) => state.layers.some(o => o.trk === t && o.start < st + ln - 0.001 && o.start + o.len > st + 0.001); let st = cur, tk;
+      if (want != null) { tk = want; for (let g2 = 0; g2 < 60; g2++) { const o = state.layers.find(o => o.trk === want && o.start < st + ln - 0.001 && o.start + o.len > st + 0.001); if (!o) break; st = o.start + o.len; } }   // 指定的軌道這個時間已經有素材：接在後面
+      else { tk = 0; while (tk < (state.ntrk || 0) && busy(tk, st)) tk++; }   // 沒指定：放進第一條空著的軌道，沒有就自動新增一條
+      state.ntrk = Math.max(state.ntrk || 0, tk + 1);
+      const l = { id: uid++, asset: a.id, start: st, in: 0, len: ln, x, y, w, ar, fit: 'cover', mute: true, trk: tk };
       state.layers.push(l); last = l; n++;
     } catch (e) { toast(e.message); }
   }
@@ -2155,7 +2182,7 @@ async function addLayers(files, tplKey) {
   relayout(); renderAll(); setCur(cur);
   toast(tpl ? (n < tpl.c.length ? `放了 ${n} 格，還有 ${tpl.c.length - n} 格是空的，可再用「自由加一層」補` : '已放進版面') : '已加一層');
 }
-$('#f-layer').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; const t = pendingTpl; pendingTpl = null; if (fs.length) { pause(); addLayers(fs, t); } };
+$('#f-layer').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; const t = pendingTpl, tk = pendingTrk; pendingTpl = null; pendingTrk = null; if (fs.length) { pause(); addLayers(fs, t, tk); } };
 function trHtml() {
   const e = L[selTr], c = e.c, ty = c.tr ? c.tr.type : '';
   return `<h4>🎞 第 ${selTr} 段 → 第 ${selTr + 1} 段 的換頁效果</h4>
@@ -2596,7 +2623,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AH';
+const VER_NOW = '1121-AI';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2817,7 +2844,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AH', upd = document.getElementById('upd');
+  const VER = '1121-AI', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
