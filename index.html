@@ -51,6 +51,12 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .ruler b.bt{position:absolute;top:8px;width:3px;height:12px;background:#ffb347;border-radius:2px;margin-left:-1px}
 .playhead{position:absolute;left:50%;top:0;bottom:0;width:2px;background:#fff;margin-left:-1px;pointer-events:none;z-index:3;box-shadow:0 0 4px rgba(0,0,0,.6)}
 .playhead::before{content:"";position:absolute;top:0;left:-5px;border:6px solid transparent;border-top-color:#fff}
+.tlb{position:absolute;top:24px;z-index:4;width:42px;height:46px;border-radius:12px;border:1px solid var(--line);background:#1d2030ee;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;padding:0}
+.tlb.add{right:6px;background:var(--main);border-color:var(--main);font-size:28px;font-weight:700}
+.tlb.vol{left:6px}
+#volp{position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));max-width:744px;margin:0 auto;z-index:80;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:none;box-shadow:0 -6px 24px #000a}
+#volp label{display:block;font-size:13px;color:var(--sub);margin:8px 0 2px}#volp label b{color:var(--text);margin-left:6px}
+#volp input[type=range]{width:100%;height:30px}
 .quick{display:flex;gap:8px;padding:4px 8px;background:var(--bg)}
 .quick button{flex:1;background:var(--panel2);color:var(--text);border:1px dashed var(--line);border-radius:9px;padding:6px 4px;font-size:13px;font-weight:700}
 .quick button:active{background:var(--line)}
@@ -177,7 +183,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-P（直接拍攝＋倒數）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-Q（介面改版：加號與音量）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -190,7 +196,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   </div>
   <div class="stage">
     <canvas id="cv" width="360" height="640"></canvas>
-    <div class="empty" id="empty">按下方「＋素材」<br>選擇活動的影片和照片開始剪輯</div>
+    <div class="empty" id="empty">按時間軸右邊的「＋」<br>選擇活動的影片和照片開始剪輯</div>
   </div>
   <div class="transport">
     <button id="b-prev">◀1格</button>
@@ -209,10 +215,12 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
       <div class="row" id="row-vo" style="height:0"></div>
     </div></div>
     <div class="playhead"></div>
+    <button class="tlb vol" id="tl-vol" title="音量">🔊</button>
+    <button class="tlb add" id="tl-add" title="加入照片或影片">＋</button>
   </div>
+  <div id="volp"></div>
   <div class="quick"><button id="q-text">🅣 添加文字</button><button id="q-music" class="m">🎵 添加音樂</button></div>
   <div class="toolbar" id="toolbar">
-    <button class="tb" data-a="add"><i>＋</i>素材</button>
     <button class="tb" data-a="cam"><i>📷</i>拍攝</button>
     <button class="tb" data-a="tpl"><i>🎬</i>範本</button>
     <button class="tb" data-a="auto"><i>✨</i>幻燈片</button>
@@ -347,7 +355,7 @@ async function camStart(face) {
 }
 async function camOpen() {
   if (camS) return;
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') return toast('這個瀏覽器不支援直接拍攝，請用「＋素材」選相機拍好的影片');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') return toast('這個瀏覽器不支援直接拍攝，請用時間軸右邊的「＋」選相機拍好的影片');
   const box = document.createElement('div');
   box.style.cssText = 'position:fixed;inset:0;z-index:99;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:space-between';
   box.innerHTML = `<div style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 14px;color:#fff;font-size:15px"><button id="cm-x" style="background:#0008;color:#fff;border:0;border-radius:20px;padding:8px 16px;font-size:15px">✕ 取消</button><b id="cm-t">準備拍攝</b><button id="cm-f" style="background:#0008;color:#fff;border:0;border-radius:20px;padding:8px 16px;font-size:15px">🔄 翻轉</button></div>
@@ -1003,6 +1011,22 @@ const ops = {
   undo, redo
 };
 $('#toolbar').addEventListener('click', e => { const b = e.target.closest('.tb'); if (!b || b.disabled) return; pause(); ops[b.dataset.a](); });
+
+/* ===== 時間軸左右的快捷鈕：左＝音量、右＝加素材（仿 TikTok）===== */
+function volOpen() {
+  const bx = $('#volp');
+  if (bx.style.display === 'block') { bx.style.display = 'none'; return; }
+  const hasM = !!state.music;
+  bx.innerHTML = `<b style="font-size:14px">🔊 音量</b><label>影片原聲<b id="vp-v">${Math.round(state.vol.video * 100)}%</b></label><input type="range" id="vp-vv" min="0" max="1" step="0.05" value="${state.vol.video}">`
+    + (hasM ? `<label>配樂<b id="vp-m">${Math.round(state.vol.music * 100)}%</b></label><input type="range" id="vp-mm" min="0" max="1" step="0.05" value="${state.vol.music}">` : '<label>（加了配樂就能在這裡調配樂音量）</label>')
+    + `<button class="sm ok" id="vp-ok" style="width:100%;margin-top:10px;background:var(--main);color:#fff;border:0;border-radius:8px;padding:10px;font-weight:700">完成</button>`;
+  bx.style.display = 'block';
+  bx.querySelector('#vp-vv').oninput = e => { touch('vv'); state.vol.video = +e.target.value; $('#vp-v').textContent = Math.round(state.vol.video * 100) + '%'; syncMedia(); };
+  const m = bx.querySelector('#vp-mm'); if (m) m.oninput = e => { touch('vm'); state.vol.music = +e.target.value; $('#vp-m').textContent = Math.round(state.vol.music * 100) + '%'; syncMedia(); };
+  bx.querySelector('#vp-ok').onclick = () => { bx.style.display = 'none'; };
+}
+$('#tl-add').onclick = () => { pause(); ops.add(); };
+$('#tl-vol').onclick = () => volOpen();
 $('#h-cam').onclick = () => camOpen();
 $('#f-media').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; if (fs.length) { addMedia(fs); if (window.__hideHome) window.__hideHome(); } };
 $('#f-music').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) addMusic(f); };
@@ -1054,9 +1078,7 @@ function renderCtx() {
       h += `<div class="r2" style="margin:2px 0 2px"><button class="sm" id="cover-save">🖼 這一格存成封面圖</button></div>`;
       if (a.kind === 'image') h += `<label>這張照片顯示幾秒</label><div class="r2"><input type="number" id="img-d" min="0.5" max="30" step="0.5" value="${e.d.toFixed(1)}"></div>`;
       else h += `<label class="chk"><input type="checkbox" id="clip-mute"${e.c.mute ? ' checked' : ''}> 這一段不要原本的聲音</label>`;
-    } else h += `<h4>還沒有素材，請先按「＋素材」</h4>`;
-    h += `<label>影片原聲音量 ${Math.round(state.vol.video * 100)}%</label><input type="range" id="vol-v" min="0" max="1" step="0.05" value="${state.vol.video}">`;
-    if (state.music) h += `<label>配樂音量 ${Math.round(state.vol.music * 100)}%</label><input type="range" id="vol-m" min="0" max="1" step="0.05" value="${state.vol.music}">`;
+    } else h += `<h4>還沒有素材，請先按時間軸右邊的「＋」</h4>`;
     h += `<label class="chk"><input type="checkbox" id="kb"${state.kb ? ' checked' : ''}> 照片慢慢推近（較動感，匯出會比較慢）</label>`;
   }
   box.innerHTML = h;
@@ -1572,7 +1594,7 @@ const CLUBTPL = [
 ];
 function tplHtml() {
   const hasM = !!state.music;
-  return `<h4>🎬 剪輯範本：先「＋素材」選好照片影片，再一鍵套用</h4>
+  return `<h4>🎬 剪輯範本：先時間軸右邊的「＋」選好照片影片，再一鍵套用</h4>
   <label>範本風格</label><select id="tp-st">${CLUBTPL.map((x, i) => `<option value="${i}">${x.n}</option>`).join('')}</select>
   <label>活動名稱（片頭大字）</label><input type="text" id="tp-title" maxlength="20" placeholder="例如：暑期營隊回顧">
   <label>日期或副標（選填，片頭小字）</label><input type="text" id="tp-sub" maxlength="24" placeholder="例如：2026.07.20">
@@ -1585,7 +1607,7 @@ function tplHtml() {
 function bindTpl(on) {
   on('#tp-x', 'click', () => { showAuto = false; renderCtx(); });
   on('#tp-go', 'click', async () => {
-    if (!state.clips.length) return toast('請先按「＋素材」加入照片和影片');
+    if (!state.clips.length) return toast('請先按時間軸右邊的「＋」加入照片和影片');
     const T = CLUBTPL[+$('#tp-st').value], title = $('#tp-title').value.trim() || '活動回顧', sub = $('#tp-sub').value.trim(), endT = $('#tp-end').value.trim();
     const beat = $('#tp-beat').checked && !!state.music, sfx = $('#tp-sfx').checked;
     if (beat && !(state.beats || []).length) { await detectBeats(); }
@@ -2002,7 +2024,7 @@ async function pjLoad(id) {
 async function pjNew() {
   if (!(await pjAskSave())) return; pjClose(); pjReset();
   state = { ratio: '9:16', clips: [], layers: [], texts: [], music: null, kb: false, vol: { video: 1, music: 0.6 } }; uid = 1;
-  PJ.cur = null; PJ.name = ''; PJ.savedStr = ''; PJ.stored = new Set(); $('#ratio').value = state.ratio; applyRatio(); relayout(); renderAll(); if (window.__hideHome) window.__hideHome(); toast('已開新專案，按「＋素材」加入影片');
+  PJ.cur = null; PJ.name = ''; PJ.savedStr = ''; PJ.stored = new Set(); $('#ratio').value = state.ratio; applyRatio(); relayout(); renderAll(); if (window.__hideHome) window.__hideHome(); toast('已開新專案，按時間軸右邊的「＋」加入影片');
 }
 const pjFmtSize = n => n > 1048576 ? (n / 1048576).toFixed(0) + ' MB' : Math.round(n / 1024) + ' KB';
 async function pjRender() {
@@ -2080,7 +2102,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-P', upd = document.getElementById('upd');
+  const VER = '1121-Q', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
@@ -2118,8 +2140,8 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 影片軸下方的快速按鈕 =====
 (function () {
-  document.getElementById('q-text').addEventListener('click', () => { if (!L.length) return toast('請先按「＋素材」加入影片或照片'); pause(); ops.text(); });
-  document.getElementById('q-music').addEventListener('click', () => { if (!L.length) return toast('請先按「＋素材」加入影片或照片'); pause(); ops.music(); });
+  document.getElementById('q-text').addEventListener('click', () => { if (!L.length) return toast('請先按時間軸右邊的「＋」加入影片或照片'); pause(); ops.text(); });
+  document.getElementById('q-music').addEventListener('click', () => { if (!L.length) return toast('請先按時間軸右邊的「＋」加入影片或照片'); pause(); ops.music(); });
 })();
 </script>
 </body>
