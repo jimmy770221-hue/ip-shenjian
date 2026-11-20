@@ -730,7 +730,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AT（預覽更順：大照片預覽用縮小版）</div>
+  <div class="hfoot">版本 1121-AU（預覽更順：換段先預備下一段影片）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -1458,12 +1458,18 @@ function syncMedia() {
     if (a && a.kind === 'video') { let f = 1; if (ts) f = e === ts.B ? ts.p : e === ts.A ? 1 - ts.p : 1; const sp = spd(e.c), lt = (cur - e.start) * sp; want.set(a.id, { t: e.c.rev ? e.c.out - lt : e.c.in + lt, mute: e.c.mute, f, sp, rev: !!e.c.rev }); }
   });
   assets.forEach(a => { if (a.kind === 'video' && !want.has(a.id) && !a.el.paused) a.el.pause(); });
+  if (playing) for (const e of L) {   // 預先跳到下一段影片的起點（還沒輪到它之前先把第一格準備好），換段時才不會卡一下
+    if (e.start <= cur || e.start - cur > 1.5) continue;
+    const na = assets.get(e.c.asset); if (!na || na.kind !== 'video' || want.has(na.id)) continue;
+    const t0 = e.c.rev ? e.c.out : e.c.in, el = na.el;
+    if (!el.seeking && Math.abs(el.currentTime - t0) > 0.05) { try { el.currentTime = clamp(t0, 0, el.duration || 1e9); } catch (er) {} }
+  }
   want.forEach((w, id) => {
     const el = assets.get(id).el, sm = w.rev || w.sp > 2 || w.sp < 0.5;   // 倒放或太快太慢：預覽改用逐格跳轉
     el.muted = w.mute || sm; el.volume = clamp(state.vol.video * w.f, 0, 1);
     try { el.playbackRate = sm ? 1 : w.sp; } catch (er) {}
     if (playing && sm) { if (!el.paused) el.pause(); if (!el.seeking && Math.abs(el.currentTime - w.t) > 0.04) el.currentTime = clamp(w.t, 0, el.duration || 1e9); }
-    else if (playing) { if (needSeek(el, w.t, 0.4)) { el.currentTime = w.t; } if (el.paused) el.play().catch(() => {}); }
+    else if (playing) { if (el.paused ? (Math.abs(el.currentTime - w.t) > 0.15 && !el.seeking) : needSeek(el, w.t, 0.4)) { el.currentTime = w.t; } if (el.paused) el.play().catch(() => {}); }   // 已經預先跳好的就直接播，不要再跳一次
     else if (Math.abs(el.currentTime - w.t) > 0.02) el.currentTime = w.t;
   });
   for (const l of state.layers) {
@@ -2816,7 +2822,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AT';
+const VER_NOW = '1121-AU';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3335,7 +3341,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AT', upd = document.getElementById('upd');
+  const VER = '1121-AU', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
