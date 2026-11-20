@@ -61,7 +61,7 @@ audio{background:none}
 </head>
 <body class="ip-tools">
 <header><div class="head">
-  <a href="index.html">← 回到 IP 神剪</a>
+  <a href="index.html" id="ip-back">← 回到 IP 神剪</a>
   <h1>快速小工具</h1>
 </div></header>
 
@@ -185,6 +185,7 @@ $$('.tab').forEach(b => b.onclick = () => {
   $$('.panel').forEach(p => p.classList.toggle('on', p.id === 'p-' + b.dataset.t));
 });
 
+document.getElementById('ip-back').addEventListener('click', e => { if (window.parent !== window) { e.preventDefault(); parent.postMessage('ip-tools-close', '*'); } });
 { const h = location.hash.slice(1), b = $$('.tab').find(x => x.dataset.t === h); if (b) b.click(); }
 
 /* ---------- ffmpeg 載入 ---------- */
