@@ -164,7 +164,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-F（音訊效果、錄音配音、節拍標記）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-G（音訊可試聽）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -1074,7 +1074,8 @@ function auHtml() {
   <label class="chk"><input type="checkbox" id="au-nr"${a.nr ? ' checked' : ''}> 🔇 基本降噪（減少沙沙的背景雜音）</label>
   <label class="chk"><input type="checkbox" id="au-norm"${a.norm ? ' checked' : ''}> 📏 音量平均（大聲小聲拉近）</label>
   <div class="r2"><div><label>聲音淡入<b id="v-au-fi">${(a.fi || 0).toFixed(1)}秒</b></label><input type="range" id="au-fi" min="0" max="5" step="0.5" value="${a.fi || 0}"></div><div><label>聲音淡出<b id="v-au-fo">${(a.fo || 0).toFixed(1)}秒</b></label><input type="range" id="au-fo" min="0" max="5" step="0.5" value="${a.fo || 0}"></div></div>
-  <p class="hint">這些聲音效果要等「匯出」後的成品才聽得到，預覽播放不會變。</p>
+  <button class="sm ok" id="au-try" style="width:100%;margin-top:8px">🔊 試聽（用目前時間點開始的 5 秒，效果跟匯出一模一樣）</button>
+  <p class="hint">換選項時會自動試聽。平常播放預覽不會變聲，匯出才會套用到整部。</p>
   <label>🎙 錄音配音（從目前時間開始錄，建議戴耳機，不然會錄到影片的聲音）</label>
   <div class="r2"><button class="sm${rec ? ' red' : ' ok'}" id="au-rec">${rec ? '⏹ 停止錄音' : '🎙 開始錄音'}</button><button class="sm" id="au-play">▶ 從這裡播放</button></div>
   ${vos.length ? vos.map((v, i) => `<div class="r2" style="margin-top:6px;align-items:center"><span style="font-size:13px">🎙 ${esc((assets.get(v.asset) || {}).name || '')}（${v.offset.toFixed(1)}秒起）</span><button class="sm red" data-vodel="${i}">刪除</button></div><input type="range" data-vovol="${i}" min="0" max="1" step="0.05" value="${v.vol == null ? 1 : v.vol}">`).join('') : ''}
@@ -1083,6 +1084,26 @@ function auHtml() {
   <div class="r2" style="margin-top:6px"><button class="sm" id="bt-cut">✂️ 依標記把影片切開</button><button class="sm red" id="bt-clr">清除標記</button></div>
   <div class="r2" style="margin-top:8px"><button class="sm ok" id="au-ok">完成</button></div>`;
 }
+let auBusy = false, auPl = null;
+async function auPreview() {
+  if (auBusy || exporting) return;
+  const e = clipAt(cur); if (!e) return toast('請把時間線移到影片上');
+  const c = e.c, a = assets.get(c.asset); if (!a || a.kind !== 'video' || c.mute || c.rev) return toast('這一段沒有聲音可以試聽（照片、靜音或倒放）');
+  pause(); if (auPl) { auPl.pause(); auPl = null; }
+  auBusy = true; toast('正在做試聽，約幾秒…');
+  const f = await getFF(), nm = `pv_${a.id}.${extOf(a.name)}`;
+  try {
+    await f.writeFile(nm, await fetchFile(a.file));
+    const sp = spd(c), src = Math.max(0, c.in + (cur - e.start) * sp), af = []; if (sp !== 1) af.push(atempoStr2(sp)); af.push(...audFilters(state.aud));
+    ffLog = []; const rc = await f.exec(['-ss', src.toFixed(3), '-t', (5 * sp).toFixed(3), '-i', nm, '-vn', '-af', af.length ? af.join(',') : 'anull', '-ac', '2', '-ar', '44100', '-c:a', 'aac', '-y', 'pv_out.m4a']);
+    if (rc !== 0) throw new Error('這段影片沒有聲音，或試聽失敗');
+    const data = await f.readFile('pv_out.m4a'), url = URL.createObjectURL(new Blob([data], { type: 'audio/mp4' }));
+    auPl = new Audio(url); auPl.play().catch(() => toast('請再按一次「試聽」（手機需要你點一下才能出聲）'));
+  } catch (er) { toast(er.message || '試聽失敗'); }
+  try { await f.deleteFile(nm); } catch (er) {} try { await f.deleteFile('pv_out.m4a'); } catch (er) {}
+  auBusy = false;
+}
+const atempoStr2 = sp => { const o = []; let sv = sp; while (sv > 2.0001) { o.push('atempo=2'); sv /= 2; } while (sv < 0.4999) { o.push('atempo=0.5'); sv /= 0.5; } o.push(`atempo=${sv.toFixed(4)}`); return o.join(','); };
 let rec = null;
 async function addVo(file, start, dur) {
   const a = { id: uid++, file, url: URL.createObjectURL(file), name: file.name, kind: 'audio', dur }, au = new Audio(); au.preload = 'auto'; au.src = a.url; a.el = au; assets.set(a.id, a);
@@ -1121,10 +1142,11 @@ async function detectBeats() {
 }
 function bindAu(on) {
   const a = () => (state.aud = state.aud || {});
-  on('#au-voice', 'change', e => { commit(); if (e.target.value) a().voice = e.target.value; else delete a().voice; });
-  on('#au-eq', 'change', e => { commit(); if (e.target.value) a().eq = e.target.value; else delete a().eq; });
-  on('#au-nr', 'change', e => { commit(); if (e.target.checked) a().nr = 1; else delete a().nr; });
-  on('#au-norm', 'change', e => { commit(); if (e.target.checked) a().norm = 1; else delete a().norm; });
+  on('#au-voice', 'change', e => { commit(); if (e.target.value) a().voice = e.target.value; else delete a().voice; auPreview(); });
+  on('#au-eq', 'change', e => { commit(); if (e.target.value) a().eq = e.target.value; else delete a().eq; auPreview(); });
+  on('#au-nr', 'change', e => { commit(); if (e.target.checked) a().nr = 1; else delete a().nr; auPreview(); });
+  on('#au-norm', 'change', e => { commit(); if (e.target.checked) a().norm = 1; else delete a().norm; auPreview(); });
+  on('#au-try', 'click', auPreview);
   [['fi', 'v-au-fi'], ['fo', 'v-au-fo']].forEach(([k, id]) => on('#au-' + k, 'input', e => { touch('au' + k); a()[k] = +e.target.value; if (!a()[k]) delete a()[k]; $('#' + id).textContent = (+e.target.value).toFixed(1) + '秒'; }));
   on('#au-rec', 'click', () => { if (rec) recStop(); else recStart(); });
   on('#au-play', 'click', () => { if (playing) pause(); else play(); });
@@ -1622,7 +1644,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-F', upd = document.getElementById('upd');
+  const VER = '1121-G', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
