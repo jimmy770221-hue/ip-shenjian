@@ -166,6 +166,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   <div class="chips"><span>免費</span><span>免註冊</span><span>不上傳</span><span>手機裡處理</span></div>
   <button class="hbtn" id="h-start"><span class="pl"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3.5"/><path d="M10.5 9.5v5l4-2.5z"/></svg></span><span class="lb">開始剪輯</span><span class="ar">›</span></button>
   <button class="hbtn sub" id="h-cont" style="display:none">繼續剛剛的剪輯</button>
+  <button class="hbtn sub" id="h-cam">📷 直接拍攝（可倒數計時）</button>
   <button class="hbtn sub" id="h-proj">📁 我的專案（暫存的作品）</button>
   <div class="hbox"><div class="ht">快速小工具</div><div class="hgrid">
     <a class="tile c1" href="tools.html#trim"><i><svg viewBox="0 0 24 24"><circle cx="6" cy="6.5" r="2.6"/><circle cx="6" cy="17.5" r="2.6"/><path d="M8 8l12 10M8 16L20 6"/></svg></i>剪裁</a>
@@ -176,7 +177,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-O（剪輯範本）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-P（直接拍攝＋倒數）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -212,6 +213,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   <div class="quick"><button id="q-text">🅣 添加文字</button><button id="q-music" class="m">🎵 添加音樂</button></div>
   <div class="toolbar" id="toolbar">
     <button class="tb" data-a="add"><i>＋</i>素材</button>
+    <button class="tb" data-a="cam"><i>📷</i>拍攝</button>
     <button class="tb" data-a="tpl"><i>🎬</i>範本</button>
     <button class="tb" data-a="auto"><i>✨</i>幻燈片</button>
     <button class="tb" data-a="fx"><i>🎛</i>調整</button>
@@ -334,6 +336,58 @@ function clipAt(t) {
   return L[L.length - 1];
 }
 
+/* ===== 直接拍攝＋倒數計時 ===== */
+let camS = null;
+function camClose() { if (!camS) return; try { if (camS.mr && camS.mr.state !== 'inactive') { camS.mr.onstop = null; camS.mr.stop(); } } catch (er) {} clearInterval(camS.tm); clearTimeout(camS.cd); if (camS.stream) camS.stream.getTracks().forEach(t => t.stop()); camS.box.remove(); camS = null; }
+async function camStart(face) {
+  if (camS.stream) camS.stream.getTracks().forEach(t => t.stop());
+  try { camS.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: face, width: { ideal: 1280 }, height: { ideal: 1280 } }, audio: true }); }
+  catch (e) { try { camS.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: face }, audio: false }); toast('沒有取得麥克風，這支影片會沒有聲音'); } catch (e2) { toast('沒有取得相機權限，請在瀏覽器允許使用相機'); camClose(); return; } }
+  camS.face = face; const v = camS.box.querySelector('video'); v.srcObject = camS.stream; v.style.transform = face === 'user' ? 'scaleX(-1)' : 'none'; v.play().catch(() => {});
+}
+async function camOpen() {
+  if (camS) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') return toast('這個瀏覽器不支援直接拍攝，請用「＋素材」選相機拍好的影片');
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;inset:0;z-index:99;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:space-between';
+  box.innerHTML = `<div style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 14px;color:#fff;font-size:15px"><button id="cm-x" style="background:#0008;color:#fff;border:0;border-radius:20px;padding:8px 16px;font-size:15px">✕ 取消</button><b id="cm-t">準備拍攝</b><button id="cm-f" style="background:#0008;color:#fff;border:0;border-radius:20px;padding:8px 16px;font-size:15px">🔄 翻轉</button></div>
+  <div style="flex:1;width:100%;position:relative;min-height:0"><video playsinline muted style="width:100%;height:100%;object-fit:contain;background:#000"></video><div id="cm-n" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:140px;font-weight:800;color:#fff;text-shadow:0 0 20px #000"></div></div>
+  <div style="padding:14px;display:flex;align-items:center;gap:22px;color:#fff;font-size:14px"><label style="display:flex;flex-direction:column;align-items:center;gap:4px">倒數<select id="cm-c" style="font-size:15px;padding:4px"><option value="0">不倒數</option><option value="3" selected>3 秒</option><option value="5">5 秒</option><option value="10">10 秒</option></select></label>
+  <button id="cm-r" style="width:74px;height:74px;border-radius:50%;border:5px solid #fff;background:#e33;color:#fff;font-size:15px;font-weight:700">拍攝</button><span style="width:70px"></span></div>`;
+  document.body.appendChild(box); camS = { box, stream: null, mr: null, face: 'environment' };
+  const q = id => box.querySelector(id);
+  q('#cm-x').onclick = camClose;
+  q('#cm-f').onclick = () => { if (camS.mr || camS.cd) return toast('拍攝中不能翻轉'); camStart(camS.face === 'user' ? 'environment' : 'user'); };
+  q('#cm-r').onclick = () => {
+    if (camS.mr) return camStop();
+    if (camS.cd) { clearTimeout(camS.cd); camS.cd = null; q('#cm-n').style.display = 'none'; q('#cm-r').textContent = '拍攝'; q('#cm-t').textContent = '準備拍攝'; return; }
+    let n = +q('#cm-c').value; q('#cm-r').textContent = '取消';
+    const step = () => { if (n <= 0) { q('#cm-n').style.display = 'none'; camS.cd = null; return camRec(); } q('#cm-n').style.display = 'flex'; q('#cm-n').textContent = n; q('#cm-t').textContent = '倒數中…'; n--; camS.cd = setTimeout(step, 1000); };
+    step();
+  };
+  await camStart('environment');
+}
+function camRec() {
+  const st = camS.stream, q = id => camS.box.querySelector(id);
+  const mt = ['video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '', chunks = [];
+  let mr; try { mr = new MediaRecorder(st, mt ? { mimeType: mt } : undefined); } catch (e) { toast('這支手機無法錄影'); return camClose(); }
+  mr.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  mr.onstop = () => camDone(chunks, mr.mimeType || mt || 'video/webm');
+  camS.mr = mr; camS.t0 = Date.now(); mr.start(500);
+  q('#cm-r').textContent = '停止'; q('#cm-x').style.visibility = 'hidden'; q('#cm-f').style.visibility = 'hidden';
+  camS.tm = setInterval(() => { const sec = Math.floor((Date.now() - camS.t0) / 1000); q('#cm-t').textContent = '🔴 錄影中 ' + Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); if (sec >= 300) camStop(); }, 300);
+}
+function camStop() { if (camS && camS.mr && camS.mr.state !== 'inactive') camS.mr.stop(); }
+async function camDone(chunks, type) {
+  const isMp4 = /mp4/.test(type), n = 1 + [...assets.values()].filter(a => /^拍攝/.test(a.name)).length;
+  let blob = new Blob(chunks, { type: isMp4 ? 'video/mp4' : 'video/webm' });
+  const box = camS && camS.box; if (box) { box.querySelector('#cm-t').textContent = '處理中…'; box.querySelector('#cm-r').style.display = 'none'; }
+  let file = new File([blob], `拍攝${n}.${isMp4 ? 'mp4' : 'webm'}`, { type: blob.type });
+  if (!isMp4) {   // webm 沒有影片長度資訊，用 ffmpeg 重新封裝（不重新壓縮，很快）補上
+    try { const f = await getFF(); await f.writeFile('cam_in.webm', await fetchFile(file)); const rc = await f.exec(['-i', 'cam_in.webm', '-c', 'copy', '-y', 'cam_out.webm']); if (rc === 0) { const d = await f.readFile('cam_out.webm'); file = new File([d], file.name, { type: 'video/webm' }); } try { await f.deleteFile('cam_in.webm'); await f.deleteFile('cam_out.webm'); } catch (er) {} } catch (er) { console.error(er); }
+  }
+  camClose(); await addMedia([file]); if (window.__hideHome) window.__hideHome(); toast('拍好了，已加入時間軸');
+}
 /* ================= 匯入素材 ================= */
 function loadVideo(a) {
   return new Promise((res, rej) => {
@@ -888,6 +942,7 @@ window.addEventListener('resize', () => { renderTimeline(); });
 function afterEdit(newCur) { selTr = null; showAuto = false; relayout(); if (newCur !== undefined) cur = clamp(newCur, 0, total); renderAll(); setCur(cur); }
 const ops = {
   add() { $('#f-media').click(); },
+  cam() { camOpen(); },
   split() {
     const e = clipAt(cur), local = cur - e.start;
     if (local < 0.1 || e.d - local < 0.1) return toast('請把時間線移到片段「中間」再分割');
@@ -948,6 +1003,7 @@ const ops = {
   undo, redo
 };
 $('#toolbar').addEventListener('click', e => { const b = e.target.closest('.tb'); if (!b || b.disabled) return; pause(); ops[b.dataset.a](); });
+$('#h-cam').onclick = () => camOpen();
 $('#f-media').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; if (fs.length) { addMedia(fs); if (window.__hideHome) window.__hideHome(); } };
 $('#f-music').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) addMusic(f); };
 $('#b-play').onclick = () => playing ? pause() : play();
@@ -2024,7 +2080,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-O', upd = document.getElementById('upd');
+  const VER = '1121-P', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
