@@ -677,7 +677,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-U（藍紫配色）</div>
+  <div class="hfoot">版本 1121-V（更新不影響舊作品）</div>
   </main>
 </div>
 <div id="app">
@@ -2492,6 +2492,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
+const VER_NOW = '1121-V';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2523,7 +2524,7 @@ async function pjSave(name, quiet) {
     const keep = new Set(used.map(a => id + ':' + a)); const drop = (keys || []).filter(k => !keep.has(k));
     if (drop.length) await pjReq('blobs', 'readwrite', st => { drop.forEach(k => st.delete(k)); });
     const nm = (name || PJ.name || '').trim() || ('專案 ' + new Date().toLocaleDateString('zh-TW'));
-    await pjReq('projects', 'readwrite', st => st.put({ id, name: nm, updated: Date.now(), thumb: pjThumb(), state: str, uid, assets: used, dur: total, ratio: state.ratio }));
+    await pjReq('projects', 'readwrite', st => st.put({ id, name: nm, updated: Date.now(), thumb: pjThumb(), state: str, uid, ver: (typeof VER_NOW !== 'undefined' ? VER_NOW : ''), assets: used, dur: total, ratio: state.ratio }));
     PJ.cur = id; PJ.name = nm; PJ.savedStr = str; try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
     if (!quiet) toast('已儲存「' + nm + '」');
     return true;
@@ -2555,6 +2556,7 @@ async function pjLoad(id) {
     assets.set(aid, a); stored.add(id + ':' + aid);
   }
   state = JSON.parse(rec.state); uid = Math.max(uid, rec.uid || 1);
+  { const d = { ratio: '9:16', clips: [], layers: [], texts: [], music: null, kb: false, vol: { video: 1, music: 0.6 } }; for (const k in d) if (state[k] === undefined) state[k] = d[k]; }   // 舊版專案補上新欄位，不影響舊作品
   state.clips = state.clips.filter(c => assets.get(c.asset)); state.layers = (state.layers || []).filter(l => assets.get(l.asset)); if (state.music && !assets.get(state.music.asset)) state.music = null; if (state.vo) state.vo = state.vo.filter(v => assets.get(v.asset));
   PJ.cur = id; PJ.name = rec.name; PJ.savedStr = JSON.stringify(state); PJ.stored = stored;
   $('#ratio').value = state.ratio; applyRatio(); relayout(); renderAll(); setCur(0); if (window.__hideHome) window.__hideHome();
@@ -2641,12 +2643,12 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-U', upd = document.getElementById('upd');
+  const VER = '1121-V', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
   };
-  upd.addEventListener('click', () => { try { sessionStorage.removeItem('ipsj-rl'); } catch (e) {} reloadNew(); });
+  upd.addEventListener('click', async () => { try { if (pjHas() && pjDirty()) { upd.textContent = '先自動暫存你的作品…'; await pjSave(PJ.cur ? null : '自動暫存 ' + new Date().toLocaleString('zh-TW'), true); } } catch (e) {} try { sessionStorage.removeItem('ipsj-rl'); } catch (e) {} reloadNew(); });
   let busy = false;
   async function check() {
     if (busy) return; busy = true;
