@@ -164,7 +164,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-H（快速匯出）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-I（音訊即時預覽）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -678,7 +678,55 @@ function syncMedia() {
     else if (!el.paused) el.pause();
     if (!playing && mw >= 0 && mw < m.dur && Math.abs(el.currentTime - mw) > 0.05) el.currentTime = mw;
   }
-  syncVo();
+  syncVo(); awSync();
+}
+
+/* ===== 即時聽到音訊效果（WebAudio，播放預覽用；匯出仍用更高品質的 ffmpeg）===== */
+let actx = null, awMaster = null, awIn = null, awKey = '', awNodes = [];
+const awSrc = new WeakSet();
+function awCtx() {
+  if (!actx) { actx = new (window.AudioContext || window.webkitAudioContext)(); awMaster = actx.createGain(); awMaster.connect(actx.destination); awIn = actx.createGain(); awIn.connect(awMaster); }
+  if (actx.state === 'suspended') actx.resume().catch(() => {});
+  return actx;
+}
+function awPitch(c, r) {   // 兩個延遲線輪流交叉淡化的音高轉換
+  const inp = c.createGain(), out = c.createGain(), T = 0.1, sr = c.sampleRate, n = Math.round(T * sr), dmax = Math.abs(1 - r) * T;
+  const mk = (ph) => {
+    const dl = c.createDelay(0.5), gn = c.createGain(); gn.gain.value = 0; inp.connect(dl); dl.connect(gn); gn.connect(out);
+    const bd = c.createBuffer(1, n, sr), bg = c.createBuffer(1, n, sr), d = bd.getChannelData(0), g = bg.getChannelData(0);
+    for (let i = 0; i < n; i++) { const p = ((i / n) + ph) % 1; d[i] = 0.05 + (r > 1 ? dmax * (1 - p) : dmax * p); g[i] = Math.pow(Math.sin(Math.PI * p), 2); }
+    const sd = c.createBufferSource(), sg = c.createBufferSource(); sd.buffer = bd; sg.buffer = bg; sd.loop = sg.loop = true; sd.connect(dl.delayTime); sg.connect(gn.gain); dl.delayTime.value = 0; sd.start(); sg.start();
+    return [sd, sg];
+  };
+  const srcs = [...mk(0), ...mk(0.5)];
+  return { inp, out, stop: () => srcs.forEach(x => { try { x.stop(); } catch (e) {} }) };
+}
+function awBuild() {
+  const a = state.aud || {}, key = JSON.stringify([a.voice || '', a.eq || '', a.nr || 0, a.norm || 0]);
+  if (key === awKey && awIn) return; awKey = key; const c = awCtx();
+  try { awIn.disconnect(); } catch (e) {} awNodes.forEach(n => { try { n.stop && n.stop(); n.disconnect && n.disconnect(); } catch (e) {} }); awNodes = [];
+  let last = awIn; const add = node => { last.connect(node.inp || node); last = node.out || node; awNodes.push(node); };
+  const bq = (type, f, g, q) => { const b = c.createBiquadFilter(); b.type = type; b.frequency.value = f; if (g != null) b.gain.value = g; if (q) b.Q.value = q; return b; };
+  if (a.nr) add(bq('highpass', 80));
+  if (a.eq === 'bass') add(bq('lowshelf', 120, 8)); else if (a.eq === 'voice') { add(bq('highpass', 100)); add(bq('peaking', 3000, 4, 1)); } else if (a.eq === 'bright') add(bq('highshelf', 4000, 6));
+  if (a.voice === 'kid') add(awPitch(c, 1.35)); else if (a.voice === 'deep') add(awPitch(c, 0.8)); else if (a.voice === 'giant') add(awPitch(c, 0.65));
+  else if (a.voice === 'phone') { add(bq('highpass', 400)); add(bq('lowpass', 3000)); }
+  else if (a.voice === 'echo' || a.voice === 'robot') {
+    const d = a.voice === 'echo' ? [0.06, 0.4] : [0.015, 0.7], inp = c.createGain(), out = c.createGain(), dl = c.createDelay(0.5), fb = c.createGain(); dl.delayTime.value = d[0]; fb.gain.value = d[1];
+    inp.connect(out); inp.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(out); add({ inp, out });
+  }
+  if (a.norm) { const comp = c.createDynamicsCompressor(); comp.threshold.value = -30; comp.ratio.value = 6; const mk = c.createGain(); mk.gain.value = 2; add(comp); add(mk); }
+  last.connect(awMaster);
+}
+function awSync() {
+  const a = state.aud; if (!hasAud(a) && !actx) return;   // 沒用到效果就完全不碰 WebAudio
+  if (!hasAud(a)) { if (awMaster) awMaster.gain.value = 1; if (!awIn) return; }
+  awBuild(); const c = awCtx();
+  const route = (el, isVid) => { if (!el || awSrc.has(el)) return; awSrc.add(el); try { const sr = c.createMediaElementSource(el); sr.connect(isVid ? awIn : awMaster); } catch (e) {} };
+  assets.forEach(x => { if (x.el) route(x.el, x.kind === 'video'); });
+  lyEls.forEach(el => route(el, true));
+  let g = 1; if (a && a.fi > 0) g = Math.min(g, cur / a.fi); if (a && a.fo > 0) g = Math.min(g, (total - cur) / a.fo);
+  awMaster.gain.value = clamp(g, 0, 1);
 }
 function syncVo() {
   for (const v of (state.vo || [])) {
@@ -1077,8 +1125,8 @@ function auHtml() {
   <label class="chk"><input type="checkbox" id="au-nr"${a.nr ? ' checked' : ''}> 🔇 基本降噪（減少沙沙的背景雜音）</label>
   <label class="chk"><input type="checkbox" id="au-norm"${a.norm ? ' checked' : ''}> 📏 音量平均（大聲小聲拉近）</label>
   <div class="r2"><div><label>聲音淡入<b id="v-au-fi">${(a.fi || 0).toFixed(1)}秒</b></label><input type="range" id="au-fi" min="0" max="5" step="0.5" value="${a.fi || 0}"></div><div><label>聲音淡出<b id="v-au-fo">${(a.fo || 0).toFixed(1)}秒</b></label><input type="range" id="au-fo" min="0" max="5" step="0.5" value="${a.fo || 0}"></div></div>
-  <button class="sm ok" id="au-try" style="width:100%;margin-top:8px">🔊 試聽（用目前時間點開始的 5 秒，效果跟匯出一模一樣）</button>
-  <p class="hint">換選項時會自動試聽。平常播放預覽不會變聲，匯出才會套用到整部。</p>
+  <button class="sm ok" id="au-try" style="width:100%;margin-top:8px">🔊 試聽匯出音質（目前時間點開始的 5 秒）</button>
+  <p class="hint">按播放就能即時聽到效果（預覽是近似版，變聲的音質匯出時會更好）。想聽跟匯出一模一樣的，按上面的試聽。</p>
   <label>🎙 錄音配音（從目前時間開始錄，建議戴耳機，不然會錄到影片的聲音）</label>
   <div class="r2"><button class="sm${rec ? ' red' : ' ok'}" id="au-rec">${rec ? '⏹ 停止錄音' : '🎙 開始錄音'}</button><button class="sm" id="au-play">▶ 從這裡播放</button></div>
   ${vos.length ? vos.map((v, i) => `<div class="r2" style="margin-top:6px;align-items:center"><span style="font-size:13px">🎙 ${esc((assets.get(v.asset) || {}).name || '')}（${v.offset.toFixed(1)}秒起）</span><button class="sm red" data-vodel="${i}">刪除</button></div><input type="range" data-vovol="${i}" min="0" max="1" step="0.05" value="${v.vol == null ? 1 : v.vol}">`).join('') : ''}
@@ -1700,7 +1748,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-H', upd = document.getElementById('upd');
+  const VER = '1121-I', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
