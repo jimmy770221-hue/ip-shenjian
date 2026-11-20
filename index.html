@@ -665,6 +665,43 @@ html, body, .ip-tools { background-color: var(--bg); }
 #home .tile i svg { width: 46%; height: 46%; }
 #home .tile:active i, #home .tile:focus-visible i { background: linear-gradient(150deg, #9d6aff66, #f764ae30); }
 #home .hfoot { text-align: center; margin-top: 0; }
+#home #h-quick{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px 18px 12px 12px;border-radius:99px;font-size:19px;letter-spacing:1px;text-align:left;background:linear-gradient(110deg,#ff9a3c 0%,#ff4f7a 60%,#d63cff 100%);box-shadow:0 10px 28px #ff4f7a55,inset 0 1px 0 #ffffff55;color:#fff;width:100%;max-width:360px;border:0;font-family:inherit;font-weight:900}
+#home #h-quick .pl{flex:none;display:flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:50%;background:#fff;font-size:26px}
+#home #h-quick .lb{flex:1}#home #h-quick small{display:block;font-size:12px;font-weight:600;opacity:.92;letter-spacing:0;margin-top:2px}
+#home #h-quick:active{transform:scale(.97)}
+#qm{position:fixed;inset:0;z-index:65;background:#0b0b14;color:#fff;display:none;flex-direction:column;font-family:inherit}
+#qm.on{display:flex}
+#qm .qt{display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 12px 8px}
+#qm .qt b{flex:1;font-size:17px}#qm .qt span{font-size:13px;color:#b9b6d6}
+#qm .qt button{border:0;background:#23253a;color:#fff;border-radius:12px;width:40px;height:40px;font-size:20px}
+#qm .qdots{display:flex;gap:6px;padding:0 14px 6px}#qm .qdots i{flex:1;height:4px;border-radius:2px;background:#2a2c44}#qm .qdots i.on{background:linear-gradient(90deg,#ff9a3c,#ff4f7a)}
+#qm .qb{flex:1;overflow:auto;padding:8px 16px 16px;-webkit-overflow-scrolling:touch}
+#qm h2{font-size:20px;margin:14px 0 6px}#qm p.qh{font-size:13px;color:#b9b6d6;margin:2px 0 10px;line-height:1.5}
+#qm .qchips{display:flex;flex-wrap:wrap;gap:10px}
+#qm .qchips button{border:2px solid #2d3050;background:#171828;color:#fff;border-radius:16px;padding:14px 18px;font-size:17px;font-weight:700;font-family:inherit}
+#qm .qchips button.on{border-color:#ff6b9d;background:#3a1f3c}
+#qm .qf{padding:10px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid #23253a;display:flex;gap:10px}
+#qm .qf button{flex:1;border:0;border-radius:16px;padding:15px;font-size:18px;font-weight:900;color:#fff;background:linear-gradient(110deg,#ff9a3c,#ff4f7a 60%,#d63cff);font-family:inherit}
+#qm .qf button:disabled{opacity:.4}
+#qm .qf button.alt{background:#2a2c44}
+#qm .qpick{display:block;width:100%;border:2px dashed #6d5cff;background:#171828;color:#d9d3ff;border-radius:16px;padding:18px;font-size:18px;font-weight:800;font-family:inherit}
+#qm .qgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px}
+#qm .qgrid div{position:relative;aspect-ratio:1;border-radius:10px;background:#23253a center/cover;overflow:hidden;font-size:11px;display:flex;align-items:center;justify-content:center;text-align:center;padding:3px;word-break:break-all}
+#qm .qgrid div i{position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:11px;background:#000a;font-style:normal;line-height:22px;text-align:center;font-size:12px}
+#qm .qgrid .no{position:absolute;top:2px;left:2px;min-width:20px;height:20px;border-radius:10px;background:#ff4f7a;font-size:12px;line-height:20px;text-align:center;padding:0 4px}
+#qm .qgrid s{position:absolute;bottom:2px;width:24px;height:24px;border-radius:12px;background:#000a;text-decoration:none;font-size:16px;line-height:22px;text-align:center}
+#qm .qsty{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:2px solid #2d3050;background:#171828;color:#fff;border-radius:16px;padding:12px 14px;margin-bottom:8px;font-family:inherit}
+#qm .qsty.on{border-color:#ff6b9d;background:#3a1f3c}#qm .qsty b{font-size:17px;display:block}#qm .qsty small{color:#b9b6d6;font-size:12px}
+#qm input[type=text]{width:100%;box-sizing:border-box;background:#171828;border:1px solid #2d3050;color:#fff;border-radius:12px;padding:12px;font-size:16px;font-family:inherit}
+#qm .qtabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px}#qm .qtabs button{flex:none;border:0;border-radius:18px;padding:8px 14px;font-size:14px;color:#fff;background:#2c2f45;font-family:inherit}#qm .qtabs button.on{background:#7c5cff}
+#qm .qsong{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #23253a}
+#qm .qsong .pv{flex:none;width:40px;height:40px;border-radius:20px;border:0;background:#2c2f45;color:#fff;font-size:15px}
+#qm .qsong span{flex:1}#qm .qsong .ck{flex:none;border:2px solid #4a4d70;background:none;color:#fff;border-radius:12px;padding:8px 14px;font-size:14px;font-weight:700;font-family:inherit}
+#qm .qsong .ck.on{background:#ff4f7a;border-color:#ff4f7a}
+#qm .qopt{display:block;width:100%;text-align:left;border:2px solid #2d3050;background:#171828;color:#fff;border-radius:14px;padding:13px 14px;margin-bottom:8px;font-size:16px;font-weight:700;font-family:inherit}#qm .qopt.on{border-color:#ff6b9d;background:#3a1f3c}
+#qm .qbar{height:12px;border-radius:6px;background:#23253a;overflow:hidden;margin:18px 0 10px}#qm .qbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff9a3c,#ff4f7a);transition:width .25s}
+#qm .qbig{text-align:center;padding-top:40px}#qm .qbig .em{font-size:64px}
+
 
 </style>
 </head>
@@ -677,6 +714,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <h1>I POWER 神剪輯</h1>
     <p>從相簿選取影片或照片，素材在這台裝置上處理。</p>
     <button class="hbtn" id="h-start"><span class="pl"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 12h8m-4-4v8"/></svg></span><span class="lb">開始剪輯</span><span class="ar" aria-hidden="true">›</span></button>
+    <button id="h-quick"><span class="pl">🎬</span><span class="lb">快速成片<small>選時間、選素材、選風格，一鍵生成</small></span></button>
   </div>
   <div class="home-links">
     <button class="hbtn sub" id="h-cont" style="display:none">繼續剛剛的剪輯</button>
@@ -692,9 +730,10 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AK（第2軌＝完整主軌）</div>
+  <div class="hfoot">版本 1121-AL（快速成片）</div>
   </main>
 </div>
+<div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
 <div id="app">
   <div class="top">
     <button class="logo" type="button" aria-label="返回首頁"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M4 4h7L8 7v13H4Z"/><path fill="#f4edff" fill-rule="evenodd" d="M13 4h4l4 4v4l-4 4h-3v4h-4V7Zm1 4v4h2l1-1V9l-1-1Z"/></svg></button>
@@ -2722,7 +2761,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AK';
+const VER_NOW = '1121-AL';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2839,6 +2878,222 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
   document.querySelector('.top .logo').addEventListener('click', showHome);
 })();
 
+/* ===== 🎬 快速成片：選片長 → 選素材 → 選風格 → 選音樂 → 一鍵生成（不用 AI，影片用「畫面清楚＋有動作」自動挑精彩片段）===== */
+(function () {
+  const QLEN = [[30, '30 秒'], [60, '1 分鐘'], [120, '2 分鐘'], [180, '3 分鐘'], [300, '5 分鐘']];
+  const QSTY = [
+    { id: 'party', n: '🎉 活力派對', d: '換頁效果多變、節奏快，活動最適合', tr: ['circleopen', 'radial', 'slideleft', 'slideup', 'circleclose'], dur: 0.6, cap: 4, ph: 2.5, c: '#ffe14d', end: '#ff6b6b' },
+    { id: 'warm', n: '🌸 溫馨日常', d: '柔和淡入淡出，像回憶相簿', tr: ['fade', 'fadewhite'], dur: 1.0, cap: 5, ph: 3, c: '#ffffff', end: '#ffffff' },
+    { id: 'beat', n: '⚡ 節奏卡點', d: '快速切換，配合強節拍', tr: ['wipeleft', 'wiperight', 'fadewhite', 'slidedown'], dur: 0.4, cap: 3, ph: 2, c: '#4dd2ff', end: '#ffe14d' },
+    { id: 'cute', n: '🐣 可愛童趣', d: '愛心、星星、漫畫貼紙', tr: ['heart', 'star', 'circleopen', 'circleclose'], dur: 0.55, cap: 3, ph: 2.4, c: '#ff8fb8', end: '#ffe14d', stk: 1 },
+    { id: 'travel', n: '✈️ 旅行日記', d: '推擠、放大，像 vlog', tr: ['slideleft', 'zoom', 'slideright', 'fade'], dur: 0.7, cap: 3.6, ph: 2.8, c: '#ffffff', end: '#ffffff', kb: 1 },
+    { id: 'touch', n: '🥹 感動時刻', d: '慢慢推近、柔光淡入', tr: ['fade', 'fadewhite', 'fade'], dur: 1.2, cap: 5, ph: 3, c: '#ffffff', end: '#ffffff', kb: 1 },
+    { id: 'retro', n: '📼 復古底片', d: '黑場過渡、撕紙感', tr: ['fadeblack', 'torn', 'fade'], dur: 0.8, cap: 3.5, ph: 2.8, c: '#ffd59a', end: '#ffd59a', kb: 1 },
+    { id: 'funny', n: '😂 搞笑整人', d: '放大衝進、撕紙、搞笑貼紙', tr: ['zoom', 'star', 'torn', 'slidedown'], dur: 0.5, cap: 2.6, ph: 2.2, c: '#ffe14d', end: '#ff6b6b', stk: 1 }
+  ];
+  const QSTK = ['太好玩了！', '來！', '讚！', '笑死', '好吃！', '開心', '超可愛', '耶！'];
+  const Q = { step: 1, len: 30, ratio: '9:16', files: [], sty: 0, title: '', end: '謝謝大家', mus: 'auto', mstyle: 'party', song: null, busy: false, lib: null, pv: null, done: null };
+  const qm = document.getElementById('qm'), body = document.getElementById('qm-body'), nextB = document.getElementById('qm-next'), backB = document.getElementById('qm-back');
+  const urls = new Map();
+  const fileUrl = f => { if (!urls.has(f)) urls.set(f, URL.createObjectURL(f)); return urls.get(f); };
+  const clearUrls = () => { urls.forEach(u => { try { URL.revokeObjectURL(u); } catch (e) {} }); urls.clear(); };
+  const stopPv = () => { if (Q.pv) { try { Q.pv.pause(); } catch (e) {} Q.pv = null; } };
+  const isImg = f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|bmp)$/i.test(f.name);
+  const recRange = () => [Math.max(3, Math.round(Q.len / 6)), Math.max(6, Math.round(Q.len / 3))];
+
+  function open() {
+    Object.assign(Q, { step: 1, files: [], busy: false, done: null, song: null, mus: 'auto' }); Q.mstyle = QSTY[Q.sty].id;
+    qm.classList.add('on'); render();
+  }
+  function close() { stopPv(); qm.classList.remove('on'); clearUrls(); Q.files = []; }
+  async function loadLib() { if (Q.lib) return Q.lib; try { const r = await fetch('music/manifest.json?v=' + Date.now(), { cache: 'no-store' }); if (!r.ok) throw 0; Q.lib = await r.json(); } catch (e) { Q.lib = null; } return Q.lib; }
+
+  function render() {
+    const st = Q.step;
+    document.getElementById('qm-dots').innerHTML = [1, 2, 3, 4].map(i => `<i class="${i <= st ? 'on' : ''}"></i>`).join('');
+    document.getElementById('qm-step').textContent = Q.done || Q.busy ? '' : st + ' / 4';
+    backB.style.visibility = Q.busy ? 'hidden' : 'visible'; document.getElementById('qm-x').style.visibility = Q.busy ? 'hidden' : 'visible';
+    const foot = document.getElementById('qm-foot');
+    if (Q.busy) { foot.style.display = 'none'; return; }
+    foot.style.display = 'flex';
+    if (Q.done) { document.getElementById('qm-title').textContent = '完成了！'; body.innerHTML = doneHtml(); foot.innerHTML = '<button class="alt" id="qm-again">重做一支</button><button id="qm-edit">進編輯器微調</button>'; bindDone(); return; }
+    document.getElementById('qm-title').textContent = ['', '要做多長的影片？', '選照片或影片', '選一個風格', '選配樂'][st];
+    foot.innerHTML = '<button id="qm-next">' + (st === 4 ? '✨ 開始生成' : '下一步') + '</button>';
+    const nb = document.getElementById('qm-next'); nb.onclick = next;
+    if (st === 1) { body.innerHTML = `<p class="qh">選好時間，我會自動算出需要幾張照片、幾段影片。</p><div class="qchips" id="q-len">${QLEN.map(l => `<button data-v="${l[0]}" class="${Q.len === l[0] ? 'on' : ''}">${l[1]}</button>`).join('')}</div>
+      <h2>畫面方向</h2><div class="qchips" id="q-rt">${[['9:16', '📱 直式'], ['16:9', '🖥 橫式'], ['1:1', '⬜ 方形']].map(r => `<button data-v="${r[0]}" class="${Q.ratio === r[0] ? 'on' : ''}">${r[1]}</button>`).join('')}</div>`;
+      body.querySelectorAll('#q-len button').forEach(b => b.onclick = () => { Q.len = +b.dataset.v; render(); });
+      body.querySelectorAll('#q-rt button').forEach(b => b.onclick = () => { Q.ratio = b.dataset.v; render(); });
+    } else if (st === 2) {
+      const [a, b] = recRange(), im = Q.files.filter(isImg).length, vd = Q.files.length - im;
+      body.innerHTML = `<p class="qh">${QLEN.find(l => l[0] === Q.len)[1]}的影片，建議選約 <b style="color:#ffb347">${a}～${b} 個</b>照片或影片（可以混著選）。影片我會自動挑出畫面清楚、有動作的精彩片段；一支影片比較長時，會分成好幾段使用。<br><b style="color:#ffb347">影片會照下面的編號順序播放</b>（照片、影片混著選也一樣，不會亂跳）；點 ‹ › 可以調順序。</p>
+      <button class="qpick" id="q-pick">＋ 選取照片／影片</button>
+      <p class="qh" style="margin-top:10px">${Q.files.length ? `已選 ${Q.files.length} 個（照片 ${im}、影片 ${vd}）` : '還沒有選素材'}</p>
+      <div class="qgrid">${Q.files.map((f, i) => `<div style="${isImg(f) ? `background-image:url(${fileUrl(f)})` : ''}">${isImg(f) ? '' : '🎞 ' + esc(f.name.slice(0, 14))}<b class="no">${i + 1}</b><i data-rm="${i}">✕</i>${i > 0 ? `<s data-mv="${i}" data-d="-1" style="left:2px">‹</s>` : ''}${i < Q.files.length - 1 ? `<s data-mv="${i}" data-d="1" style="right:2px">›</s>` : ''}</div>`).join('')}</div>`;
+      nb.disabled = !Q.files.length;
+      document.getElementById('q-pick').onclick = () => { const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; inp.accept = 'image/*,video/*'; inp.onchange = () => { Q.files.push(...inp.files); render(); }; inp.click(); };
+      body.querySelectorAll('[data-mv]').forEach(x => x.onclick = e => { e.stopPropagation(); const i = +x.dataset.mv, j = i + +x.dataset.d; [Q.files[i], Q.files[j]] = [Q.files[j], Q.files[i]]; render(); });
+      body.querySelectorAll('[data-rm]').forEach(x => x.onclick = e => { e.stopPropagation(); Q.files.splice(+x.dataset.rm, 1); render(); });
+    } else if (st === 3) {
+      body.innerHTML = QSTY.map((x, i) => `<button class="qsty${Q.sty === i ? ' on' : ''}" data-i="${i}"><span><b>${x.n}</b><small>${x.d}</small></span></button>`).join('')
+        + `<h2>片頭文字（選填）</h2><input type="text" id="q-title" maxlength="20" placeholder="例如：暑期營隊回顧" value="${esc(Q.title)}"><h2>片尾文字（選填）</h2><input type="text" id="q-end" maxlength="20" value="${esc(Q.end)}">`;
+      body.querySelectorAll('.qsty').forEach(b => b.onclick = () => { Q.title = document.getElementById('q-title').value; Q.end = document.getElementById('q-end').value; Q.sty = +b.dataset.i; Q.mstyle = QSTY[Q.sty].id; Q.song = null; render(); });
+    } else {
+      body.innerHTML = `<button class="qopt${Q.mus === 'auto' ? ' on' : ''}" id="q-auto">🎲 自動幫我挑（${(QSTY.find(x => x.id === Q.mstyle) || QSTY[0]).n}風格）</button><button class="qopt${Q.mus === 'none' ? ' on' : ''}" id="q-none">🔇 不要配樂</button><h2 style="font-size:16px">或自己挑一首</h2><div class="qtabs" id="q-tabs"></div><div id="q-songs"><p class="qh">載入配樂中…</p></div>`;
+      document.getElementById('q-auto').onclick = () => { Q.mus = 'auto'; Q.song = null; stopPv(); render(); };
+      document.getElementById('q-none').onclick = () => { Q.mus = 'none'; Q.song = null; stopPv(); render(); };
+      loadLib().then(lib => {
+        const tabs = document.getElementById('q-tabs'), list = document.getElementById('q-songs'); if (!tabs) return;
+        if (!lib) { list.innerHTML = '<p class="qh">要連上網路才能用配樂庫（也可以選「不要配樂」）。</p>'; return; }
+        const ids = lib.styles.filter(x => x.tracks.length);
+        tabs.innerHTML = ids.map(x => `<button data-id="${x.id}" class="${x.id === Q.mstyle ? 'on' : ''}">${x.emoji} ${x.name}</button>`).join('');
+        tabs.querySelectorAll('button').forEach(b => b.onclick = () => { Q.mstyle = b.dataset.id; stopPv(); render(); });
+        const cs = lib.styles.find(x => x.id === Q.mstyle) || ids[0];
+        list.innerHTML = cs.tracks.map((t, i) => `<div class="qsong"><button class="pv" data-pv="${i}">▶</button><span>${t.name}</span><button class="ck${Q.song === t.file ? ' on' : ''}" data-use="${i}">${Q.song === t.file ? '已選' : '選這首'}</button></div>`).join('');
+        list.querySelectorAll('[data-pv]').forEach(b => b.onclick = () => { const t = cs.tracks[+b.dataset.pv], u = 'music/' + t.file; if (Q.pv && Q.pv._u === u && !Q.pv.paused) { stopPv(); list.querySelectorAll('[data-pv]').forEach(x => x.textContent = '▶'); return; } stopPv(); list.querySelectorAll('[data-pv]').forEach(x => x.textContent = '▶'); const au = new Audio(u); au._u = u; Q.pv = au; b.textContent = '⏸'; au.onended = () => { b.textContent = '▶'; }; au.play().catch(() => {}); });
+        list.querySelectorAll('[data-use]').forEach(b => b.onclick = () => { Q.song = cs.tracks[+b.dataset.use].file; Q.mus = 'song'; stopPv(); render(); });
+      });
+    }
+  }
+  function next() {
+    if (Q.step === 3) { const t = document.getElementById('q-title'), e = document.getElementById('q-end'); if (t) Q.title = t.value.trim(); if (e) Q.end = e.value.trim(); }
+    if (Q.step === 2 && !Q.files.length) return;
+    if (Q.step < 4) { Q.step++; stopPv(); render(); body.scrollTop = 0; } else generate();
+  }
+  backB.onclick = () => { if (Q.done) { Q.done = null; Q.step = 4; render(); return; } if (Q.step > 1) { if (Q.step === 3) { const t = document.getElementById('q-title'), e = document.getElementById('q-end'); if (t) Q.title = t.value.trim(); if (e) Q.end = e.value.trim(); } Q.step--; stopPv(); render(); } else close(); };
+  document.getElementById('qm-x').onclick = close;
+
+  /* ---- 找精彩片段：每隔一小段取一張縮圖，算「清楚度」和「動作多寡」，挑分數最高又不重疊的幾段 ---- */
+  const seekTo = (el, t) => new Promise(res => { let d = false; const f = () => { if (d) return; d = true; el.removeEventListener('seeked', f); res(); }; el.addEventListener('seeked', f); setTimeout(f, 1600); try { el.currentTime = t; } catch (e) { f(); } });
+  async function findCands(a, segLen) {
+    const dur = a.dur; if (dur <= segLen + 0.5) return [{ t: 0, score: 1 }];
+    const el = a.el, step = Math.max(0.6, dur / 40), W = 48, H = Math.max(16, Math.round(48 * a.h / a.w)), c = document.createElement('canvas'); c.width = W; c.height = H;
+    const x = c.getContext('2d', { willReadFrequently: true }), smp = []; let prev = null; const t0 = Date.now();
+    for (let t = 0.2; t < dur - 0.1; t += step) {
+      if (Date.now() - t0 > 7000) break;
+      await seekTo(el, t);
+      try { x.drawImage(el, 0, 0, W, H); const d = x.getImageData(0, 0, W, H).data, g = new Float32Array(W * H); let lum = 0;
+        for (let i = 0; i < W * H; i++) { g[i] = d[i * 4] * 0.3 + d[i * 4 + 1] * 0.59 + d[i * 4 + 2] * 0.11; lum += g[i]; } lum /= W * H;
+        let sh = 0, n = 0; for (let yy = 1; yy < H - 1; yy++) for (let xx = 1; xx < W - 1; xx++) { const i = yy * W + xx, lap = 4 * g[i] - g[i - 1] - g[i + 1] - g[i - W] - g[i + W]; sh += lap * lap; n++; } sh /= n;
+        let mo = 0; if (prev) { for (let i = 0; i < W * H; i++) mo += Math.abs(g[i] - prev[i]); mo /= W * H; } prev = g;
+        smp.push({ t, sh, mo, ex: lum < 25 || lum > 235 ? 0 : 1 }); } catch (e) {}
+    }
+    try { el.currentTime = 0; } catch (e) {}
+    const maxSeg = Math.max(1, Math.floor(dur / segLen)), out = [];
+    if (smp.length < 3) { for (let k = 0; k < maxSeg; k++) out.push({ t: Math.min(dur - segLen, (k + 0.5) * dur / maxSeg - segLen / 2 < 0 ? 0 : (k + 0.5) * dur / maxSeg - segLen / 2), score: 0.5 }); return out; }
+    const mx = (k) => Math.max(1e-6, ...smp.map(q => q[k])), msh = mx('sh'), mmo = mx('mo');
+    smp.forEach(q => { q.s = 0.45 * q.sh / msh + 0.4 * q.mo / mmo + 0.15 * q.ex; });
+    const wins = []; for (let s = 0; s <= dur - segLen + 0.001; s += Math.max(0.4, step / 2)) { const inn = smp.filter(q => q.t >= s && q.t <= s + segLen); if (inn.length) wins.push({ t: s, score: inn.reduce((m, q) => m + q.s, 0) / inn.length * (s < 0.4 ? 0.9 : 1) }); }
+    wins.sort((p, q) => q.score - p.score);
+    for (const w of wins) { if (out.length >= maxSeg) break; if (out.every(o => Math.abs(o.t - w.t) >= segLen - 0.01)) out.push(w); }
+    return out.length ? out : [{ t: 0, score: 0.5 }];
+  }
+  /* ---- 排進時間軸：照片和影片段落湊成剛好的長度 ---- */
+  function plan(items, D, T) {
+    const dur = T.dur, cap = T.cap, imgD = Math.min(cap, 3.2);
+    const n = Math.max(1, Math.round((D - dur) / (cap - dur)));
+    let sel = [];   // {it, c}
+    if (items.length > n) { for (let i = 0; i < n; i++) { const k = n === 1 ? Math.floor(items.length / 2) : Math.round(i * (items.length - 1) / (n - 1)); sel.push({ it: items[k], c: items[k].cands[0], i: k }); } }
+    else {
+      items.forEach((it, i) => sel.push({ it, c: it.cands[0], i }));
+      const extra = []; items.forEach((it, i) => { if (it.a.kind === 'video') it.cands.slice(1).forEach(c => extra.push({ it, c, i })); });
+      extra.sort((p, q) => q.c.score - p.c.score); while (sel.length < n && extra.length) sel.push(extra.shift());
+    }
+    sel.sort((p, q) => p.i - q.i || p.c.t - q.c.t);
+    const out = sel.map(q => q.it.a.kind === 'image' ? { a: q.it.a, in: 0, len: imgD } : { a: q.it.a, in: q.c.t, len: Math.min(cap, q.it.a.dur - q.c.t) });
+    const sum = out.reduce((m, o) => m + o.len, 0), target = D + (out.length - 1) * dur, k = clamp(target / sum, 0.7, 1.7);
+    out.forEach(o => { o.len = o.a.kind === 'image' ? Math.min(6, o.len * k) : Math.min(o.len * k, o.a.dur - o.in); });
+    return out;
+  }
+  /* ---- 配樂：選的那首，不夠長就接上同風格的其他首（交叉淡入）、結尾淡出，合成一個檔 ---- */
+  async function buildMusic(D, style, file) {
+    const lib = await loadLib(); if (!lib) throw new Error('lib');
+    const cs = lib.styles.find(x => x.id === style) || lib.styles.find(x => x.tracks.length), trs = cs.tracks;
+    let first = file ? trs.find(t => t.file === file) : trs[Math.floor(Math.random() * trs.length)]; if (!first) first = trs[0];
+    const getBuf = async t => { const r = await fetch('music/' + t.file); if (!r.ok) throw new Error('fetch'); return { blob: await r.blob(), ab: null, t }; };
+    const f1 = await getBuf(first);
+    const AC = window.OfflineAudioContext || window.webkitOfflineAudioContext, SR = 32000;
+    const dec = async b => { const ab = await b.blob.arrayBuffer(), ctx = new AC(2, 1, SR), buf = await new Promise((res, rej) => { const p = ctx.decodeAudioData(ab, res, rej); if (p && p.catch) p.catch(rej); }); const ch = buf.numberOfChannels, n = buf.length, m = new Float32Array(n), d0 = buf.getChannelData(0), d1 = ch > 1 ? buf.getChannelData(1) : d0; for (let i = 0; i < n; i++) m[i] = (d0[i] + d1[i]) / 2; return m; };
+    const b1 = await dec(f1);
+    if (b1.length / SR >= D + 1) return new File([f1.blob], first.name + '.mp3', { type: 'audio/mpeg' });
+    const others = trs.filter(t => t !== first && t.file.replace(/[ab]\.mp3$/, '') !== first.file.replace(/[ab]\.mp3$/, '')).sort(() => Math.random() - 0.5);
+    const N = Math.ceil((D + 1.5) * SR), out = new Float32Array(N), xf = Math.round(0.6 * SR); let pos = 0, idx = 0, cur = b1;
+    while (pos < N) {
+      for (let i = 0; i < cur.length && pos + i < N; i++) { const v = cur[i]; out[pos + i] = (pos > 0 && i < xf) ? out[pos + i] * (1 - i / xf) + v * (i / xf) : v; }
+      pos += Math.max(1, cur.length - xf);
+      if (pos >= N) break;
+      const t = others.length ? others[idx++ % others.length] : first; cur = t === first ? b1 : await dec(await getBuf(t));
+    }
+    const fo = Math.min(N, Math.round(2.2 * SR)); for (let i = 0; i < fo; i++) out[N - 1 - i] *= i / fo;
+    const pcm = new DataView(new ArrayBuffer(44 + N * 2)), w = (o, s) => { for (let i = 0; i < s.length; i++) pcm.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, 'RIFF'); pcm.setUint32(4, 36 + N * 2, true); w(8, 'WAVE'); w(12, 'fmt '); pcm.setUint32(16, 16, true); pcm.setUint16(20, 1, true); pcm.setUint16(22, 1, true); pcm.setUint32(24, SR, true); pcm.setUint32(28, SR * 2, true); pcm.setUint16(32, 2, true); pcm.setUint16(34, 16, true); w(36, 'data'); pcm.setUint32(40, N * 2, true);
+    for (let i = 0; i < N; i++) pcm.setInt16(44 + i * 2, Math.max(-1, Math.min(1, out[i])) * 32767, true);
+    return new File([pcm.buffer], first.name.replace(/（B版）/, '') + '（接長）.wav', { type: 'audio/wav' });
+  }
+  const prog = (pct, msg) => { body.innerHTML = `<div class="qbig"><div class="em">🎬</div><h2>正在幫你做影片…</h2><div class="qbar"><i style="width:${Math.round(pct)}%"></i></div><p class="qh" id="q-msg">${msg}</p><p class="qh">請先不要離開這個畫面，手機也別鎖屏喔。</p></div>`; };
+  const setProg = (pct, msg) => { const i = body.querySelector('.qbar i'), m = document.getElementById('q-msg'); if (i) i.style.width = Math.round(pct) + '%'; if (m) m.textContent = msg; };
+  async function generate() {
+    if (state.clips.length || state.layers.length) { if (!(await pjAskSave())) return; }
+    stopPv(); Q.busy = true; render(); prog(2, '準備中…');
+    const T = QSTY[Q.sty], D = Q.len; let wake = null; try { wake = await navigator.wakeLock?.request('screen'); } catch (e) {}
+    try {
+      pjReset(); state = { ratio: Q.ratio, clips: [], layers: [], texts: [], music: null, kb: false, vol: { video: 1, music: 0.6 } }; uid = 1; PJ.cur = null; PJ.name = ''; PJ.savedStr = ''; PJ.stored = new Set(); $('#ratio').value = state.ratio; applyRatio(); relayout(); renderAll();
+      // 1. 匯入
+      const items = [], errs = []; let fin = 0;
+      for (const f of Q.files) { setProg(3 + 22 * fin / Q.files.length, `匯入素材 ${fin + 1} / ${Q.files.length}…`); try { const a = await makeAsset(f); items.push({ a, cands: null }); } catch (e) { errs.push(e.message); } fin++; }
+      if (!items.length) throw new Error(errs[0] || '沒有可以用的素材');
+      // 2. 影片找精彩片段
+      const vids = items.filter(x => x.a.kind === 'video'); let vi = 0;
+      for (const it of items) { if (it.a.kind === 'image') { it.cands = [{ t: 0, score: 1 }]; continue; } setProg(25 + 40 * vi / Math.max(1, vids.length), `正在找精彩片段 ${vi + 1} / ${vids.length}…`); it.cands = await findCands(it.a, T.cap); vi++; }
+      // 3. 排版
+      setProg(68, '正在排版…');
+      const pl = plan(items, D, T);
+      state.clips = pl.map((o, i) => { const c = { id: uid++, asset: o.a.id, in: o.in, out: o.in + o.len, mute: false }; if (i) c.tr = { type: T.tr[(i - 1) % T.tr.length], dur: T.dur }; return c; });
+      if (T.kb) state.kb = true;
+      relayout();
+      // 4. 配樂
+      let musicOk = false;
+      if (Q.mus !== 'none') {
+        setProg(72, '正在準備配樂…');
+        try {
+          const need = Math.max(D, total) + 1, f = await buildMusic(need, Q.mstyle, Q.mus === 'song' ? Q.song : null);
+          await addMusic(f); musicOk = !!state.music; if (musicOk) state.vol = { video: 0.4, music: 0.7 };
+        } catch (e) { toast('配樂沒有載入成功（要連網路），影片先做好了'); }
+      }
+      if (musicOk) {
+        setProg(84, '正在對準節拍…'); relayout();
+        try { await detectBeats(); } catch (e) {}
+        const bt = (state.beats || []).slice().sort((x, y) => x - y);
+        if (bt.length) for (let i = 0; i < state.clips.length - 1; i++) {
+          relayout(); const e = L[i], c = e.c, a = assets.get(c.asset), sp = spd(c), minEnd = e.start + 1.5, maxEnd = e.start + T.cap * 1.6;
+          const cand = bt.filter(t => t >= minEnd && t <= maxEnd).sort((x, y) => Math.abs(x - e.start - T.cap) - Math.abs(y - e.start - T.cap)), b = cand[0]; if (b == null) continue;
+          const len = b - e.start; if (a.kind === 'image') c.out = c.in + len; else { const need = c.in + len * sp; if (need <= (a.dur || 1e9)) c.out = need; }
+        }
+      }
+      relayout();
+      // 5. 文字與貼紙
+      setProg(92, '正在加上文字…');
+      const td = Math.min(2.6, Math.max(1, total * 0.2));
+      if (Q.title) state.texts.push({ id: uid++, tpl: 1, text: Q.title, start: 0.2, dur: td, color: T.c, size: 11, pos: 'middle', an: 'pop', sh: 1 });
+      if (Q.end) { const ed = Math.min(2.5, Math.max(1, total * 0.15)); state.texts.push({ id: uid++, tpl: 1, text: Q.end, start: Math.max(0, total - ed), dur: ed, color: T.end, size: 10, pos: 'middle', an: 'rise', sh: 1 }); }
+      if (T.stk) { let k = 0; for (let i = 1; i < L.length; i++) { if ((i + 1) % 3) continue; const e = L[i]; state.texts.push({ id: uid++, tpl: 1, text: QSTK[(k * 3 + i) % QSTK.length], start: e.start + 0.3, dur: Math.max(0.8, Math.min(1.6, e.d - 0.5)), color: '#222222', size: 6.5, pos: 'middle', ty: -0.2, tx: k % 2 ? 0.14 : -0.14, ow: 0, an: 'pop', bx: k % 2 ? 'burst' : 'bubble' }); k++; } }
+      clearSel(); renderAll(); setCur(0); history = []; redoStack = []; updateToolbar();
+      Q.done = { sec: total, n: state.clips.length, short: total < D * 0.8, errs: errs.length, music: musicOk };
+    } catch (e) { toast('做不出來：' + (e && e.message || '發生問題')); Q.done = null; Q.busy = false; Q.step = 2; render(); return; }
+    finally { if (wake) try { wake.release(); } catch (e) {} }
+    Q.busy = false; render();
+  }
+  const doneHtml = () => { const d = Q.done; return `<div class="qbig"><div class="em">🎉</div><h2>做好了！總長 ${fmt(d.sec)}</h2><p class="qh">用了 ${d.n} 段素材${d.music ? '，已配上音樂' : ''}。${d.short ? '素材不夠長，所以比你選的時間短一些；多選一點素材會更接近。' : ''}${d.errs ? `有 ${d.errs} 個素材讀不了，已跳過。` : ''}</p></div>
+    <button class="qopt" id="q-play" style="margin-top:20px">▶ 先看看成果</button><button class="qopt" id="q-exp">📤 直接匯出</button>`; };
+  function bindDone() {
+    document.getElementById('q-play').onclick = () => { close(); if (window.__hideHome) window.__hideHome(); setCur(0); play(); };
+    document.getElementById('q-exp').onclick = () => { close(); if (window.__hideHome) window.__hideHome(); $('#btn-export').click(); };
+    document.getElementById('qm-edit').onclick = () => { close(); if (window.__hideHome) window.__hideHome(); };
+    document.getElementById('qm-again').onclick = () => { Q.done = null; Q.step = 1; Q.files = []; render(); };
+  }
+  document.getElementById('h-quick').addEventListener('click', open);
+})();
+
 // ===== 防止雙擊／雙指縮放 =====
 (function () {
   ['gesturestart', 'gesturechange', 'gestureend'].forEach(n => document.addEventListener(n, e => e.preventDefault(), { passive: false }));
@@ -2943,7 +3198,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AK', upd = document.getElementById('upd');
+  const VER = '1121-AL', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
