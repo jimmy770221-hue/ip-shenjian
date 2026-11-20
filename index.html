@@ -176,7 +176,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-K（專案暫存）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-L（匯入更穩更快）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -335,43 +335,58 @@ function clipAt(t) {
 /* ================= 匯入素材 ================= */
 function loadVideo(a) {
   return new Promise((res, rej) => {
-    const el = document.createElement('video');
+    const el = document.createElement('video'); let done = false, t1, t2;
+    const fail = msg => { if (done) return; done = true; clearTimeout(t1); clearTimeout(t2); try { el.removeAttribute('src'); el.load(); el.remove(); } catch (e) {} rej(new Error(msg)); };
+    const ok = () => { if (done) return; done = true; clearTimeout(t1); clearTimeout(t2); el.onseeked = null; el.addEventListener('seeked', () => dirty = true); res(); };
     el.playsInline = true; el.preload = 'auto'; el.src = a.url; el.setAttribute('playsinline', '');
     $('#pool').appendChild(el);
     el.addEventListener('seeked', () => dirty = true); el.addEventListener('loadeddata', () => dirty = true);
-    el.onerror = () => rej(new Error('讀不到這個影片：' + a.name));
+    el.onerror = () => fail('「' + a.name + '」這支影片格式讀不了（可能是 HEVC/H.265 或損壞），請改用 MP4(H.264) 的影片');
+    t1 = setTimeout(() => fail('「' + a.name + '」讀取太久沒有回應，已跳過（檔案太大或格式不支援）'), 25000);
     el.onloadedmetadata = () => {
+      if (!isFinite(el.duration) || !el.videoWidth) return fail('「' + a.name + '」讀不到影片長度或畫面，已跳過');
       a.el = el; a.w = el.videoWidth; a.h = el.videoHeight; a.dur = el.duration;
-      el.currentTime = Math.min(0.1, el.duration / 2);
+      t2 = setTimeout(ok, 5000);   // 取縮圖等太久就不等了，照樣匯入
       el.onseeked = () => {
         try { const c = document.createElement('canvas'); c.height = 80; c.width = Math.round(80 * a.w / a.h) || 80;
           c.getContext('2d').drawImage(el, 0, 0, c.width, c.height); a.thumb = c.toDataURL('image/jpeg', 0.6); } catch (e) {}
-        el.onseeked = null; el.addEventListener('seeked', () => dirty = true); res();
+        ok();
       };
+      try { el.currentTime = Math.min(0.1, el.duration / 2); } catch (e) { ok(); }
     };
   });
 }
 function loadImage(a) {
   return new Promise((res, rej) => {
-    const img = new Image(); img.onload = () => { a.img = img; a.w = img.naturalWidth; a.h = img.naturalHeight; a.thumb = a.url; res(); };
-    img.onerror = () => rej(new Error('讀不到這張照片：' + a.name)); img.src = a.url;
+    const img = new Image(); let done = false;
+    const t = setTimeout(() => { if (!done) { done = true; rej(new Error('「' + a.name + '」照片讀取太久沒有回應，已跳過')); } }, 20000);
+    img.onload = () => { if (done) return; done = true; clearTimeout(t); a.img = img; a.w = img.naturalWidth; a.h = img.naturalHeight; a.thumb = a.url; res(); };
+    img.onerror = () => { if (done) return; done = true; clearTimeout(t); rej(new Error('「' + a.name + '」這張照片讀不了（HEIC 之類的格式請先轉成 JPG）')); }; img.src = a.url;
   });
 }
 async function makeAsset(file) {
   const a = { id: uid++, file, url: URL.createObjectURL(file), name: file.name, kind: file.type.startsWith('image/') ? 'image' : file.type.startsWith('audio/') ? 'audio' : 'video' };
-  if (a.kind === 'video') await loadVideo(a); else if (a.kind === 'image') await loadImage(a);
+  try { if (a.kind === 'video') await loadVideo(a); else if (a.kind === 'image') await loadImage(a); }
+  catch (e) { URL.revokeObjectURL(a.url); throw e; }
   assets.set(a.id, a); return a;
 }
 async function addMedia(files) {
-  toast('匯入中…');
-  commit();
-  for (const f of files) {
-    try {
-      const a = await makeAsset(f);
-      state.clips.push({ id: uid++, asset: a.id, in: 0, out: a.kind === 'image' ? 3 : a.dur, mute: false });
-    } catch (e) { toast(e.message); }
-  }
-  relayout(); renderAll(); toast('已加入 ' + files.length + ' 個素材');
+  commit(); const n = files.length, res = new Array(n), errs = []; let next = 0, fin = 0;
+  const show = () => toast('匯入中 ' + fin + ' / ' + n + '…');
+  show();
+  const worker = async () => {   // 同時處理 2 個，順序仍照選的順序
+    while (next < n) {
+      const i = next++, f = files[i];
+      try { res[i] = await makeAsset(f); } catch (e) { errs.push(e.message); }
+      fin++; show();
+    }
+  };
+  await Promise.all([worker(), worker()]);
+  let okN = 0;
+  for (const a of res) if (a) { state.clips.push({ id: uid++, asset: a.id, in: 0, out: a.kind === 'image' ? 3 : a.dur, mute: false }); okN++; }
+  relayout(); renderAll();
+  if (errs.length) { toast('成功 ' + okN + ' 個，失敗 ' + errs.length + ' 個：' + errs[0] + (errs.length > 1 ? '（還有 ' + (errs.length - 1) + ' 個失敗）' : '')); if (!okN) { try { history.pop(); } catch (e) {} } }
+  else toast('已加入 ' + okN + ' 個素材');
 }
 async function addMusic(file) {
   try {
@@ -1885,7 +1900,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-K', upd = document.getElementById('upd');
+  const VER = '1121-L', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
