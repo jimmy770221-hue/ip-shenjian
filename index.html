@@ -176,7 +176,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-L（匯入更穩更快）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-M（定格＋封面）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -220,6 +220,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tb" data-a="au"><i>🎧</i>音訊</button>
     <button class="tb" data-a="ef"><i>🌈</i>特效包</button>
     <button class="tb" data-a="split"><i>✂️</i>分割</button>
+    <button class="tb" data-a="freeze"><i>❄️</i>定格</button>
     <button class="tb" data-a="trimL"><i>⇤</i>裁左邊</button>
     <button class="tb" data-a="trimR"><i>⇥</i>裁右邊</button>
     <button class="tb" data-a="del"><i>🗑</i>刪除</button>
@@ -822,7 +823,7 @@ function updateToolbar() {
   const e = clipAt(cur), has = !!e;
   const set = (a, v) => { const b = document.querySelector(`.tb[data-a="${a}"]`); if (b) b.disabled = !v; };
   set('split', has); set('trimL', has); set('trimR', has); set('del', has); set('mvL', has && e.i > 0); set('mvR', has && e.i < L.length - 1);
-  set('text', has); set('fx', has); set('undo', history.length > 0); set('redo', redoStack.length > 0);
+  set('text', has); set('fx', has); set('freeze', has); set('undo', history.length > 0); set('redo', redoStack.length > 0);
 }
 function renderTimeline() {
   const h = half(); $('#inner').style.padding = `0 ${h}px 6px`;
@@ -892,6 +893,27 @@ const ops = {
     commit(); const c = e.c, a = { ...c, id: uid++ }, ls = local * spd(c); delete a.kf;
     if (c.rev) { c.in = c.out - ls; a.out = c.out - ls; } else { a.in = c.in + ls; c.out = c.in + ls; }
     state.clips.splice(e.i + 1, 0, a); afterEdit(cur); toast('已分割');
+  },
+  async freeze() {
+    const e = clipAt(cur); if (!e) return; const a = assets.get(e.c.asset), local = cur - e.start;
+    let blob;
+    try {
+      if (a.kind === 'image') { toast('這已經是照片了，不用定格'); return; }
+      const t = clamp(e.c.rev ? e.c.out - local * spd(e.c) : e.c.in + local * spd(e.c), 0, Math.max(0, (a.el.duration || 1e9) - 0.001)), el = a.el;
+      if (Math.abs(el.currentTime - t) > 0.02 || el.seeking) { await new Promise(r => { const f = () => { el.removeEventListener('seeked', f); r(); }; el.addEventListener('seeked', f); setTimeout(f, 1500); el.currentTime = t; }); }
+      const w = el.videoWidth || a.w, h = el.videoHeight || a.h, c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(el, 0, 0, w, h);
+      blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+      if (!blob) throw new Error('空的');
+    } catch (er) { return toast('定格失敗，請再試一次'); }
+    const na = await makeAsset(new File([blob], '定格_' + (a.name || 'clip').replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
+    commit();
+    const nc = { ...e.c, id: uid++, asset: na.id, in: 0, out: 2, mute: true }; ['kf', 'tr', 'sp', 'rev', 'bb'].forEach(k => delete nc[k]);
+    let idx, goto;
+    if (local < 0.1) { idx = e.i; }
+    else if (e.d - local < 0.1) { idx = e.i + 1; }
+    else { const c = e.c, b = { ...c, id: uid++ }, ls = local * spd(c); delete b.kf; delete b.tr; if (c.rev) { c.in = c.out - ls; b.out = c.out - ls; } else { b.in = c.in + ls; c.out = c.in + ls; } state.clips.splice(e.i + 1, 0, b); idx = e.i + 1; }
+    state.clips.splice(idx, 0, nc); relayout(); afterEdit(L[idx].start + 0.05); toast('已定格 2 秒（可在「這張照片顯示幾秒」改長短）');
   },
   trimL() {
     const e = clipAt(cur), local = cur - e.start;
@@ -971,6 +993,7 @@ function renderCtx() {
       const a = assets.get(e.c.asset);
       h += `<h4>目前選取：第 ${e.i + 1} 段（時間軸上橘色框）・${a.kind === 'image' ? '照片' : '影片'}・${e.d.toFixed(1)} 秒</h4>`;
       h += `<div class="r2" style="margin:8px 0 2px"><button class="sm" id="fit-fill">🔍 畫面滿版</button><button class="sm" id="fit-reset">↺ 還原大小</button></div>`;
+      h += `<div class="r2" style="margin:2px 0 2px"><button class="sm" id="cover-save">🖼 這一格存成封面圖</button></div>`;
       if (a.kind === 'image') h += `<label>這張照片顯示幾秒</label><div class="r2"><input type="number" id="img-d" min="0.5" max="30" step="0.5" value="${e.d.toFixed(1)}"></div>`;
       else h += `<label class="chk"><input type="checkbox" id="clip-mute"${e.c.mute ? ' checked' : ''}> 這一段不要原本的聲音</label>`;
     } else h += `<h4>還沒有素材，請先按「＋素材」</h4>`;
@@ -1015,6 +1038,7 @@ function renderCtx() {
   } else {
     on('#img-d', 'change', e => { const en = clipAt(cur); commit(); en.c.out = en.c.in + clamp(+e.target.value || 3, 0.5, 30); afterEdit(cur); });
     on('#fit-fill', 'click', () => { const en = clipAt(cur); if (!en) return; const a = assets.get(en.c.asset), W = cv.width, H = cv.height; commit(); const rw = (en.c.rot || 0) % 180 ? a.h : a.w, rh = (en.c.rot || 0) % 180 ? a.w : a.h; en.c.z = Math.max(W / rw, H / rh) / Math.min(W / rw, H / rh); en.c.x = 0; en.c.y = 0; dirty = true; });
+    on('#cover-save', 'click', () => { cv.toBlob(async b => { if (!b) return toast('存圖失敗'); const f = new File([b], '封面.jpg', { type: 'image/jpeg' }); try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f] }); return; } } catch (er) { if (er && er.name === 'AbortError') return; } const u = URL.createObjectURL(b), an = document.createElement('a'); an.href = u; an.download = '封面.jpg'; document.body.appendChild(an); an.click(); an.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); toast('封面圖已下載'); }, 'image/jpeg', 0.92); });
     on('#fit-reset', 'click', () => { const en = clipAt(cur); if (!en) return; commit(); en.c.z = 1; en.c.x = 0; en.c.y = 0; dirty = true; });
     on('#clip-mute', 'change', e => { const en = clipAt(cur); commit(); en.c.mute = e.target.checked; renderTimeline(); syncMedia(); });
     on('#vol-v', 'input', e => { touch('vv'); state.vol.video = +e.target.value; e.target.previousElementSibling.textContent = '影片原聲音量 ' + Math.round(state.vol.video * 100) + '%'; syncMedia(); });
@@ -1900,7 +1924,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-L', upd = document.getElementById('upd');
+  const VER = '1121-M', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
