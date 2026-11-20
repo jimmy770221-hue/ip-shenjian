@@ -162,7 +162,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-D（動畫關鍵幀、特效包）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-E（文字樣式、貼圖、變速曲線）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -200,6 +200,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tb" data-a="fx"><i>🎛</i>調整</button>
     <button class="tb" data-a="ly"><i>🧩</i>拼貼</button>
     <button class="tb" data-a="kf"><i>🎞</i>動畫</button>
+    <button class="tb" data-a="st"><i>😀</i>貼圖</button>
     <button class="tb" data-a="ef"><i>🌈</i>特效包</button>
     <button class="tb" data-a="split"><i>✂️</i>分割</button>
     <button class="tb" data-a="trimL"><i>⇤</i>裁左邊</button>
@@ -246,10 +247,10 @@ const assets = new Map();           // id -> {id,kind,file,url,el,img,w,h,dur,na
 let uid = 1;
 let state = { ratio: '9:16', clips: [], layers: [], texts: [], music: null, kb: false, vol: { video: 1, music: 0.6 } };
 let history = [], redoStack = [], lastTouch = null;
-let showEf = false, showKf = false, kfMode = 'clip', kfLyId = null, kfIdx = -1;
+let showSt = false, showEf = false, showKf = false, kfMode = 'clip', kfLyId = null, kfIdx = -1;
 let showFx = false, fxTab = 'f', fxIdx = -1, showLy = false, selLy = null, lyTab = 'p', pendingTpl = null;
 let cur = 0, playing = false, pps = 80, selText = null, selMusic = false, selTr = null, showAuto = false, dirty = true;
-function clearSel() { showEf = false; showKf = false; showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
+function clearSel() { showSt = false; showEf = false; showKf = false; showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
 let L = [], total = 0;               // 排版結果
 const FXP = {
   none: { n: '原圖', b: 0, ct: 1, sa: 1, r: 1, g: 1, bl: 1 },
@@ -356,9 +357,10 @@ async function addMusic(file) {
 /* ================= 預覽引擎 ================= */
 const cv = $('#cv'), g = cv.getContext('2d');
 function applyRatio() { const [w, h] = RATIO[state.ratio]; cv.width = w; cv.height = h; dirty = true; }
-function drawText(g, W, H, x) {
+const textAnc = {}, textAncEx = {};
+function drawText(g, W, H, x, tl) {
   const fs = Math.round(H * x.size / 100);
-  g.font = `700 ${fs}px "PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif`;
+  g.font = `700 ${fs}px "PingFang TC","Noto Sans TC","Microsoft JhengHei","Apple Color Emoji","Noto Color Emoji",sans-serif`;
   g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
   const lines = [];
   for (const para of x.text.split('\n')) {
@@ -366,11 +368,22 @@ function drawText(g, W, H, x) {
     for (const ch of para) { if (g.measureText(c + ch).width > W * 0.9 && c) { lines.push(c); c = ch; } else c += ch; }
     lines.push(c);
   }
-  const lh = fs * 1.25, tot = lh * lines.length;
-  const y0 = x.pos === 'top' ? H * 0.07 + lh / 2 : x.pos === 'middle' ? (H - tot) / 2 + lh / 2 : H * 0.93 - tot + lh / 2;
-  g.lineWidth = Math.max(3, fs / 6);
-  g.strokeStyle = (x.color === '#ff6b6b' || x.color === '#000000') ? '#ffffff' : '#000000'; g.fillStyle = x.color;
-  lines.forEach((ln, i) => { g.strokeText(ln, W / 2, y0 + i * lh); g.fillText(ln, W / 2, y0 + i * lh); });
+  const lh = fs * 1.25, tot = lh * lines.length, cx = W / 2 + (x.tx || 0) * W;
+  const y0 = (x.pos === 'top' ? H * 0.07 + lh / 2 : x.pos === 'middle' ? (H - tot) / 2 + lh / 2 : H * 0.93 - tot + lh / 2) + (x.ty || 0) * H, cy = y0 + (lines.length - 1) * lh / 2;
+  textAnc[x.id] = { cx, cy };
+  let al = 1, sc = 1, dy = 0;
+  if (x.an && tl != null) { const p = Math.min(1, Math.max(0, tl / 0.35)); if (x.an === 'fade') al = p * Math.min(1, Math.max(0, (x.dur - tl) / 0.35)); else if (x.an === 'pop') { sc = 0.3 + 0.7 * p; al = p; } else if (x.an === 'rise') { dy = (1 - p) * H * 0.05; al = p; } }
+  g.save(); g.globalAlpha *= al; if (dy) g.translate(0, dy); if (sc !== 1) { g.translate(cx, cy); g.scale(sc, sc); g.translate(-cx, -cy); }
+  const ow = x.ow == null ? 1 : x.ow;
+  g.lineWidth = Math.max(3, fs / 6) * ow;
+  g.strokeStyle = (x.color === '#ff6b6b' || x.color === '#000000') ? '#ffffff' : '#000000';
+  if (x.c2) { const gr = g.createLinearGradient(0, y0 - lh / 2, 0, y0 - lh / 2 + tot); gr.addColorStop(0, x.color); gr.addColorStop(1, x.c2); g.fillStyle = gr; } else g.fillStyle = x.color;
+  lines.forEach((ln, i) => {
+    const yy = y0 + i * lh;
+    if (ow > 0.01) { if (x.sh) { g.shadowColor = 'rgba(0,0,0,.75)'; g.shadowBlur = fs * 0.15; g.shadowOffsetX = g.shadowOffsetY = fs * 0.06; } g.strokeText(ln, cx, yy); g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetX = g.shadowOffsetY = 0; g.fillText(ln, cx, yy); }
+    else { if (x.sh) { g.shadowColor = 'rgba(0,0,0,.75)'; g.shadowBlur = fs * 0.15; g.shadowOffsetX = g.shadowOffsetY = fs * 0.06; } g.fillText(ln, cx, yy); g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetX = g.shadowOffsetY = 0; }
+  });
+  g.restore();
 }
 function drawContain(T, src, sw, sh, c) {
   const W = cv.width, H = cv.height, z = (c && c.z) || 1, ox = (c && c.x) || 0, oy = (c && c.y) || 0, rot = (c && c.rot) || 0;
@@ -622,7 +635,7 @@ function renderFrame() {
   for (const l of state.layers) if (cur >= l.start && cur < l.start + l.len) drawLayer(l);
   if (state.gfx && hasFx(state.gfx)) { try { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); fxg.drawImage(cv, 0, 0); applyFx(state.gfx); g.drawImage(fxc, 0, 0); } catch (er) {} }
   if (state.gfx && hasEf(state.gfx.ef)) { try { applyEf(state.gfx.ef, cur); } catch (er) {} }
-  for (const x of state.texts) if (cur >= x.start && cur < x.start + x.dur) drawText(g, cv.width, cv.height, x);
+  for (const x of state.texts) if (cur >= x.start && cur < x.start + x.dur) drawText(g, cv.width, cv.height, x, cur - x.start);
   if (selLy && showLy) { const l = state.layers.find(x => x.id === selLy); if (l && cur >= l.start && cur < l.start + l.len) { const r = lyRect(l); g.save(); g.setLineDash([8, 5]); g.lineWidth = 3; g.strokeStyle = '#ffb347'; g.strokeRect(r.x + 1.5, r.y + 1.5, r.cw - 3, r.ch - 3); g.restore(); } }
 }
 function syncMedia() {
@@ -798,6 +811,7 @@ const ops = {
   fx() { clearSel(); showFx = true; renderTimeline(); renderCtx(); },
   ly() { clearSel(); showLy = true; renderTimeline(); renderCtx(); dirty = true; },
   kf() { const m = (showLy && selLy) ? 'ly' : 'clip', id = selLy; clearSel(); showKf = true; kfMode = m; kfLyId = id; renderTimeline(); renderCtx(); dirty = true; },
+  st() { clearSel(); showSt = true; renderTimeline(); renderCtx(); dirty = true; },
   ef() { clearSel(); showEf = true; renderTimeline(); renderCtx(); dirty = true; },
   auto() { clearSel(); showAuto = true; renderTimeline(); renderCtx(); },
   undo, redo
@@ -817,6 +831,7 @@ function renderCtx() {
   const t = selText && state.texts.find(x => x.id === selText);
   if (showAuto) { h += autoHtml(); }
   else if (selTr !== null && L[selTr]) { h += trHtml(); }
+  else if (showSt) { h += stHtml(); }
   else if (showKf) { h += kfHtml(); }
   else if (showEf) { h += efHtml(); }
   else if (showLy) { h += lyHtml(); }
@@ -826,7 +841,12 @@ function renderCtx() {
     <textarea id="tx-text">${esc(t.text)}</textarea>
     <div class="r2"><div><label>顏色</label><select id="tx-color">${COLORS.map(c => `<option value="${c[0]}"${t.color === c[0] ? ' selected' : ''}>${c[1]}</option>`).join('')}</select></div>
     <div><label>位置</label><select id="tx-pos"><option value="top"${t.pos === 'top' ? ' selected' : ''}>上方</option><option value="middle"${t.pos === 'middle' ? ' selected' : ''}>中間</option><option value="bottom"${t.pos === 'bottom' ? ' selected' : ''}>下方</option></select></div></div>
-    <label>字體大小</label><input type="range" id="tx-size" min="3" max="14" step="0.5" value="${t.size}">
+    <label>字體大小</label><input type="range" id="tx-size" min="3" max="40" step="0.5" value="${t.size}">
+    <div class="r2"><div><label>描邊粗細<b id="v-tx-ow">${Math.round((t.ow == null ? 1 : t.ow) * 100)}%</b></label><input type="range" id="tx-ow" min="0" max="2" step="0.1" value="${t.ow == null ? 1 : t.ow}"></div>
+    <div><label>漸層（下方顏色）</label><select id="tx-c2"><option value="">無</option>${COLORS.map(c => `<option value="${c[0]}"${t.c2 === c[0] ? ' selected' : ''}>${c[1]}</option>`).join('')}</select></div></div>
+    <div class="r2"><div><label>出現動畫</label><select id="tx-an">${[['', '無'], ['fade', '淡入淡出'], ['pop', '彈出放大'], ['rise', '往上浮現']].map(o => `<option value="${o[0]}"${(t.an || '') === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></div>
+    <div><label class="chk" style="margin-top:22px"><input type="checkbox" id="tx-sh"${t.sh ? ' checked' : ''}> 陰影</label></div></div>
+    <div class="r2"><div><label>左右微調</label><input type="range" id="tx-tx" min="-0.5" max="0.5" step="0.01" value="${t.tx || 0}"></div><div><label>上下微調</label><input type="range" id="tx-ty" min="-0.5" max="0.5" step="0.01" value="${t.ty || 0}"></div></div>
     <div class="r2"><div><label>開始（秒）</label><input type="number" id="tx-s" step="0.1" min="0" value="${t.start.toFixed(1)}"></div><div><label>持續（秒）</label><input type="number" id="tx-d" step="0.1" min="0.2" value="${t.dur.toFixed(1)}"></div></div>
     <div class="r2" style="margin-top:8px"><button class="sm" id="tx-ss">開始＝目前位置</button><button class="sm" id="tx-se">結束＝目前位置</button></div>
     <div class="r2" style="margin-top:8px"><button class="sm red" id="tx-del">刪除文字</button><button class="sm ok" id="tx-ok">完成</button></div>`;
@@ -851,11 +871,12 @@ function renderCtx() {
     h += `<label class="chk"><input type="checkbox" id="kb"${state.kb ? ' checked' : ''}> 照片慢慢推近（較動感，匯出會比較慢）</label>`;
   }
   box.innerHTML = h;
-  box.classList.toggle('edit', !!(showAuto || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
+  box.classList.toggle('edit', !!(showAuto || showSt || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
   const on = (id, ev, fn) => { const el = box.querySelector(id); if (el) el.addEventListener(ev, fn); };
   on('#kb', 'change', e => { commit(); state.kb = e.target.checked; dirty = true; });
   if (showAuto) bindAuto(on);
   else if (selTr !== null && L[selTr]) bindTr(on);
+  else if (showSt) bindSt(on);
   else if (showKf) bindKf(on);
   else if (showEf) bindEf(on);
   else if (showLy) bindLy(on);
@@ -864,6 +885,12 @@ function renderCtx() {
     on('#tx-text', 'input', e => { touch('t' + t.id); t.text = e.target.value || ' '; renderTimelineLight(); dirty = true; });
     on('#tx-color', 'change', e => { commit(); t.color = e.target.value; dirty = true; });
     on('#tx-pos', 'change', e => { commit(); t.pos = e.target.value; dirty = true; });
+    on('#tx-ow', 'input', e => { touch('t' + t.id + 'o'); t.ow = +e.target.value; $('#v-tx-ow').textContent = Math.round(t.ow * 100) + '%'; dirty = true; });
+    on('#tx-c2', 'change', e => { commit(); if (e.target.value) t.c2 = e.target.value; else delete t.c2; dirty = true; });
+    on('#tx-an', 'change', e => { commit(); if (e.target.value) t.an = e.target.value; else delete t.an; dirty = true; });
+    on('#tx-sh', 'change', e => { commit(); if (e.target.checked) t.sh = 1; else delete t.sh; dirty = true; });
+    on('#tx-tx', 'input', e => { touch('t' + t.id + 'x'); t.tx = +e.target.value; dirty = true; });
+    on('#tx-ty', 'input', e => { touch('t' + t.id + 'y'); t.ty = +e.target.value; dirty = true; });
     on('#tx-size', 'input', e => { touch('t' + t.id + 's'); t.size = +e.target.value; dirty = true; });
     on('#tx-s', 'change', e => { commit(); t.start = Math.max(0, +e.target.value || 0); renderTimeline(); dirty = true; });
     on('#tx-d', 'change', e => { commit(); t.dur = Math.max(0.2, +e.target.value || 1); renderTimeline(); dirty = true; });
@@ -888,6 +915,7 @@ function renderCtx() {
 const TRS = [['fade', '淡入淡出', '🌫'], ['fadeblack', '黑場過渡', '⬛'], ['fadewhite', '閃白', '⬜'], ['slideleft', '向左推', '⬅️'], ['slideright', '向右推', '➡️'], ['slideup', '向上推', '⬆️'], ['slidedown', '向下推', '⬇️'], ['wipeleft', '向左擦拭', '◀️'], ['wiperight', '向右擦拭', '▶️'], ['circleopen', '圓形展開', '⭕'], ['circleclose', '圓形收合', '🎯'], ['radial', '時鐘擦拭', '🕐']];
 const AUTO_STYLES = [['🎲 隨機混合', TRS.map(t => t[0])], ['🌫 柔和淡入淡出', ['fade']], ['➡️ 推擠換頁', ['slideleft', 'slideright', 'slideup', 'slidedown']], ['🧹 擦拭換頁', ['wipeleft', 'wiperight']], ['⭕ 圓形與時鐘', ['circleopen', 'circleclose', 'radial']], ['⚡ 閃光動感', ['fadewhite', 'fadeblack']]];
 const SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3, 4];
+const RAMPS = [['up', '漸快', [0.5, 0.75, 1, 1.5, 2]], ['down', '漸慢', [2, 1.5, 1, 0.75, 0.5]], ['bullet', '慢快慢（子彈時間）', [1, 0.5, 0.25, 0.5, 1]], ['punch', '快慢快（重點放慢）', [2, 1, 0.5, 1, 2]], ['pulse', '忽快忽慢', [1, 0.5, 2, 0.5, 1]]];
 function fxHtml() {
   const e = clipAt(cur), c = e.c, a = assets.get(c.asset), isV = a.kind === 'video'; fxIdx = e.i;
   let h = `<h4>🎛 調整・第 ${e.i + 1} 段</h4><div class="tabs3">${[['f', '🎨 濾鏡'], ['s', '⚡ 速度'], ['x', '🔄 變換']].map(t => `<button class="sm${fxTab === t[0] ? ' ok' : ''}" data-tab="${t[0]}">${t[1]}</button>`).join('')}</div>`;
@@ -902,6 +930,7 @@ function fxHtml() {
     else {
       h += `<div class="fchips">${SPEEDS.map(v => `<button class="sm${spd(c) === v ? ' ok' : ''}" data-sp="${v}">${v}x</button>`).join('')}</div>`;
       h += `<label class="chk"><input type="checkbox" id="fx-rev"${c.rev ? ' checked' : ''}> ↺ 倒放（影片倒著播）</label>`;
+      h += `<label>📈 變速曲線（把這一段切成 5 小段，速度一段一段變）</label><div class="fchips">${RAMPS.map(r => `<button class="sm" data-ramp="${r[0]}">${r[1]}</button>`).join('')}</div>`;
       h += `<p class="hint">目前這一段約 ${e.d.toFixed(1)} 秒。${(c.rev || spd(c) > 2) ? '倒放與 3x、4x 的預覽會比較卡，匯出的成品是順的。' : ''}${c.rev ? '倒放的片段不會有聲音。' : ''}</p>`;
     }
   } else {
@@ -919,6 +948,15 @@ function bindFx(on) {
   [['fb', v => Math.round(v * 100)], ['fc', v => Math.round(v * 100) + '%'], ['fs', v => Math.round(v * 100) + '%']].forEach(([k, f]) => on('#fx-' + k, 'input', ev => { touch('fx' + k + c.id); c[k] = +ev.target.value; $('#v-' + k).textContent = f(c[k]); dirty = true; renderTimelineLight2(); }));
   on('#fx-reset', 'click', () => { commit(); delete c.fp; delete c.fb; delete c.fc; delete c.fs; dirty = true; renderCtx(); renderTimeline(); });
   on('#fx-all', 'click', () => { commit(); state.clips.forEach(x => { ['fp', 'fb', 'fc', 'fs'].forEach(k => { if (c[k] == null) delete x[k]; else x[k] = c[k]; }); }); dirty = true; renderTimeline(); toast('已套用到全部片段'); });
+  document.querySelectorAll('#ctx [data-ramp]').forEach(b => b.onclick = () => {
+    const r = RAMPS.find(q => q[0] === b.dataset.ramp), S = c.out - c.in, N = r[2].length; if (S < 1) return toast('這一段太短，不能切成 5 小段');
+    commit(); const ps = [];
+    for (let k = 0; k < N; k++) {
+      const hi = c.rev ? c.out - k * S / N : c.in + (k + 1) * S / N, lo = c.rev ? hi - S / N : c.in + k * S / N, q = { ...c, id: k === 0 ? c.id : uid++, in: +lo.toFixed(3), out: +hi.toFixed(3) };
+      if (r[2][k] === 1) delete q.sp; else q.sp = r[2][k]; delete q.kf; if (k > 0) delete q.tr; ps.push(q);
+    }
+    state.clips.splice(e.i, 1, ...ps); afterEdit(e.start); toast('已套用「' + r[1] + '」');
+  });
   document.querySelectorAll('#ctx [data-sp]').forEach(b => b.onclick = () => { commit(); const v = +b.dataset.sp; if (v === 1) delete c.sp; else c.sp = v; afterEdit(e.start); });
   on('#fx-rev', 'change', ev => { commit(); if (ev.target.checked) c.rev = true; else delete c.rev; afterEdit(e.start); });
   document.querySelectorAll('#ctx [data-x]').forEach(b => b.onclick = () => {
@@ -981,6 +1019,19 @@ function bindKf(on) {
   document.querySelectorAll('#ctx [data-kfj]').forEach(b => b.onclick = () => { const k = it.kf[+b.dataset.kfj]; if (k) { setCur(clamp(tg.start + k.t, 0, total)); } });
   on('#kf-del', 'click', () => { const t = cur - tg.start, j = (it.kf || []).findIndex(q => Math.abs(q.t - t) < 0.1); if (j < 0) return toast('這個時間點沒有關鍵幀'); commit(); it.kf.splice(j, 1); if (!it.kf.length) delete it.kf; dirty = true; renderCtx(); });
   on('#kf-clr', 'click', () => { if (!it.kf) return; commit(); delete it.kf; dirty = true; renderCtx(); });
+}
+const STICKERS = '😀 😂 🤣 😍 😎 🥳 😭 😱 🤔 👍 👏 🔥 ❤️ 💯 ⭐ ✨ 🎉 🎵 💥 👑 🌈 🍀 🌸 ☀️ 🌙 ⚡ 🎬 📸 🏆 💪 🙏 😈 👻 🐶 🐱 🐻 🦄 🍕 🍔 🧋 ⚽ 🏀 🚀 💎 🎁 ➡️ ⬆️ ❓ ❗ 💬'.split(' ');
+function stHtml() {
+  return `<h4>😀 貼圖・表情</h4><label>點一個，就會放到目前時間的畫面上（可以再改大小、位置、出現動畫）。</label><div class="fchips" style="max-height:170px;overflow:auto">${STICKERS.map(e => `<button class="sm" data-st="${e}" style="font-size:22px;padding:4px 8px">${e}</button>`).join('')}</div><div class="r2" style="margin-top:8px"><button class="sm ok" id="st-ok">完成</button></div>`;
+}
+function bindSt(on) {
+  document.querySelectorAll('#ctx [data-st]').forEach(b => b.onclick = () => {
+    if (!total) return toast('請先加入影片或照片');
+    const start = Math.min(cur, Math.max(0, total - 0.5)), dur = Math.max(0.5, Math.min(3, total - start));
+    commit(); const x = { id: uid++, text: b.dataset.st, start, dur, color: '#ffffff', size: 18, pos: 'middle', ow: 0, an: 'pop' };
+    state.texts.push(x); clearSel(); selText = x.id; renderTimeline(); renderCtx(); dirty = true;
+  });
+  on('#st-ok', 'click', () => { showSt = false; renderTimeline(); renderCtx(); });
 }
 function efHtml() {
   const ef = (state.gfx && state.gfx.ef) || {};
@@ -1191,7 +1242,7 @@ function exportDims(S) {
   if (r === '9:16') return [S, ev(S * 16 / 9)]; if (r === '16:9') return [ev(S * 16 / 9), S]; if (r === '4:3') return [ev(S * 4 / 3), S]; if (r === '3:4') return [S, ev(S * 4 / 3)]; return [S, S];
 }
 function textPng(x, W, H) {
-  const c = document.createElement('canvas'); c.width = W; c.height = H; drawText(c.getContext('2d'), W, H, x);
+  const c = document.createElement('canvas'); c.width = W; c.height = H; drawText(c.getContext('2d'), W, H, x); textAncEx[x.id] = { ...textAnc[x.id] };
   return new Promise(r => c.toBlob(async b => r(new Uint8Array(await b.arrayBuffer())), 'image/png'));
 }
 function maskPng(shape, w, h) {
@@ -1318,7 +1369,7 @@ $('#xp-go').onclick = async () => {
     } else {
       xStatus(audioOnly ? '正在混音…' : '正在合成畫面、文字與配樂…'); prog(0.8, 1);
       const args = ['-i', base]; let idx = 1;
-      for (const x of texts) { const pn = `t${idx}.png`; await f.writeFile(pn, await textPng(x, W, H)); files.push(pn); args.push('-i', pn); idx++; }
+      for (const x of texts) { const pn = `t${idx}.png`; await f.writeFile(pn, await textPng(x, W, H)); files.push(pn); if (x.an) args.push('-loop', '1', '-framerate', '30', '-t', Math.max(0.2, Math.min(x.dur, TT - x.start)).toFixed(3), '-i', pn); else args.push('-i', pn); idx++; }
       for (const it of lyInfo) {
         it.i = idx++;
         if (it.la.kind === 'image') args.push('-loop', '1', '-framerate', '30', '-t', it.l.len.toFixed(3), '-i', it.ln);
@@ -1358,7 +1409,16 @@ $('#xp-go').onclick = async () => {
         });
         if (gfxOn) { parts.push(`[${prev}]${fxString(snap.gfx)}[vg]`); prev = 'vg'; }
         if (efOn) prev = efParts(snap.gfx.ef, prev, parts, W, H);
-        texts.forEach((x, k) => { const nx = `v${k + 1}`; parts.push(`[${prev}][${k + 1}:v]overlay=0:0:enable='between(t,${x.start.toFixed(2)},${(x.start + x.dur).toFixed(2)})'[${nx}]`); prev = nx; });
+        texts.forEach((x, k) => {
+          const nx = `v${k + 1}`;
+          if (!x.an) { parts.push(`[${prev}][${k + 1}:v]overlay=0:0:enable='between(t,${x.start.toFixed(2)},${(x.start + x.dur).toFixed(2)})'[${nx}]`); prev = nx; return; }
+          const d = Math.max(0.2, Math.min(x.dur, TT - x.start)), an = textAncEx[x.id] || { cx: W / 2, cy: H / 2 }, ch = ['format=yuva420p'];
+          let ox = 'x=0', oy = 'y=0';
+          if (x.an === 'fade') ch.push('fade=t=in:st=0:d=0.35:alpha=1', `fade=t=out:st=${Math.max(0, d - 0.35).toFixed(3)}:d=0.35:alpha=1`);
+          else if (x.an === 'pop') { ch.push('fade=t=in:st=0:d=0.35:alpha=1', `scale=w='max(2,trunc(iw*min(1,0.3+0.7*t/0.35)/2)*2)':h='max(2,trunc(ih*min(1,0.3+0.7*t/0.35)/2)*2)':eval=frame`); ox = `x='${an.cx.toFixed(1)}*(1-overlay_w/${W})'`; oy = `y='${an.cy.toFixed(1)}*(1-overlay_h/${H})'`; }
+          else if (x.an === 'rise') { ch.push('fade=t=in:st=0:d=0.35:alpha=1'); oy = `y='(1-min(1,max(0,(t-${x.start.toFixed(3)})/0.35)))*${(H * 0.05).toFixed(1)}'`; }
+          parts.push(`[${k + 1}:v]${ch.join(',')},setpts=PTS-STARTPTS+${x.start.toFixed(3)}/TB[tk${k}]`, `[${prev}][tk${k}]overlay=${ox}:${oy}:eof_action=pass:format=auto[${nx}]`); prev = nx;
+        });
         vmap = `[${prev}]`;
       }
       let amap = '0:a';
@@ -1450,7 +1510,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-D', upd = document.getElementById('upd');
+  const VER = '1121-E', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
