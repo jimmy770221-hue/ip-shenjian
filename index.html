@@ -164,7 +164,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-I（音訊即時預覽）</div>
+  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-J（動畫曲線、平滑變速、多音軌）</div>
 </div>
 <div id="app">
   <div class="top">
@@ -222,6 +222,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 <input type="file" id="f-media" accept="video/*,image/*" multiple hidden>
 <input type="file" id="f-layer" accept="video/*,image/*" multiple hidden>
 <input type="file" id="f-music" accept="audio/*,video/*" hidden>
+<input type="file" id="f-track" accept="audio/*,video/*" hidden>
 <div id="pool"></div>
 <div class="toast" id="toast"></div>
 
@@ -477,26 +478,27 @@ function applyKey(l, rx, ry, rw, rh) {
 
 /* ===== 關鍵幀（動畫）===== */
 const KF0 = { x: 0, y: 0, s: 1, r: 0, o: 1 };
+const easeF = (m, p) => m === 'ease' ? p * p * (3 - 2 * p) : m === 'in' ? p * p : m === 'out' ? p * (2 - p) : p;
 function kfAt(it, t) {
   const kf = it && it.kf; if (!kf || !kf.length) return null;
   const a = kf[0], b = kf[kf.length - 1]; if (t <= a.t) return { ...KF0, ...a }; if (t >= b.t) return { ...KF0, ...b };
   for (let i = 0; i < kf.length - 1; i++) if (t < kf[i + 1].t) {
     const p = (t - kf[i].t) / Math.max(1e-6, kf[i + 1].t - kf[i].t), A = { ...KF0, ...kf[i] }, B = { ...KF0, ...kf[i + 1] }, o = {};
-    for (const k in KF0) o[k] = A[k] + (B[k] - A[k]) * p; return o;
+    const pe = easeF(it.kfe, p); for (const k in KF0) o[k] = A[k] + (B[k] - A[k]) * pe; return o;
   }
   return { ...KF0, ...b };
 }
 const kfIdent = k => !k || (Math.abs(k.x) < 1e-4 && Math.abs(k.y) < 1e-4 && Math.abs(k.s - 1) < 1e-4 && Math.abs(k.r) < 1e-3 && Math.abs(k.o - 1) < 1e-3);
 function applyTf(ctx, cx, cy, k, W, H) { ctx.translate(cx + k.x * W, cy + k.y * H); ctx.rotate(k.r * Math.PI / 180); ctx.scale(k.s, k.s); ctx.translate(-cx, -cy); }
-function kfExpr(kf, key, mul, base, tv) {
+function kfExpr(kf, key, mul, base, tv, em) {
   const P = kf.map(k => [k.t + base, (k[key] == null ? KF0[key] : k[key]) * mul]), f = n => String(+n.toFixed(4));
   let e = f(P[P.length - 1][1]);
-  for (let i = P.length - 2; i >= 0; i--) { const [t0, v0] = P[i], [t1, v1] = P[i + 1], dt = Math.max(t1 - t0, 0.001); e = `if(lt(${tv},${f(t1)}),${f(v0)}+(${f(v1 - v0)})*(${tv}-${f(t0)})/${f(dt)},${e})`; }
+  for (let i = P.length - 2; i >= 0; i--) { const [t0, v0] = P[i], [t1, v1] = P[i + 1], dt = Math.max(t1 - t0, 0.001); const Q = `((${tv}-${f(t0)})/${f(dt)})`, F = em === 'ease' ? `${Q}*${Q}*(3-2*${Q})` : em === 'in' ? `${Q}*${Q}` : em === 'out' ? `${Q}*(2-${Q})` : Q; e = `if(lt(${tv},${f(t1)}),${f(v0)}+(${f(v1 - v0)})*(${F}),${e})`; }
   return P.length > 1 ? `if(lt(${tv},${f(P[0][0])}),${f(P[0][1])},${e})` : e;
 }
 // 做出動畫用的濾鏡鏈（chain 作用在格子影像上）和 overlay 的 x/y 運算式；base＝關鍵幀時間換成該串流時間要加的秒數
-function kfBuild(kf, cw, ch, W, H, base, cx, cy) {
-  const vary = key => kf.some(k => Math.abs((k[key] == null ? KF0[key] : k[key]) - KF0[key]) > 0.001), E = (key, mul, tv) => kfExpr(kf, key, mul, base, tv), c = [];
+function kfBuild(kf, cw, ch, W, H, base, cx, cy, em) {
+  const vary = key => kf.some(k => Math.abs((k[key] == null ? KF0[key] : k[key]) - KF0[key]) > 0.001), E = (key, mul, tv) => kfExpr(kf, key, mul, base, tv, em), c = [];
   const e2 = n => { n = Math.round(n); return n % 2 ? n + 1 : n; };
   if (vary('o')) c.push('format=yuva420p', `geq=lum='lum(X,Y)':cb='cb(X,Y)':cr='cr(X,Y)':a='alpha(X,Y)*clip(${E('o', 1, 'T')},0,1)'`);
   if (vary('r')) { const D = e2(Math.ceil(Math.hypot(cw, ch))); c.push('format=yuva420p', `rotate=a='${E('r', Math.PI / 180, 't')}':ow=${D}:oh=${D}:c=black@0`); }
@@ -999,7 +1001,7 @@ function fxHtml() {
     else {
       h += `<div class="fchips">${SPEEDS.map(v => `<button class="sm${spd(c) === v ? ' ok' : ''}" data-sp="${v}">${v}x</button>`).join('')}</div>`;
       h += `<label class="chk"><input type="checkbox" id="fx-rev"${c.rev ? ' checked' : ''}> ↺ 倒放（影片倒著播）</label>`;
-      h += `<label>📈 變速曲線（把這一段切成 5 小段，速度一段一段變）</label><div class="fchips">${RAMPS.map(r => `<button class="sm" data-ramp="${r[0]}">${r[1]}</button>`).join('')}</div>`;
+      h += `<label>📈 變速曲線（把這一段切成 5～10 小段，速度慢慢變，至少 2 秒才能用）</label><div class="fchips">${RAMPS.map(r => `<button class="sm" data-ramp="${r[0]}">${r[1]}</button>`).join('')}</div>`;
       h += `<p class="hint">目前這一段約 ${e.d.toFixed(1)} 秒。${(c.rev || spd(c) > 2) ? '倒放與 3x、4x 的預覽會比較卡，匯出的成品是順的。' : ''}${c.rev ? '倒放的片段不會有聲音。' : ''}</p>`;
     }
   } else {
@@ -1018,11 +1020,12 @@ function bindFx(on) {
   on('#fx-reset', 'click', () => { commit(); delete c.fp; delete c.fb; delete c.fc; delete c.fs; dirty = true; renderCtx(); renderTimeline(); });
   on('#fx-all', 'click', () => { commit(); state.clips.forEach(x => { ['fp', 'fb', 'fc', 'fs'].forEach(k => { if (c[k] == null) delete x[k]; else x[k] = c[k]; }); }); dirty = true; renderTimeline(); toast('已套用到全部片段'); });
   document.querySelectorAll('#ctx [data-ramp]').forEach(b => b.onclick = () => {
-    const r = RAMPS.find(q => q[0] === b.dataset.ramp), S = c.out - c.in, N = r[2].length; if (S < 1) return toast('這一段太短，不能切成 5 小段');
+    const r = RAMPS.find(q => q[0] === b.dataset.ramp), S = c.out - c.in, N = Math.min(10, Math.max(5, Math.floor(S / 0.4))); if (S < 2) return toast('這一段太短（要至少 2 秒），不能做變速曲線');
+    const cp = r[2], spAt = k => { const x = (k + 0.5) / N * (cp.length - 1), i = Math.min(cp.length - 2, Math.floor(x)); return cp[i] + (cp[i + 1] - cp[i]) * (x - i); };
     commit(); const ps = [];
     for (let k = 0; k < N; k++) {
       const hi = c.rev ? c.out - k * S / N : c.in + (k + 1) * S / N, lo = c.rev ? hi - S / N : c.in + k * S / N, q = { ...c, id: k === 0 ? c.id : uid++, in: +lo.toFixed(3), out: +hi.toFixed(3) };
-      if (r[2][k] === 1) delete q.sp; else q.sp = r[2][k]; delete q.kf; if (k > 0) delete q.tr; ps.push(q);
+      const sv = +spAt(k).toFixed(2); if (sv === 1) delete q.sp; else q.sp = sv; delete q.kf; if (k > 0) delete q.tr; ps.push(q);
     }
     state.clips.splice(e.i, 1, ...ps); afterEdit(e.start); toast('已套用「' + r[1] + '」');
   });
@@ -1063,6 +1066,7 @@ function kfHtml() {
   const v = kfAt(tg.it, cur - tg.start) || KF0, kf = tg.it.kf || [];
   h += `<label>把時間線移到想要的時間，再拉下面的滑桿，就會自動記下一個關鍵幀。兩個關鍵幀之間，畫面會自己慢慢變過去。</label>`;
   h += kfDefs.map(([k, n, mn, mx, st, f]) => `<label>${n}<b id="v-kf-${k}">${f(v[k])}</b></label><input type="range" id="kf-${k}" min="${mn}" max="${mx}" step="${st}" value="${v[k]}">`).join('');
+  h += `<label>變化方式（兩個關鍵幀中間怎麼變）</label><select id="kf-ease">${[['', '直線（平均變化）'], ['ease', '緩入緩出（比較自然）'], ['in', '越來越快'], ['out', '越來越慢']].map(o => `<option value="${o[0]}"${(tg.it.kfe || '') === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>`;
   h += kf.length ? `<label>已記的關鍵幀（點一下跳到那個時間）</label><div class="fchips">${kf.map((k, i) => `<button class="sm${Math.abs(k.t - (cur - tg.start)) < 0.05 ? ' ok' : ''}" data-kfj="${i}">${k.t.toFixed(1)} 秒</button>`).join('')}</div>` : '';
   h += `<div class="r2" style="margin-top:8px"><button class="sm red" id="kf-del">刪除這個時間點</button><button class="sm red" id="kf-clr">全部清除</button></div><div class="r2" style="margin-top:8px"><button class="sm ok" id="kf-ok">完成</button></div>`;
   return h;
@@ -1085,6 +1089,7 @@ function bindKf(on) {
     dirty = true;
   };
   kfDefs.forEach(([k, n, mn, mx, st, f]) => { on('#kf-' + k, 'input', ev => { $('#v-kf-' + k).textContent = f(+ev.target.value); write(); }); on('#kf-' + k, 'change', () => renderCtx()); });
+  on('#kf-ease', 'change', e => { commit(); if (e.target.value) it.kfe = e.target.value; else delete it.kfe; dirty = true; });
   document.querySelectorAll('#ctx [data-kfj]').forEach(b => b.onclick = () => { const k = it.kf[+b.dataset.kfj]; if (k) { setCur(clamp(tg.start + k.t, 0, total)); } });
   on('#kf-del', 'click', () => { const t = cur - tg.start, j = (it.kf || []).findIndex(q => Math.abs(q.t - t) < 0.1); if (j < 0) return toast('這個時間點沒有關鍵幀'); commit(); it.kf.splice(j, 1); if (!it.kf.length) delete it.kf; dirty = true; renderCtx(); });
   on('#kf-clr', 'click', () => { if (!it.kf) return; commit(); delete it.kf; dirty = true; renderCtx(); });
@@ -1127,9 +1132,10 @@ function auHtml() {
   <div class="r2"><div><label>聲音淡入<b id="v-au-fi">${(a.fi || 0).toFixed(1)}秒</b></label><input type="range" id="au-fi" min="0" max="5" step="0.5" value="${a.fi || 0}"></div><div><label>聲音淡出<b id="v-au-fo">${(a.fo || 0).toFixed(1)}秒</b></label><input type="range" id="au-fo" min="0" max="5" step="0.5" value="${a.fo || 0}"></div></div>
   <button class="sm ok" id="au-try" style="width:100%;margin-top:8px">🔊 試聽匯出音質（目前時間點開始的 5 秒）</button>
   <p class="hint">按播放就能即時聽到效果（預覽是近似版，變聲的音質匯出時會更好）。想聽跟匯出一模一樣的，按上面的試聽。</p>
-  <label>🎙 錄音配音（從目前時間開始錄，建議戴耳機，不然會錄到影片的聲音）</label>
+  <label>🎙 錄音配音與更多音軌（建議錄音時戴耳機，不然會錄到影片的聲音）</label>
   <div class="r2"><button class="sm${rec ? ' red' : ' ok'}" id="au-rec">${rec ? '⏹ 停止錄音' : '🎙 開始錄音'}</button><button class="sm" id="au-play">▶ 從這裡播放</button></div>
-  ${vos.length ? vos.map((v, i) => `<div class="r2" style="margin-top:6px;align-items:center"><span style="font-size:13px">🎙 ${esc((assets.get(v.asset) || {}).name || '')}（${v.offset.toFixed(1)}秒起）</span><button class="sm red" data-vodel="${i}">刪除</button></div><input type="range" data-vovol="${i}" min="0" max="1" step="0.05" value="${v.vol == null ? 1 : v.vol}">`).join('') : ''}
+  <div class="r2" style="margin-top:6px"><button class="sm" id="au-track">＋ 加入音效／另一首音樂（放在目前位置）</button></div>
+  ${vos.length ? vos.map((v, i) => `<div class="r2" style="margin-top:6px;align-items:center"><span style="font-size:13px">🎙 ${esc((assets.get(v.asset) || {}).name || '')}（${v.offset.toFixed(1)}秒起）</span><button class="sm" data-voat="${i}">起點＝目前位置</button><button class="sm red" data-vodel="${i}">刪除</button></div><input type="range" data-vovol="${i}" min="0" max="1" step="0.05" value="${v.vol == null ? 1 : v.vol}">`).join('') : ''}
   <label>🥁 節拍標記（剪輯點，會顯示在時間尺上）${bt.length ? '：已標 ' + bt.length + ' 個' : ''}</label>
   <div class="r2"><button class="sm" id="bt-add">📍 在目前位置標記</button><button class="sm" id="bt-auto">🎵 從配樂自動找節拍</button></div>
   <div class="r2" style="margin-top:6px"><button class="sm" id="bt-cut">✂️ 依標記把影片切開</button><button class="sm red" id="bt-clr">清除標記</button></div>
@@ -1155,6 +1161,15 @@ async function auPreview() {
   auBusy = false;
 }
 const atempoStr2 = sp => { const o = []; let sv = sp; while (sv > 2.0001) { o.push('atempo=2'); sv /= 2; } while (sv < 0.4999) { o.push('atempo=0.5'); sv /= 0.5; } o.push(`atempo=${sv.toFixed(4)}`); return o.join(','); };
+async function addTrack(file) {
+  try {
+    const a = { id: uid++, file, url: URL.createObjectURL(file), name: file.name, kind: 'audio' }, au = new Audio(); au.preload = 'auto'; au.src = a.url;
+    await new Promise((res, rej) => { au.onloadedmetadata = res; au.onerror = () => rej(new Error('這個檔案讀不出聲音')); });
+    a.el = au; a.dur = au.duration; assets.set(a.id, a); commit(); state.vo = state.vo || []; state.vo.push({ id: uid++, asset: a.id, offset: +cur.toFixed(2), vol: 1 });
+    renderTimeline(); if (showAu) renderCtx(); toast('已加入音軌');
+  } catch (e) { toast(e.message); }
+}
+$('#f-track').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) addTrack(f); };
 let rec = null;
 async function addVo(file, start, dur) {
   const a = { id: uid++, file, url: URL.createObjectURL(file), name: file.name, kind: 'audio', dur }, au = new Audio(); au.preload = 'auto'; au.src = a.url; a.el = au; assets.set(a.id, a);
@@ -1200,6 +1215,8 @@ function bindAu(on) {
   on('#au-try', 'click', auPreview);
   [['fi', 'v-au-fi'], ['fo', 'v-au-fo']].forEach(([k, id]) => on('#au-' + k, 'input', e => { touch('au' + k); a()[k] = +e.target.value; if (!a()[k]) delete a()[k]; $('#' + id).textContent = (+e.target.value).toFixed(1) + '秒'; }));
   on('#au-rec', 'click', () => { if (rec) recStop(); else recStart(); });
+  on('#au-track', 'click', () => $('#f-track').click());
+  document.querySelectorAll('#ctx [data-voat]').forEach(b => b.onclick = () => { commit(); state.vo[+b.dataset.voat].offset = +cur.toFixed(2); renderTimeline(); renderCtx(); syncMedia(); });
   on('#au-play', 'click', () => { if (playing) pause(); else play(); });
   document.querySelectorAll('#ctx [data-vodel]').forEach(b => b.onclick = () => { commit(); const v = state.vo.splice(+b.dataset.vodel, 1)[0]; const as = v && assets.get(v.asset); if (as && as.el) as.el.pause(); renderTimeline(); renderCtx(); });
   document.querySelectorAll('#ctx [data-vovol]').forEach(el => el.addEventListener('input', () => { touch('vov' + el.dataset.vovol); state.vo[+el.dataset.vovol].vol = +el.value; syncVo(); }));
@@ -1528,7 +1545,7 @@ $('#xp-go').onclick = async () => {
         const compose = (Wt, Ht) => `color=c=black:s=${Wt}x${Ht}:r=30[bg];[0:v]${pre}scale=${Wt}:${Ht}:force_original_aspect_ratio=decrease,${fxs}scale=trunc(iw*${tz.toFixed(4)}/2)*2:trunc(ih*${tz.toFixed(4)}/2)*2,setsar=1[fg];[bg][fg]overlay=x=(main_w-overlay_w)/2+${(tx * Wt).toFixed(2)}:y=(main_h-overlay_h)/2+${(ty * Ht).toFixed(2)}:shortest=1,setsar=1`;
         if (hasT && useKB) { const nf = Math.max(1, Math.round(len * 30)); fcv = `${compose(W * 2, H * 2)},zoompan=z='1+0.12*(${off.toFixed(3)}+on/30)/${d.toFixed(3)}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${nf}:s=${W}x${H}:fps=30,format=yuv420p[vout]`; }
         else if (!useKB && c.kf && c.kf.length) {
-          const kb = kfBuild(c.kf, W, H, W, H, -off, Math.round(W / 2 + tx * W), Math.round(H / 2 + ty * H));
+          const kb = kfBuild(c.kf, W, H, W, H, -off, Math.round(W / 2 + tx * W), Math.round(H / 2 + ty * H), c.kfe);
           fcv = `color=c=black:s=${W}x${H}:r=30[bg];[0:v]${pre}scale=${W}:${H}:force_original_aspect_ratio=decrease,${fxs}scale=trunc(iw*${tz.toFixed(4)}/2)*2:trunc(ih*${tz.toFixed(4)}/2)*2,setsar=1${kb.chain ? ',' + kb.chain : ''}[fg];[bg][fg]overlay=${kb.ox}:${kb.oy}:shortest=1:format=auto,setsar=1,fps=30,format=yuv420p[vout]`;
         }
         else if (hasT) { fcv = `${compose(W, H)},fps=30,format=yuv420p[vout]`; }
@@ -1632,7 +1649,7 @@ $('#xp-go').onclick = async () => {
             else parts.push(`[cl${k}][mg${k}]alphamerge,setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
           } else parts.push(`${cell},setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
           let ex = `x=${Math.round(l.x * W - cw / 2)}`, ey = `y=${Math.round(l.y * H - ch / 2)}`, lyN = `ly${k}`, ovf = '';
-          if (l.kf && l.kf.length) { const kb = kfBuild(l.kf, cw, ch, W, H, l.start, Math.round(l.x * W), Math.round(l.y * H)); if (kb.chain) { parts.push(`[ly${k}]${kb.chain}[lk${k}]`); lyN = `lk${k}`; } ex = kb.ox; ey = kb.oy; ovf = ':format=auto'; }
+          if (l.kf && l.kf.length) { const kb = kfBuild(l.kf, cw, ch, W, H, l.start, Math.round(l.x * W), Math.round(l.y * H), l.kfe); if (kb.chain) { parts.push(`[ly${k}]${kb.chain}[lk${k}]`); lyN = `lk${k}`; } ex = kb.ox; ey = kb.oy; ovf = ':format=auto'; }
           if (l.bm) {
             parts.push(`color=c=${BLEND_NEUTRAL[l.bm]}:s=${W}x${H}:r=30:d=${TT.toFixed(3)}[bn${k}]`, `[bn${k}][${lyN}]overlay=${ex}:${ey}:eof_action=pass:format=auto,format=yuv420p[bf${k}]`,
               `[${prev}]format=yuv420p[bp${k}]`, `[bp${k}][bf${k}]blend=all_mode=${FF_BLEND[l.bm]}:all_opacity=${op.toFixed(2)}:shortest=1[vl${k}]`);
@@ -1748,7 +1765,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-I', upd = document.getElementById('upd');
+  const VER = '1121-J', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
