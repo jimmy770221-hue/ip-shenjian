@@ -20,6 +20,30 @@
     {
      "file": "party-02b.mp3",
      "name": "活力派對 02（B版）"
+    },
+    {
+     "file": "party-03a.mp3",
+     "name": "活力派對 03"
+    },
+    {
+     "file": "party-03b.mp3",
+     "name": "活力派對 03（B版）"
+    },
+    {
+     "file": "party-04a.mp3",
+     "name": "活力派對 04"
+    },
+    {
+     "file": "party-04b.mp3",
+     "name": "活力派對 04（B版）"
+    },
+    {
+     "file": "party-05a.mp3",
+     "name": "活力派對 05"
+    },
+    {
+     "file": "party-05b.mp3",
+     "name": "活力派對 05（B版）"
     }
    ]
   },
@@ -43,6 +67,30 @@
     {
      "file": "warm-02b.mp3",
      "name": "溫馨回憶 02（B版）"
+    },
+    {
+     "file": "warm-03a.mp3",
+     "name": "溫馨回憶 03"
+    },
+    {
+     "file": "warm-03b.mp3",
+     "name": "溫馨回憶 03（B版）"
+    },
+    {
+     "file": "warm-04a.mp3",
+     "name": "溫馨回憶 04"
+    },
+    {
+     "file": "warm-04b.mp3",
+     "name": "溫馨回憶 04（B版）"
+    },
+    {
+     "file": "warm-05a.mp3",
+     "name": "溫馨回憶 05"
+    },
+    {
+     "file": "warm-05b.mp3",
+     "name": "溫馨回憶 05（B版）"
     }
    ]
   },
@@ -66,6 +114,30 @@
     {
      "file": "beat-02b.mp3",
      "name": "動感節奏 02（B版）"
+    },
+    {
+     "file": "beat-03a.mp3",
+     "name": "動感節奏 03"
+    },
+    {
+     "file": "beat-03b.mp3",
+     "name": "動感節奏 03（B版）"
+    },
+    {
+     "file": "beat-04a.mp3",
+     "name": "動感節奏 04"
+    },
+    {
+     "file": "beat-04b.mp3",
+     "name": "動感節奏 04（B版）"
+    },
+    {
+     "file": "beat-05a.mp3",
+     "name": "動感節奏 05"
+    },
+    {
+     "file": "beat-05b.mp3",
+     "name": "動感節奏 05（B版）"
     }
    ]
   },
@@ -89,6 +161,30 @@
     {
      "file": "cute-02b.mp3",
      "name": "可愛俏皮 02（B版）"
+    },
+    {
+     "file": "cute-03a.mp3",
+     "name": "可愛俏皮 03"
+    },
+    {
+     "file": "cute-03b.mp3",
+     "name": "可愛俏皮 03（B版）"
+    },
+    {
+     "file": "cute-04a.mp3",
+     "name": "可愛俏皮 04"
+    },
+    {
+     "file": "cute-04b.mp3",
+     "name": "可愛俏皮 04（B版）"
+    },
+    {
+     "file": "cute-05a.mp3",
+     "name": "可愛俏皮 05"
+    },
+    {
+     "file": "cute-05b.mp3",
+     "name": "可愛俏皮 05（B版）"
     }
    ]
   },
@@ -104,6 +200,38 @@
     {
      "file": "travel-01b.mp3",
      "name": "旅行輕快 01（B版）"
+    },
+    {
+     "file": "travel-02a.mp3",
+     "name": "旅行輕快 02"
+    },
+    {
+     "file": "travel-02b.mp3",
+     "name": "旅行輕快 02（B版）"
+    },
+    {
+     "file": "travel-03a.mp3",
+     "name": "旅行輕快 03"
+    },
+    {
+     "file": "travel-03b.mp3",
+     "name": "旅行輕快 03（B版）"
+    },
+    {
+     "file": "travel-04a.mp3",
+     "name": "旅行輕快 04"
+    },
+    {
+     "file": "travel-04b.mp3",
+     "name": "旅行輕快 04（B版）"
+    },
+    {
+     "file": "travel-05a.mp3",
+     "name": "旅行輕快 05"
+    },
+    {
+     "file": "travel-05b.mp3",
+     "name": "旅行輕快 05（B版）"
     }
    ]
   },
@@ -119,6 +247,38 @@
     {
      "file": "touch-01b.mp3",
      "name": "感動抒情 01（B版）"
+    },
+    {
+     "file": "touch-02a.mp3",
+     "name": "感動抒情 02"
+    },
+    {
+     "file": "touch-02b.mp3",
+     "name": "感動抒情 02（B版）"
+    },
+    {
+     "file": "touch-03a.mp3",
+     "name": "感動抒情 03"
+    },
+    {
+     "file": "touch-03b.mp3",
+     "name": "感動抒情 03（B版）"
+    },
+    {
+     "file": "touch-04a.mp3",
+     "name": "感動抒情 04"
+    },
+    {
+     "file": "touch-04b.mp3",
+     "name": "感動抒情 04（B版）"
+    },
+    {
+     "file": "touch-05a.mp3",
+     "name": "感動抒情 05"
+    },
+    {
+     "file": "touch-05b.mp3",
+     "name": "感動抒情 05（B版）"
     }
    ]
   },
@@ -134,6 +294,38 @@
     {
      "file": "retro-01b.mp3",
      "name": "復古街機 01（B版）"
+    },
+    {
+     "file": "retro-02a.mp3",
+     "name": "復古街機 02"
+    },
+    {
+     "file": "retro-02b.mp3",
+     "name": "復古街機 02（B版）"
+    },
+    {
+     "file": "retro-03a.mp3",
+     "name": "復古街機 03"
+    },
+    {
+     "file": "retro-03b.mp3",
+     "name": "復古街機 03（B版）"
+    },
+    {
+     "file": "retro-04a.mp3",
+     "name": "復古街機 04"
+    },
+    {
+     "file": "retro-04b.mp3",
+     "name": "復古街機 04（B版）"
+    },
+    {
+     "file": "retro-05a.mp3",
+     "name": "復古街機 05"
+    },
+    {
+     "file": "retro-05b.mp3",
+     "name": "復古街機 05（B版）"
     }
    ]
   },
@@ -149,6 +341,38 @@
     {
      "file": "funny-01b.mp3",
      "name": "搞笑歡樂 01（B版）"
+    },
+    {
+     "file": "funny-02a.mp3",
+     "name": "搞笑歡樂 02"
+    },
+    {
+     "file": "funny-02b.mp3",
+     "name": "搞笑歡樂 02（B版）"
+    },
+    {
+     "file": "funny-03a.mp3",
+     "name": "搞笑歡樂 03"
+    },
+    {
+     "file": "funny-03b.mp3",
+     "name": "搞笑歡樂 03（B版）"
+    },
+    {
+     "file": "funny-04a.mp3",
+     "name": "搞笑歡樂 04"
+    },
+    {
+     "file": "funny-04b.mp3",
+     "name": "搞笑歡樂 04（B版）"
+    },
+    {
+     "file": "funny-05a.mp3",
+     "name": "搞笑歡樂 05"
+    },
+    {
+     "file": "funny-05b.mp3",
+     "name": "搞笑歡樂 05（B版）"
     }
    ]
   }
