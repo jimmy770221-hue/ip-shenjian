@@ -677,7 +677,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-Z（配樂預覽更穩）</div>
+  <div class="hfoot">版本 1121-AA（新範本：派對快閃／故事字幕）</div>
   </main>
 </div>
 <div id="app">
@@ -1239,6 +1239,19 @@ function drawTrans(type, p, dA, dB) {
     case 'circleopen': dA(); g.save(); g.beginPath(); g.arc(W / 2, H / 2, R * p, 0, 7); g.clip(); dB(); g.restore(); break;
     case 'circleclose': dB(); g.save(); g.beginPath(); g.arc(W / 2, H / 2, R * (1 - p), 0, 7); g.clip(); dA(); g.restore(); break;
     case 'radial': dA(); g.save(); g.beginPath(); g.moveTo(W / 2, H / 2); g.arc(W / 2, H / 2, R + 2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * p); g.closePath(); g.clip(); dB(); g.restore(); break;
+    case 'star': case 'heart': {   // 形狀轉場：彩色星星／愛心放大，把下一段「撐」出來
+      const cx = W / 2, cy = H / 2, rr = R * 1.25 * p, col = type === 'star' ? '#f2d94e' : '#ff6b9d';
+      const path = r => { g.beginPath(); if (type === 'star') { for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * 0.55 : r; g.lineTo(cx + Math.cos(a) * q, cy + Math.sin(a) * q); } g.closePath(); } else { const k = r / 16; g.moveTo(cx, cy + 13 * k); g.bezierCurveTo(cx - 24 * k, cy - 2 * k, cx - 14 * k, cy - 18 * k, cx, cy - 7 * k); g.bezierCurveTo(cx + 14 * k, cy - 18 * k, cx + 24 * k, cy - 2 * k, cx, cy + 13 * k); g.closePath(); } };
+      dA(); g.save(); path(rr * 1.12); g.fillStyle = col; g.fill(); g.restore();
+      g.save(); path(rr); g.clip(); dB(); g.restore(); break; }
+    case 'torn': {   // 撕紙轉場：鋸齒邊斜向掃過
+      dA(); const d = (W + H) * p * 1.1 - H * 0.1, steps = 24, edge = [];
+      for (let i = 0; i <= steps; i++) { const t = i / steps, j = (i % 2 ? 1 : -1) * W * 0.018 * (1 + (i % 3)); edge.push([d - t * H * 0.55 + j, t * H]); }
+      g.save(); g.beginPath(); g.moveTo(0, 0); g.lineTo(edge[0][0], 0); edge.forEach(q => g.lineTo(q[0], q[1])); g.lineTo(0, H); g.closePath(); g.clip(); dB(); g.restore();
+      g.save(); g.beginPath(); g.moveTo(edge[0][0] - W * 0.03, 0); edge.forEach(q => g.lineTo(q[0] - W * 0.03, q[1])); edge.slice().reverse().forEach(q => g.lineTo(q[0] + W * 0.012, q[1])); g.closePath(); g.fillStyle = '#f4efe4'; g.fill(); g.restore(); break; }
+    case 'zoom': {   // 放大衝進下一段
+      g.save(); g.translate(W / 2, H / 2); g.scale(1 + 0.5 * p, 1 + 0.5 * p); g.translate(-W / 2, -H / 2); dA(); g.restore();
+      g.save(); g.globalAlpha = clamp(p * 1.6, 0, 1); g.translate(W / 2, H / 2); g.scale(1.3 - 0.3 * p, 1.3 - 0.3 * p); g.translate(-W / 2, -H / 2); dB(); g.restore(); g.globalAlpha = 1; break; }
     default: dB();
   }
 }
@@ -1685,8 +1698,8 @@ function renderCtx() {
   }
   on('#vol-m', 'input', e => { touch('vm'); state.vol.music = +e.target.value; e.target.previousElementSibling.textContent = '配樂音量 ' + Math.round(state.vol.music * 100) + '%'; syncMedia(); });
 }
-const TRS = [['fade', '淡入淡出', '🌫'], ['fadeblack', '黑場過渡', '⬛'], ['fadewhite', '閃白', '⬜'], ['slideleft', '向左推', '⬅️'], ['slideright', '向右推', '➡️'], ['slideup', '向上推', '⬆️'], ['slidedown', '向下推', '⬇️'], ['wipeleft', '向左擦拭', '◀️'], ['wiperight', '向右擦拭', '▶️'], ['circleopen', '圓形展開', '⭕'], ['circleclose', '圓形收合', '🎯'], ['radial', '時鐘擦拭', '🕐']];
-const AUTO_STYLES = [['🎲 隨機混合', TRS.map(t => t[0])], ['🌫 柔和淡入淡出', ['fade']], ['➡️ 推擠換頁', ['slideleft', 'slideright', 'slideup', 'slidedown']], ['🧹 擦拭換頁', ['wipeleft', 'wiperight']], ['⭕ 圓形與時鐘', ['circleopen', 'circleclose', 'radial']], ['⚡ 閃光動感', ['fadewhite', 'fadeblack']]];
+const TRS = [['fade', '淡入淡出', '🌫'], ['fadeblack', '黑場過渡', '⬛'], ['fadewhite', '閃白', '⬜'], ['slideleft', '向左推', '⬅️'], ['slideright', '向右推', '➡️'], ['slideup', '向上推', '⬆️'], ['slidedown', '向下推', '⬇️'], ['wipeleft', '向左擦拭', '◀️'], ['wiperight', '向右擦拭', '▶️'], ['circleopen', '圓形展開', '⭕'], ['circleclose', '圓形收合', '🎯'], ['radial', '時鐘擦拭', '🕐'], ['star', '星星放大', '⭐'], ['heart', '愛心放大', '💗'], ['torn', '撕紙', '📄'], ['zoom', '放大衝入', '🔍']];
+const AUTO_STYLES = [['🎲 隨機混合', TRS.map(t => t[0])], ['🌫 柔和淡入淡出', ['fade']], ['➡️ 推擠換頁', ['slideleft', 'slideright', 'slideup', 'slidedown']], ['🧹 擦拭換頁', ['wipeleft', 'wiperight']], ['⭕ 圓形與時鐘', ['circleopen', 'circleclose', 'radial']], ['⚡ 閃光動感', ['fadewhite', 'fadeblack']], ['🎈 派對形狀', ['star', 'heart', 'torn', 'zoom']]];
 const SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3, 4];
 const RAMPS = [['up', '漸快', [0.5, 0.75, 1, 1.5, 2]], ['down', '漸慢', [2, 1.5, 1, 0.75, 0.5]], ['bullet', '慢快慢（子彈時間）', [1, 0.5, 0.25, 0.5, 1]], ['punch', '快慢快（重點放慢）', [2, 1, 0.5, 1, 2]], ['pulse', '忽快忽慢', [1, 0.5, 2, 0.5, 1]]];
 function fxHtml() {
@@ -2150,7 +2163,9 @@ function bindAuto(on) {
 const CLUBTPL = [
   { n: '🎉 活潑熱鬧', tr: ['circleopen', 'radial', 'slideleft', 'slideup', 'circleclose'], dur: 0.6, cap: 4, ph: 2.5, c: '#ffe14d', end: '#ff6b6b' },
   { n: '🌸 溫馨回憶', tr: ['fade', 'fadewhite'], dur: 1.0, cap: 5, ph: 3, c: '#ffffff', end: '#ffffff' },
-  { n: '⚡ 動感節奏', tr: ['wipeleft', 'wiperight', 'fadewhite', 'slidedown'], dur: 0.4, cap: 3, ph: 2, c: '#4dd2ff', end: '#ffe14d' }
+  { n: '⚡ 動感節奏', tr: ['wipeleft', 'wiperight', 'fadewhite', 'slidedown'], dur: 0.4, cap: 3, ph: 2, c: '#4dd2ff', end: '#ffe14d' },
+  { n: '🎂 派對快閃（星星／撕紙）', tr: ['star', 'torn', 'zoom', 'heart', 'circleopen'], dur: 0.55, cap: 2.5, ph: 2.2, c: '#ffe14d', end: '#ff6b9d', kb: 1 },
+  { n: '📖 故事字幕（慢推近）', tr: ['fade', 'zoom', 'fade', 'fadewhite'], dur: 0.7, cap: 3.5, ph: 2.5, c: '#ffffff', end: '#ffffff', kb: 1 }
 ];
 function tplHtml() {
   const hasM = !!state.music;
@@ -2159,9 +2174,10 @@ function tplHtml() {
   <label>活動名稱（片頭大字）</label><input type="text" id="tp-title" maxlength="20" placeholder="例如：暑期營隊回顧">
   <label>日期或副標（選填，片頭小字）</label><input type="text" id="tp-sub" maxlength="24" placeholder="例如：2026.07.20">
   <label>片尾文字</label><input type="text" id="tp-end" maxlength="20" value="謝謝大家">
+  <label>每段字幕（選填，一行一句，依序放在每一段）</label><textarea id="tp-cap" rows="3" placeholder="例如：\n第一天出發！\n大家一起玩遊戲"></textarea>
   <label class="chk"><input type="checkbox" id="tp-beat"${hasM ? ' checked' : ' disabled'}> 換頁對準配樂節拍${hasM ? '' : '（先加配樂才能用）'}</label>
   <label class="chk"><input type="checkbox" id="tp-sfx" checked> 片頭加「噹噹」音效</label>
-  <p class="hint">每段影片會依風格縮短（活潑約 4 秒、溫馨約 5 秒、動感約 3 秒），想改可以再用「裁左／右邊」調整，不滿意按「復原」。</p>
+  <p class="hint">每段影片會依風格縮短（約 2.5～5 秒），想改可以再用「裁左／右邊」調整，不滿意按「復原」。</p>
   <div class="r2" style="margin-top:8px"><button class="sm ok" id="tp-go">套用範本</button><button class="sm" id="tp-x">取消</button></div>`;
 }
 function bindTpl(on) {
@@ -2169,7 +2185,8 @@ function bindTpl(on) {
   on('#tp-go', 'click', async () => {
     if (!state.clips.length) return toast('請先按時間軸右邊的「＋」加入照片和影片');
     const T = CLUBTPL[+$('#tp-st').value], title = $('#tp-title').value.trim() || '活動回顧', sub = $('#tp-sub').value.trim(), endT = $('#tp-end').value.trim();
-    const beat = $('#tp-beat').checked && !!state.music, sfx = $('#tp-sfx').checked;
+    const beat = $('#tp-beat').checked && !!state.music, sfx = $('#tp-sfx').checked, caps = ($('#tp-cap') ? $('#tp-cap').value : '').split('\n').map(x => x.trim()).filter(Boolean);
+    if (T.kb) state.kb = true;
     if (beat && !(state.beats || []).length) { await detectBeats(); }
     commit();
     // 1. 每段上限秒數＋換頁
@@ -2201,6 +2218,7 @@ function bindTpl(on) {
     state.texts.push({ id: uid++, tpl: 1, text: title, start: 0.2, dur: td, color: T.c, size: 11, pos: 'middle', an: 'pop', sh: 1 });
     if (sub) state.texts.push({ id: uid++, tpl: 1, text: sub, start: 0.5, dur: Math.max(0.8, td - 0.3), color: '#ffffff', size: 5, pos: 'middle', ty: 0.12, an: 'fade', sh: 1 });
     if (endT) { const ed = Math.min(2.5, Math.max(1, total * 0.3)); state.texts.push({ id: uid++, tpl: 1, text: endT, start: Math.max(0, total - ed), dur: ed, color: T.end, size: 10, pos: 'middle', an: 'rise', sh: 1 }); }
+    caps.forEach((t, i) => { const e = L[i]; if (!e) return; state.texts.push({ id: uid++, tpl: 1, text: t, start: e.start + 0.15, dur: Math.max(0.8, Math.min(3.2, e.d - 0.3)), color: '#ffffff', size: 6.5, pos: 'bottom', ty: -0.12, an: 'fade', sh: 1 }); });
     showAuto = false; renderAll(); setCur(0);
     if (sfx) { cur = 0; await sfxAdd('tada'); }
     toast('範本已套用，總長約 ' + fmt(total) + '，按播放看看！');
@@ -2515,7 +2533,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-Z';
+const VER_NOW = '1121-AA';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2688,7 +2706,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-Z', upd = document.getElementById('upd');
+  const VER = '1121-AA', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
