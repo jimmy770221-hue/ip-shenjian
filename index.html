@@ -730,7 +730,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AL（快速成片）</div>
+  <div class="hfoot">版本 1121-AM（快速成片加尺寸步驟）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -2761,7 +2761,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AL';
+const VER_NOW = '1121-AM';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2910,21 +2910,22 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
   function render() {
     const st = Q.step;
-    document.getElementById('qm-dots').innerHTML = [1, 2, 3, 4].map(i => `<i class="${i <= st ? 'on' : ''}"></i>`).join('');
-    document.getElementById('qm-step').textContent = Q.done || Q.busy ? '' : st + ' / 4';
+    document.getElementById('qm-dots').innerHTML = [1, 2, 3, 4, 5].map(i => `<i class="${i <= st ? 'on' : ''}"></i>`).join('');
+    document.getElementById('qm-step').textContent = Q.done || Q.busy ? '' : st + ' / 5';
     backB.style.visibility = Q.busy ? 'hidden' : 'visible'; document.getElementById('qm-x').style.visibility = Q.busy ? 'hidden' : 'visible';
     const foot = document.getElementById('qm-foot');
     if (Q.busy) { foot.style.display = 'none'; return; }
     foot.style.display = 'flex';
     if (Q.done) { document.getElementById('qm-title').textContent = '完成了！'; body.innerHTML = doneHtml(); foot.innerHTML = '<button class="alt" id="qm-again">重做一支</button><button id="qm-edit">進編輯器微調</button>'; bindDone(); return; }
-    document.getElementById('qm-title').textContent = ['', '要做多長的影片？', '選照片或影片', '選一個風格', '選配樂'][st];
-    foot.innerHTML = '<button id="qm-next">' + (st === 4 ? '✨ 開始生成' : '下一步') + '</button>';
+    document.getElementById('qm-title').textContent = ['', '要做多長的影片？', '選畫面尺寸', '選照片或影片', '選一個風格', '選配樂'][st];
+    foot.innerHTML = '<button id="qm-next">' + (st === 5 ? '✨ 開始生成' : '下一步') + '</button>';
     const nb = document.getElementById('qm-next'); nb.onclick = next;
-    if (st === 1) { body.innerHTML = `<p class="qh">選好時間，我會自動算出需要幾張照片、幾段影片。</p><div class="qchips" id="q-len">${QLEN.map(l => `<button data-v="${l[0]}" class="${Q.len === l[0] ? 'on' : ''}">${l[1]}</button>`).join('')}</div>
-      <h2>畫面方向</h2><div class="qchips" id="q-rt">${[['9:16', '📱 直式'], ['16:9', '🖥 橫式'], ['1:1', '⬜ 方形']].map(r => `<button data-v="${r[0]}" class="${Q.ratio === r[0] ? 'on' : ''}">${r[1]}</button>`).join('')}</div>`;
+    if (st === 1) { body.innerHTML = `<p class="qh">選好時間，我會自動算出需要幾張照片、幾段影片。</p><div class="qchips" id="q-len">${QLEN.map(l => `<button data-v="${l[0]}" class="${Q.len === l[0] ? 'on' : ''}">${l[1]}</button>`).join('')}</div>`;
       body.querySelectorAll('#q-len button').forEach(b => b.onclick = () => { Q.len = +b.dataset.v; render(); });
-      body.querySelectorAll('#q-rt button').forEach(b => b.onclick = () => { Q.ratio = b.dataset.v; render(); });
     } else if (st === 2) {
+      body.innerHTML = `<p class="qh">影片要放在哪裡看？選好尺寸，之後的素材都會照這個尺寸排好。</p>${[['9:16', '📱 直式 9:16', '手機直拍、限時動態、短影音'], ['16:9', '🖥 橫式 16:9', '電腦、電視、YouTube'], ['1:1', '⬜ 方形 1:1', 'Instagram 貼文']].map(r => `<button class="qsty${Q.ratio === r[0] ? ' on' : ''}" data-v="${r[0]}"><span><b>${r[1]}</b><small>${r[2]}</small></span></button>`).join('')}`;
+      body.querySelectorAll('.qsty').forEach(b => b.onclick = () => { Q.ratio = b.dataset.v; render(); });
+    } else if (st === 3) {
       const [a, b] = recRange(), im = Q.files.filter(isImg).length, vd = Q.files.length - im;
       body.innerHTML = `<p class="qh">${QLEN.find(l => l[0] === Q.len)[1]}的影片，建議選約 <b style="color:#ffb347">${a}～${b} 個</b>照片或影片（可以混著選）。影片我會自動挑出畫面清楚、有動作的精彩片段；一支影片比較長時，會分成好幾段使用。<br><b style="color:#ffb347">影片會照下面的編號順序播放</b>（照片、影片混著選也一樣，不會亂跳）；點 ‹ › 可以調順序。</p>
       <button class="qpick" id="q-pick">＋ 選取照片／影片</button>
@@ -2934,7 +2935,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
       document.getElementById('q-pick').onclick = () => { const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; inp.accept = 'image/*,video/*'; inp.onchange = () => { Q.files.push(...inp.files); render(); }; inp.click(); };
       body.querySelectorAll('[data-mv]').forEach(x => x.onclick = e => { e.stopPropagation(); const i = +x.dataset.mv, j = i + +x.dataset.d; [Q.files[i], Q.files[j]] = [Q.files[j], Q.files[i]]; render(); });
       body.querySelectorAll('[data-rm]').forEach(x => x.onclick = e => { e.stopPropagation(); Q.files.splice(+x.dataset.rm, 1); render(); });
-    } else if (st === 3) {
+    } else if (st === 4) {
       body.innerHTML = QSTY.map((x, i) => `<button class="qsty${Q.sty === i ? ' on' : ''}" data-i="${i}"><span><b>${x.n}</b><small>${x.d}</small></span></button>`).join('')
         + `<h2>片頭文字（選填）</h2><input type="text" id="q-title" maxlength="20" placeholder="例如：暑期營隊回顧" value="${esc(Q.title)}"><h2>片尾文字（選填）</h2><input type="text" id="q-end" maxlength="20" value="${esc(Q.end)}">`;
       body.querySelectorAll('.qsty').forEach(b => b.onclick = () => { Q.title = document.getElementById('q-title').value; Q.end = document.getElementById('q-end').value; Q.sty = +b.dataset.i; Q.mstyle = QSTY[Q.sty].id; Q.song = null; render(); });
@@ -2956,11 +2957,11 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
     }
   }
   function next() {
-    if (Q.step === 3) { const t = document.getElementById('q-title'), e = document.getElementById('q-end'); if (t) Q.title = t.value.trim(); if (e) Q.end = e.value.trim(); }
-    if (Q.step === 2 && !Q.files.length) return;
-    if (Q.step < 4) { Q.step++; stopPv(); render(); body.scrollTop = 0; } else generate();
+    if (Q.step === 4) { const t = document.getElementById('q-title'), e = document.getElementById('q-end'); if (t) Q.title = t.value.trim(); if (e) Q.end = e.value.trim(); }
+    if (Q.step === 3 && !Q.files.length) return;
+    if (Q.step < 5) { Q.step++; stopPv(); render(); body.scrollTop = 0; } else generate();
   }
-  backB.onclick = () => { if (Q.done) { Q.done = null; Q.step = 4; render(); return; } if (Q.step > 1) { if (Q.step === 3) { const t = document.getElementById('q-title'), e = document.getElementById('q-end'); if (t) Q.title = t.value.trim(); if (e) Q.end = e.value.trim(); } Q.step--; stopPv(); render(); } else close(); };
+  backB.onclick = () => { if (Q.done) { Q.done = null; Q.step = 5; render(); return; } if (Q.step > 1) { if (Q.step === 4) { const t = document.getElementById('q-title'), e = document.getElementById('q-end'); if (t) Q.title = t.value.trim(); if (e) Q.end = e.value.trim(); } Q.step--; stopPv(); render(); } else close(); };
   document.getElementById('qm-x').onclick = close;
 
   /* ---- 找精彩片段：每隔一小段取一張縮圖，算「清楚度」和「動作多寡」，挑分數最高又不重疊的幾段 ---- */
@@ -3079,7 +3080,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
       if (T.stk) { let k = 0; for (let i = 1; i < L.length; i++) { if ((i + 1) % 3) continue; const e = L[i]; state.texts.push({ id: uid++, tpl: 1, text: QSTK[(k * 3 + i) % QSTK.length], start: e.start + 0.3, dur: Math.max(0.8, Math.min(1.6, e.d - 0.5)), color: '#222222', size: 6.5, pos: 'middle', ty: -0.2, tx: k % 2 ? 0.14 : -0.14, ow: 0, an: 'pop', bx: k % 2 ? 'burst' : 'bubble' }); k++; } }
       clearSel(); renderAll(); setCur(0); history = []; redoStack = []; updateToolbar();
       Q.done = { sec: total, n: state.clips.length, short: total < D * 0.8, errs: errs.length, music: musicOk };
-    } catch (e) { toast('做不出來：' + (e && e.message || '發生問題')); Q.done = null; Q.busy = false; Q.step = 2; render(); return; }
+    } catch (e) { toast('做不出來：' + (e && e.message || '發生問題')); Q.done = null; Q.busy = false; Q.step = 3; render(); return; }
     finally { if (wake) try { wake.release(); } catch (e) {} }
     Q.busy = false; render();
   }
@@ -3198,7 +3199,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AL', upd = document.getElementById('upd');
+  const VER = '1121-AM', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
