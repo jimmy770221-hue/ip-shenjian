@@ -730,7 +730,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AN（修正相容模式匯出）</div>
+  <div class="hfoot">版本 1121-AO（快速成片素材包）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -1285,7 +1285,7 @@ function drawLayer(l) {
   const heavy = fx || l.ck || l.mk || l.bm || tf; let T = g;
   if (heavy) { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); T = fxg; }
   T.save(); if (T === g) T.globalAlpha = op;
-  T.beginPath(); T.rect(x, y, cw, ch); T.clip(); if (!l.ck) { T.fillStyle = '#000'; T.fillRect(x, y, cw, ch); }
+  T.beginPath(); T.rect(x, y, cw, ch); T.clip(); if (!l.ck && !l.al) { T.fillStyle = '#000'; T.fillRect(x, y, cw, ch); }
   if (ready) {
     const rot = l.rot || 0, sw2 = rot % 180 ? a.h : a.w, sh2 = rot % 180 ? a.w : a.h;
     const sc = (l.fit === 'contain' ? Math.min(cw / sw2, ch / sh2) : Math.max(cw / sw2, ch / sh2)) * (l.iz || 1);
@@ -2683,16 +2683,17 @@ $('#xp-go').onclick = async () => {
           const w2 = Math.max(2, Math.round(sw2 * sc)), h2 = Math.max(2, Math.round(sh2 * sc)), sp = la.kind === 'video' ? spd(l) : 1, op = l.op == null ? 1 : l.op;
           const geo = [sp !== 1 ? `setpts=(PTS-STARTPTS)/${sp}` : 'setpts=PTS-STARTPTS']; if (l.fh) geo.push('hflip'); if (l.fv) geo.push('vflip');
           if (rot === 90) geo.push('transpose=1'); else if (rot === 180) geo.push('hflip,vflip'); else if (rot === 270) geo.push('transpose=2');
+          if (l.al) geo.push('format=rgba');
           geo.push(`scale=${w2}:${h2}`);
           if (l.ck) geo.push(`chromakey=color=0x${l.ck.c.slice(1)}:similarity=${l.ck.s.toFixed(3)}:blend=${Math.max(l.ck.b, 0.0001).toFixed(3)}`);
           if (hasFx(l)) geo.push(fxString(l)); geo.push('fps=30');
           const ox = Math.round((cw - w2) / 2 + (l.ix || 0) * cw), oy = Math.round((ch - h2) / 2 + (l.iy || 0) * ch);
           const useAlpha = op < 0.999 && !l.bm;
-          parts.push(l.ck ? `color=c=black@0:s=${cw}x${ch}:r=30,format=yuva420p[lc${k}]` : `color=c=black:s=${cw}x${ch}:r=30[lc${k}]`, `[${it.i}:v]${geo.join(',')}[ls${k}]`);
-          let cell = `[lc${k}][ls${k}]overlay=x=${ox}:y=${oy}:shortest=1${l.ck ? ':format=auto' : ''}${useAlpha ? `,format=yuva420p,colorchannelmixer=aa=${op.toFixed(2)}` : ''}`;
+          parts.push((l.ck || l.al) ? `color=c=black@0:s=${cw}x${ch}:r=30,format=yuva420p[lc${k}]` : `color=c=black:s=${cw}x${ch}:r=30[lc${k}]`, `[${it.i}:v]${geo.join(',')}[ls${k}]`);
+          let cell = `[lc${k}][ls${k}]overlay=x=${ox}:y=${oy}:shortest=1${(l.ck || l.al) ? ':format=auto' : ''}${useAlpha ? `,format=yuva420p,colorchannelmixer=aa=${op.toFixed(2)}` : ''}`;
           if (l.mk) {
             parts.push(`${cell}[cl${k}]`, `[${it.m}:v]format=gray[mg${k}]`);
-            if (l.ck) parts.push(`[cl${k}]split[c1${k}][c2${k}]`, `[c1${k}]alphaextract[ae${k}]`, `[ae${k}][mg${k}]blend=all_mode=multiply,format=gray[am${k}]`, `[c2${k}][am${k}]alphamerge,setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
+            if (l.ck || l.al) parts.push(`[cl${k}]split[c1${k}][c2${k}]`, `[c1${k}]alphaextract[ae${k}]`, `[ae${k}][mg${k}]blend=all_mode=multiply,format=gray[am${k}]`, `[c2${k}][am${k}]alphamerge,setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
             else parts.push(`[cl${k}][mg${k}]alphamerge,setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
           } else parts.push(`${cell},setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
           let ex = `x=${Math.round(l.x * W - cw / 2)}`, ey = `y=${Math.round(l.y * H - ch / 2)}`, lyN = `ly${k}`, ovf = '';
@@ -2761,7 +2762,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AN';
+const VER_NOW = '1121-AO';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2882,8 +2883,8 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 (function () {
   const QLEN = [[30, '30 秒'], [60, '1 分鐘'], [120, '2 分鐘'], [180, '3 分鐘'], [300, '5 分鐘']];
   const QSTY = [
-    { id: 'party', n: '🎉 活力派對', d: '換頁效果多變、節奏快，活動最適合', tr: ['circleopen', 'radial', 'slideleft', 'slideup', 'circleclose'], dur: 0.6, cap: 4, ph: 2.5, c: '#ffe14d', end: '#ff6b6b' },
-    { id: 'warm', n: '🌸 溫馨日常', d: '柔和淡入淡出，像回憶相簿', tr: ['fade', 'fadewhite'], dur: 1.0, cap: 5, ph: 3, c: '#ffffff', end: '#ffffff' },
+    { id: 'party', n: '🎉 活力派對', d: '換頁效果多變、節奏快，活動最適合', tr: ['circleopen', 'radial', 'slideleft', 'slideup', 'circleclose'], dur: 0.6, cap: 4, ph: 2.5, c: '#ffe14d', end: '#ff6b6b', pk: 'party', tc: '#ffe14d' },
+    { id: 'warm', n: '🌸 溫馨日常', d: '柔和淡入淡出，像回憶相簿', tr: ['fade', 'fadewhite'], dur: 1.0, cap: 5, ph: 3, c: '#ffffff', end: '#ffffff', pk: 'warm', tc: '#7a4b3a' },
     { id: 'beat', n: '⚡ 節奏卡點', d: '快速切換，配合強節拍', tr: ['wipeleft', 'wiperight', 'fadewhite', 'slidedown'], dur: 0.4, cap: 3, ph: 2, c: '#4dd2ff', end: '#ffe14d' },
     { id: 'cute', n: '🐣 可愛童趣', d: '愛心、星星、漫畫貼紙', tr: ['heart', 'star', 'circleopen', 'circleclose'], dur: 0.55, cap: 3, ph: 2.4, c: '#ff8fb8', end: '#ffe14d', stk: 1 },
     { id: 'travel', n: '✈️ 旅行日記', d: '推擠、放大，像 vlog', tr: ['slideleft', 'zoom', 'slideright', 'fade'], dur: 0.7, cap: 3.6, ph: 2.8, c: '#ffffff', end: '#ffffff', kb: 1 },
@@ -3006,6 +3007,70 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
     out.forEach(o => { o.len = o.a.kind === 'image' ? Math.min(6, o.len * k) : Math.min(o.len * k, o.a.dur - o.in); });
     return out;
   }
+
+  /* ---- 素材包（活力派對／溫馨日常）：圖片放在 quick/ 資料夾，生成時才下載；沒網路就照一般樣式做 ---- */
+  const QDIM = { '9:16': [1080, 1920], '16:9': [1920, 1080], '1:1': [1080, 1080] };
+  const qCache = new Map();
+  async function qImg(pk, name) {
+    const k = pk + '_' + name; if (qCache.has(k)) return qCache.get(k);
+    const r = await fetch('quick/' + pk + '/' + k + '.png'); if (!r.ok) throw new Error('素材包載入失敗');
+    const im = new Image(); im.src = URL.createObjectURL(await r.blob()); await im.decode(); qCache.set(k, im); return im;
+  }
+  const drawCover = (x, im, W, H) => { const s = Math.max(W / im.width, H / im.height), w = im.width * s, h = im.height * s; x.drawImage(im, (W - w) / 2, (H - h) / 2, w, h); };
+  const newCv = (W, H) => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
+  const cvFile = (c, name) => new Promise((res, rej) => c.toBlob(b => b ? res(new File([b], name, { type: 'image/png' })) : rej(new Error('做圖失敗')), 'image/png'));
+  const bannerW = (W, H) => (W > H ? 0.62 : 0.9) * W;
+  const fitSize = (n, W, H) => Math.min(11, Math.max(3, bannerW(W, H) * Math.min(0.8 / Math.max(1, n), 0.15) / H * 100));
+  // 片頭／片尾卡：背景＋四個角落裝飾＋橫幅（文字另外疊上去）
+  async function cardFile(pk, kind, W, H) {
+    const c = newCv(W, H), x = c.getContext('2d'), o = H > W ? 'v' : 'h';
+    drawCover(x, await qImg(pk, (kind === 'title' ? 'titlebg_' : 'endbg_') + o + '_01'), W, H);
+    const cs = Math.min(W, H) * 0.3;
+    x.drawImage(await qImg(pk, 'corner_tl'), 0, 0, cs, cs); x.drawImage(await qImg(pk, 'corner_tr'), W - cs, 0, cs, cs);
+    x.drawImage(await qImg(pk, 'corner_bl'), 0, H - cs, cs, cs); x.drawImage(await qImg(pk, 'corner_br'), W - cs, H - cs, cs, cs);
+    const bw = bannerW(W, H), bh = bw * 0.3; x.drawImage(await qImg(pk, kind === 'title' ? 'banner_01' : 'banner_03'), (W - bw) / 2, (H - bh) / 2, bw, bh);
+    return cvFile(c, pk + '-' + kind + '.png');
+  }
+  async function fetchPng(pk, name) { const r = await fetch('quick/' + pk + '/' + pk + '_' + name + '.png'); if (!r.ok) throw new Error('素材包載入失敗'); return new File([await r.blob()], pk + '_' + name + '.png', { type: 'image/png' }); }
+  // 漏光：把「黑底光暈」圖轉成「光暈有顏色、黑的地方透明」的圖，這樣相容匯出也能正確疊（不用濾色混合）
+  async function leakFile(pk, W, H) {
+    const c = newCv(W, H), x = c.getContext('2d'); drawCover(x, await qImg(pk, 'overlay_02_black'), W, H);
+    const im = x.getImageData(0, 0, W, H), d = im.data;
+    for (let i = 0; i < d.length; i += 4) { const m = Math.max(d[i], d[i + 1], d[i + 2]); if (!m) { d[i + 3] = 0; continue; } const k = 255 / m; d[i] = Math.min(255, d[i] * k); d[i + 1] = Math.min(255, d[i + 1] * k); d[i + 2] = Math.min(255, d[i + 2] * k); d[i + 3] = Math.min(255, m * 1.3); }
+    x.putImageData(im, 0, 0); return cvFile(c, pk + '-leak.png');
+  }
+  const mkLy = (a, start, len, ar, trk, o) => Object.assign({ id: uid++, asset: a.id, start, in: 0, len, x: 0.5, y: 0.5, w: 1, ar, fit: 'cover', mute: false, trk, al: 1 }, o || {});
+  // 相框＋粒子、貼圖彈出、轉場遮罩、漏光（都放在畫面軌道上，進編輯器還能單獨改）
+  async function packLayers(pk, mainEnd, cuts) {
+    const [W, H] = QDIM[state.ratio] || QDIM['9:16'], ar = W / H, fr = W > H ? 'h' : W < H ? 'v' : 's', port = H >= W;
+    state.ntrk = 3;
+    const fc = newCv(W, H), fx = fc.getContext('2d'); fx.drawImage(await qImg(pk, 'frame_' + fr + '_01'), 0, 0, W, H); drawCover(fx, await qImg(pk, 'overlay_01_alpha'), W, H);
+    state.layers.push(mkLy(await makeAsset(await cvFile(fc, pk + '-frame.png')), 0, mainEnd, ar, 0));
+    // 貼圖：每隔一個片段彈出一張（第 2 軌）
+    const stk = []; for (let i = 1; i <= 12; i++) stk.push(await makeAsset(await fetchPng(pk, 'sticker_' + String(i).padStart(2, '0'))));
+    let k = 0;
+    for (const e of L) {
+      if (e.c.card || e.i % 2 !== 1) continue;
+      const len = Math.min(1.8, e.d - 0.9); if (len < 0.9) continue;
+      const px = k % 2 ? 0.78 : 0.22, py = (k >> 1) % 2 ? (port ? 0.8 : 0.75) : (port ? 0.2 : 0.25);
+      state.layers.push(mkLy(stk[(k * 5) % 12], e.start + 0.5, len, 1, 1, { x: px, y: py, w: port ? 0.26 : 0.17, kfe: 'ease', kf: [{ t: 0, s: 0.3, o: 0 }, { t: 0.3, s: 1.12, o: 1 }, { t: 0.45, s: 1, o: 1 }, { t: len - 0.3, s: 1, o: 1 }, { t: len, s: 0.9, o: 0 }] }));
+      k++;
+    }
+    // 轉場遮罩（彩色條帶掃過，實心區放大到蓋滿畫面時換片）和漏光（第 3 軌）
+    let m = 0, leakA = null;
+    for (const q of cuts) {
+      const e = L[q.i], tm = e.start + e.td / 2;
+      if (q.t === 'mask') {
+        const st = tm - 0.4; if (st < 0 || st + 0.8 > mainEnd) continue;
+        const a = await makeAsset(await fetchPng(pk, 'trans_0' + (m++ % 3 + 1)));
+        state.layers.push(mkLy(a, st, 0.8, 1080 / 1920, 2, { kfe: 'ease', kf: [{ t: 0, x: -1, s: 1 }, { t: 0.3, x: 0, s: 1.6 }, { t: 0.5, x: 0, s: 1.6 }, { t: 0.8, x: 1, s: 1 }] }));
+      } else {
+        const st = tm - 0.35; if (st < 0 || st + 0.8 > mainEnd) continue;
+        if (!leakA) leakA = await makeAsset(await leakFile(pk, W, H));
+        state.layers.push(mkLy(leakA, st, 0.8, ar, 2, { kf: [{ t: 0, o: 0 }, { t: 0.35, o: 1 }, { t: 0.8, o: 0 }] }));
+      }
+    }
+  }
   /* ---- 配樂：選的那首，不夠長就接上同風格的其他首（交叉淡入）、結尾淡出，合成一個檔 ---- */
   async function buildMusic(D, style, file) {
     const lib = await loadLib(); if (!lib) throw new Error('lib');
@@ -3048,8 +3113,21 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
       for (const it of items) { if (it.a.kind === 'image') { it.cands = [{ t: 0, score: 1 }]; continue; } setProg(25 + 40 * vi / Math.max(1, vids.length), `正在找精彩片段 ${vi + 1} / ${vids.length}…`); it.cands = await findCands(it.a, T.cap); vi++; }
       // 3. 排版
       setProg(68, '正在排版…');
-      const pl = plan(items, D, T);
+      let PK = T.pk || null; const cIn = PK && Q.title ? 2.8 : 0, cOut = PK && Q.end ? 2.6 : 0, DM = QDIM[Q.ratio] || QDIM['9:16'], cuts = [];
+      const pl = plan(items, PK ? Math.max(4, D - cIn - cOut) : D, T);
       state.clips = pl.map((o, i) => { const c = { id: uid++, asset: o.a.id, in: o.in, out: o.in + o.len, mute: false }; if (i) c.tr = { type: T.tr[(i - 1) % T.tr.length], dur: T.dur }; return c; });
+      if (PK) {   // 素材包：片頭卡、片尾卡，中間的換片交替用「遮罩條帶」和「漏光」
+        try {
+          if (cIn) state.clips.unshift({ id: uid++, asset: (await makeAsset(await cardFile(PK, 'title', DM[0], DM[1]))).id, in: 0, out: cIn, mute: false, card: 1 });
+          if (cOut) state.clips.push({ id: uid++, asset: (await makeAsset(await cardFile(PK, 'end', DM[0], DM[1]))).id, in: 0, out: cOut, mute: false, card: 1 });
+          state.clips.forEach((c, i) => {
+            if (!i) { delete c.tr; return; }
+            const pv = state.clips[i - 1];
+            if (c.card || pv.card) { c.tr = { type: 'fade', dur: 0.5 }; return; }
+            if (i % 2 === 0) { c.tr = { type: 'fade', dur: 0.2 }; cuts.push({ i, t: 'mask' }); } else if (i % 4 === 1) cuts.push({ i, t: 'leak' });
+          });
+        } catch (e) { PK = null; cuts.length = 0; state.clips = state.clips.filter(c => !c.card); state.clips.forEach((c, i) => { if (i) c.tr = { type: T.tr[(i - 1) % T.tr.length], dur: T.dur }; else delete c.tr; }); toast('素材包沒有載入成功（要連網路），先用一般樣式做'); }
+      }
       if (T.kb) state.kb = true;
       relayout();
       // 4. 配樂
@@ -3067,7 +3145,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
         const bt = (state.beats || []).slice().sort((x, y) => x - y);
         if (bt.length) for (let i = 0; i < state.clips.length - 1; i++) {
           relayout(); const e = L[i], c = e.c, a = assets.get(c.asset), sp = spd(c), minEnd = e.start + 1.5, maxEnd = e.start + T.cap * 1.6;
-          const cand = bt.filter(t => t >= minEnd && t <= maxEnd).sort((x, y) => Math.abs(x - e.start - T.cap) - Math.abs(y - e.start - T.cap)), b = cand[0]; if (b == null) continue;
+          if (c.card) continue; const cand = bt.filter(t => t >= minEnd && t <= maxEnd).sort((x, y) => Math.abs(x - e.start - T.cap) - Math.abs(y - e.start - T.cap)), b = cand[0]; if (b == null) continue;
           const len = b - e.start; if (a.kind === 'image') c.out = c.in + len; else { const need = c.in + len * sp; if (need <= (a.dur || 1e9)) c.out = need; }
         }
       }
@@ -3075,9 +3153,12 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
       // 5. 文字與貼紙
       setProg(92, '正在加上文字…');
       const td = Math.min(2.6, Math.max(1, total * 0.2));
-      if (Q.title) state.texts.push({ id: uid++, tpl: 1, text: Q.title, start: 0.2, dur: td, color: T.c, size: 11, pos: 'middle', an: 'pop', sh: 1 });
-      if (Q.end) { const ed = Math.min(2.5, Math.max(1, total * 0.15)); state.texts.push({ id: uid++, tpl: 1, text: Q.end, start: Math.max(0, total - ed), dur: ed, color: T.end, size: 10, pos: 'middle', an: 'rise', sh: 1 }); }
+      if (PK && Q.title) state.texts.push({ id: uid++, tpl: 1, text: Q.title, start: 0.3, dur: cIn - 0.6, color: T.tc, size: +fitSize([...Q.title].length, DM[0], DM[1]).toFixed(1), pos: 'middle', an: 'pop', sh: 0, ow: PK === 'warm' ? 0 : 1 });
+      else if (Q.title) state.texts.push({ id: uid++, tpl: 1, text: Q.title, start: 0.2, dur: td, color: T.c, size: 11, pos: 'middle', an: 'pop', sh: 1 });
+      if (PK && Q.end) { const le = L[L.length - 1]; state.texts.push({ id: uid++, tpl: 1, text: Q.end, start: le.start + 0.6, dur: Math.max(1, cOut - 0.8), color: T.tc, size: +fitSize([...Q.end].length, DM[0], DM[1]).toFixed(1), pos: 'middle', an: 'rise', sh: 0, ow: PK === 'warm' ? 0 : 1 }); }
+      else if (Q.end) { const ed = Math.min(2.5, Math.max(1, total * 0.15)); state.texts.push({ id: uid++, tpl: 1, text: Q.end, start: Math.max(0, total - ed), dur: ed, color: T.end, size: 10, pos: 'middle', an: 'rise', sh: 1 }); }
       if (T.stk) { let k = 0; for (let i = 1; i < L.length; i++) { if ((i + 1) % 3) continue; const e = L[i]; state.texts.push({ id: uid++, tpl: 1, text: QSTK[(k * 3 + i) % QSTK.length], start: e.start + 0.3, dur: Math.max(0.8, Math.min(1.6, e.d - 0.5)), color: '#222222', size: 6.5, pos: 'middle', ty: -0.2, tx: k % 2 ? 0.14 : -0.14, ow: 0, an: 'pop', bx: k % 2 ? 'burst' : 'bubble' }); k++; } }
+      if (PK) { try { relayout(); await packLayers(PK, L[L.length - 1].end, cuts); relayout(); } catch (e) { toast('素材包沒有完整載入（要連網路），其餘照做好了'); } }
       clearSel(); renderAll(); setCur(0); history = []; redoStack = []; updateToolbar();
       Q.done = { sec: total, n: state.clips.length, short: total < D * 0.8, errs: errs.length, music: musicOk };
     } catch (e) { toast('做不出來：' + (e && e.message || '發生問題')); Q.done = null; Q.busy = false; Q.step = 3; render(); return; }
@@ -3199,7 +3280,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AN', upd = document.getElementById('upd');
+  const VER = '1121-AO', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
