@@ -677,7 +677,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-X（點畫面收起工具）</div>
+  <div class="hfoot">版本 1121-Y（預覽音樂更順）</div>
   </main>
 </div>
 <div id="app">
@@ -1255,6 +1255,12 @@ function renderFrame() {
   for (const x of state.texts) if (cur >= x.start && cur < x.start + x.dur) drawText(g, cv.width, cv.height, x, cur - x.start);
   if (selLy && showLy && !xsrc) { const l = state.layers.find(x => x.id === selLy); if (l && cur >= l.start && cur < l.start + l.len) { const r = lyRect(l); g.save(); g.setLineDash([8, 5]); g.lineWidth = 3; g.strokeStyle = '#ffb347'; g.strokeRect(r.x + 1.5, r.y + 1.5, r.cw - 3, r.ch - 3); g.restore(); } }
 }
+// 播放中校正：只有偏差很大、而且離上次校正超過1秒才跳轉，避免音樂/聲音一直被打斷（斷斷續續）
+function needSeek(el, t, tol) {
+  if (el.paused) return true; if (el.seeking) return false;
+  const now = performance.now(); if (el._sk && now - el._sk < 1200) return false;
+  if (Math.abs(el.currentTime - t) > tol) { el._sk = now; return true; } return false;
+}
 function syncMedia() {
   const act = activeEntries(), ts = transState(), want = new Map();
   act.forEach(e => {
@@ -1267,7 +1273,7 @@ function syncMedia() {
     el.muted = w.mute || sm; el.volume = clamp(state.vol.video * w.f, 0, 1);
     try { el.playbackRate = sm ? 1 : w.sp; } catch (er) {}
     if (playing && sm) { if (!el.paused) el.pause(); if (!el.seeking && Math.abs(el.currentTime - w.t) > 0.04) el.currentTime = clamp(w.t, 0, el.duration || 1e9); }
-    else if (playing) { if (el.paused || Math.abs(el.currentTime - w.t) > 0.3) { el.currentTime = w.t; el.play().catch(() => {}); } }
+    else if (playing) { if (needSeek(el, w.t, 0.4)) { el.currentTime = w.t; } if (el.paused) el.play().catch(() => {}); }
     else if (Math.abs(el.currentTime - w.t) > 0.02) el.currentTime = w.t;
   });
   for (const l of state.layers) {
@@ -1278,13 +1284,13 @@ function syncMedia() {
     el.muted = l.mute !== false || sm; el.volume = clamp(state.vol.video, 0, 1);
     try { el.playbackRate = sm ? 1 : sp; } catch (er) {}
     if (playing && sm) { if (!el.paused) el.pause(); if (!el.seeking && Math.abs(el.currentTime - t) > 0.04) el.currentTime = clamp(t, 0, el.duration || 1e9); }
-    else if (playing) { if (el.paused || Math.abs(el.currentTime - t) > 0.3) { el.currentTime = t; el.play().catch(() => {}); } }
+    else if (playing) { if (needSeek(el, t, 0.4)) { el.currentTime = t; } if (el.paused) el.play().catch(() => {}); }
     else if (Math.abs(el.currentTime - t) > 0.02) el.currentTime = t;
   }
   if (state.music) {
     const m = assets.get(state.music.asset), el = m.el, mw = cur - state.music.offset;
     el.volume = clamp(state.vol.music, 0, 1);
-    if (playing && mw >= 0 && mw < m.dur) { if (el.paused || Math.abs(el.currentTime - mw) > 0.3) { el.currentTime = mw; el.play().catch(() => {}); } }
+    if (playing && mw >= 0 && mw < m.dur) { if (needSeek(el, mw, 0.6)) { el.currentTime = mw; } if (el.paused) el.play().catch(() => {}); }
     else if (!el.paused) el.pause();
     if (!playing && mw >= 0 && mw < m.dur && Math.abs(el.currentTime - mw) > 0.05) el.currentTime = mw;
   }
@@ -1341,7 +1347,7 @@ function awSync() {
 function syncVo() {
   for (const v of (state.vo || [])) {
     const a = assets.get(v.asset); if (!a || !a.el) continue; const el = a.el, mw = cur - v.offset; el.volume = clamp(v.vol == null ? 1 : v.vol, 0, 1);
-    if (playing && mw >= 0 && mw < a.dur) { if (el.paused || Math.abs(el.currentTime - mw) > 0.3) { el.currentTime = mw; el.play().catch(() => {}); } }
+    if (playing && mw >= 0 && mw < a.dur) { if (needSeek(el, mw, 0.6)) { el.currentTime = mw; } if (el.paused) el.play().catch(() => {}); }
     else if (!el.paused) el.pause();
   }
 }
@@ -2492,7 +2498,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-X';
+const VER_NOW = '1121-Y';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2665,7 +2671,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-X', upd = document.getElementById('upd');
+  const VER = '1121-Y', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
