@@ -730,7 +730,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AS（片尾文字預設留空）</div>
+  <div class="hfoot">版本 1121-AT（預覽更順：大照片預覽用縮小版）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -999,7 +999,9 @@ function loadImage(a) {
   return new Promise((res, rej) => {
     const img = new Image(); let done = false;
     const t = setTimeout(() => { if (!done) { done = true; rej(new Error('「' + a.name + '」照片讀取太久沒有回應，已跳過')); } }, 20000);
-    img.onload = () => { if (done) return; done = true; clearTimeout(t); a.img = img; a.w = img.naturalWidth; a.h = img.naturalHeight; a.thumb = a.url; res(); };
+    img.onload = () => { if (done) return; done = true; clearTimeout(t); a.img = img; a.w = img.naturalWidth; a.h = img.naturalHeight; a.thumb = a.url;
+      try { const m = Math.max(a.w, a.h); if (m > 2048) { const k = 2048 / m, c = document.createElement('canvas'); c.width = Math.round(a.w * k); c.height = Math.round(a.h * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); a.pv = c; } } catch (e) {}   // 大張照片先縮一份給預覽用（預覽不用每格縮 1200 萬像素），匯出仍用原圖
+      res(); };
     img.onerror = () => { if (done) return; done = true; clearTimeout(t); rej(new Error('「' + a.name + '」這張照片讀不了（HEIC 之類的格式請先轉成 JPG）')); }; img.src = a.url;
   });
 }
@@ -1090,6 +1092,7 @@ function drawText(g, W, H, x, tl) {
   });
   g.restore();
 }
+const pvSrc = a => (a.pv && !exporting && !xsrc) ? a.pv : a.img;   // 預覽用縮小版，匯出用原圖
 function drawContain(T, src, sw, sh, c) {
   const W = cv.width, H = cv.height, z = (c && c.z) || 1, ox = (c && c.x) || 0, oy = (c && c.y) || 0, rot = (c && c.rot) || 0, ang = (c && c.ang) || 0;
   const sw2 = rot % 180 ? sh : sw, sh2 = rot % 180 ? sw : sh, s = Math.min(W / sw2, H / sh2) * z;
@@ -1280,7 +1283,7 @@ function efParts(ef, prev, parts, W, H) {
 }
 function drawLayer(l) {
   const a = assets.get(l.asset); if (!a) return;
-  const { cw, ch, x, y } = lyRect(l), src = a.kind === 'image' ? a.img : xsrc ? xsrc['l' + l.id] : layerEl(l);
+  const { cw, ch, x, y } = lyRect(l), src = a.kind === 'image' ? pvSrc(a) : xsrc ? xsrc['l' + l.id] : layerEl(l);
   const ready = a.kind === 'image' || (xsrc ? !!src : src.readyState >= 2), fx = hasFx(l), op = l.op == null ? 1 : l.op, kk = kfAt(l, cur - l.start), tf = !kfIdent(kk);
   const heavy = fx || l.ck || l.mk || l.bm || tf; let T = g;
   if (heavy) { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); T = fxg; }
@@ -1316,11 +1319,11 @@ function drawEntry(e) {
   if (fx) { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); T = fxg; }
   if (tf) { g.save(); applyTf(g, cv.width / 2, cv.height / 2, kk, cv.width, cv.height); g.globalAlpha *= kk.o; }
   try {
-    if (e.c.bb && !tf && !(state.kb && a.kind === 'image') && !((e.c.z && e.c.z !== 1) || e.c.x || e.c.y || e.c.ang)) { const sb = a.kind === 'image' ? a.img : xsrc ? xsrc['c' + e.c.id] : (a.el.readyState >= 2 ? a.el : null); if (sb) drawBlurBg(T, sb, xsrc && a.kind !== 'image' ? sb.width : a.w, xsrc && a.kind !== 'image' ? sb.height : a.h, e.c); }
+    if (e.c.bb && !tf && !(state.kb && a.kind === 'image') && !((e.c.z && e.c.z !== 1) || e.c.x || e.c.y || e.c.ang)) { const sb = a.kind === 'image' ? pvSrc(a) : xsrc ? xsrc['c' + e.c.id] : (a.el.readyState >= 2 ? a.el : null); if (sb) drawBlurBg(T, sb, xsrc && a.kind !== 'image' ? sb.width : a.w, xsrc && a.kind !== 'image' ? sb.height : a.h, e.c); }
     if (a.kind === 'image') {
       const z = state.kb ? 1 + 0.12 * clamp((cur - e.start) / e.d, 0, 1) : 1;
       T.save(); T.translate(cv.width / 2, cv.height / 2); T.scale(z, z); T.translate(-cv.width / 2, -cv.height / 2);
-      drawContain(T, a.img, a.w, a.h, e.c); T.restore();
+      drawContain(T, pvSrc(a), a.w, a.h, e.c); T.restore();
     } else { const v = xsrc ? xsrc['c' + e.c.id] : (a.el.readyState >= 2 ? a.el : null); if (v) drawContain(T, v, xsrc ? v.width : a.w, xsrc ? v.height : a.h, e.c); }
   } catch (err) {}
   if (fx) { try { applyFx(e.c); g.drawImage(fxc, 0, 0); } catch (err) {} }
@@ -2813,7 +2816,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AS';
+const VER_NOW = '1121-AT';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3332,7 +3335,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AS', upd = document.getElementById('upd');
+  const VER = '1121-AT', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
