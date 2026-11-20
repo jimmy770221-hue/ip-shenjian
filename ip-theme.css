@@ -1,0 +1,277 @@
+/* IP 神剪 / Graphite */
+:root {
+  color-scheme: dark;
+  --bg: #101316;
+  --panel: #181d21;
+  --panel2: #22292e;
+  --line: #364148;
+  --text: #f3f7f6;
+  --sub: #aab9ba;
+  --main: #75e3c4;
+  --ink: #09251e;
+  --hot: #ffc882;
+  --ok: #79dfad;
+  --err: #ff9a9f;
+  --radius-control: 10px;
+  --radius-sheet: 22px;
+  --sheet-shadow: 0 -12px 42px #0008;
+}
+
+button, select, input, textarea { font-family: inherit; accent-color: var(--main); }
+button, select { cursor: pointer; }
+button:disabled { cursor: default; }
+:where(button, a, input, textarea, select):focus-visible {
+  outline: 2px solid var(--main);
+  outline-offset: 2px;
+}
+.ip-icon {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -.13em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 首頁 */
+#home {
+  display: block;
+  text-align: left;
+  overflow: auto;
+  background: radial-gradient(ellipse at 80% 0%, #19332e 0%, transparent 46%), var(--bg);
+  padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+}
+#home .home-shell { width: min(100%, 640px); margin: clamp(8px, 6vh, 66px) auto 0; animation: none; }
+#home .home-brand { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 800; }
+#home .hlogo, .top .logo {
+  display: inline-grid;
+  place-items: center;
+  background: var(--main);
+  color: var(--ink);
+  transform: none;
+  box-shadow: none;
+  letter-spacing: 0;
+}
+#home .hlogo { width: 35px; height: 35px; border-radius: 10px; font-size: 20px; padding: 0; }
+#home .home-hero {
+  margin-top: 22px;
+  padding: clamp(20px, 5vw, 36px);
+  border: 1px solid #38514d;
+  border-radius: 24px;
+  background: linear-gradient(140deg, #243c36, #1a2327 72%);
+}
+#home h1 { margin: 0; color: var(--text); background: none; font-size: clamp(30px, 6vw, 48px); letter-spacing: -.04em; }
+#home .home-hero p { color: #b9ceca; font-size: 14px; margin: 8px 0 0; line-height: 1.55; }
+#home .hbtn { max-width: none; }
+#home #h-start {
+  width: auto;
+  margin-top: 23px;
+  min-height: 48px;
+  padding: 0 14px;
+  gap: 9px;
+  border-radius: 11px;
+  background: var(--main);
+  color: var(--ink);
+  box-shadow: none;
+  animation: none;
+  letter-spacing: 0;
+  font-size: 15px;
+}
+#home #h-start::after { content: none; }
+#home #h-start .pl { width: auto; height: auto; background: none; box-shadow: none; font-size: 20px; }
+#home #h-start .pl svg { width: 1em; height: 1em; stroke: currentColor; }
+#home #h-start .ar { font-size: 19px; margin-right: 0; padding-left: 8px; }
+#home .home-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 9px; }
+#home .hbtn.sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-height: 48px;
+  padding: 10px;
+  text-align: left;
+  font-size: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+#home .hbtn.sub .ip-icon { font-size: 19px; color: var(--main); flex: none; }
+#home #h-cont { grid-column: 1 / -1; }
+#home .hbox { max-width: none; margin-top: 24px; }
+#home .hbox .ht { margin: 0 0 9px; color: var(--text); font-size: 15px; letter-spacing: 0; }
+#home .hgrid { gap: 7px; }
+#home .tile {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+}
+#home .tile i, #home .tile:active i {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--main);
+  backdrop-filter: none;
+  transform: none;
+}
+#home .tile i svg { width: 19px; height: 19px; }
+#home .hfoot { position: static; text-align: left; margin-top: 3px; font-size: 11px; color: var(--sub); }
+
+/* 剪輯工作區 */
+#app { max-width: 1100px; background: var(--bg); }
+.top {
+  min-height: calc(58px + env(safe-area-inset-top));
+  padding: calc(7px + env(safe-area-inset-top)) 10px 7px;
+  gap: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.top .logo { width: 34px; height: 34px; flex: none; border: 0; border-radius: 10px; font-size: 19px; padding: 0; }
+.top b { font-size: 14px; }
+.top a, .top #btn-pj {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 42px;
+  font-size: 19px;
+  padding: 0;
+  color: var(--text);
+  border-radius: var(--radius-control);
+}
+.top select { min-height: 42px; font-size: 12px; }
+.top .exp { min-height: 42px; color: var(--ink); border-radius: var(--radius-control); }
+.stage { background: #0a0c0e; }
+.empty {
+  inset: 0;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--sub);
+  font-size: 13px;
+}
+.empty .ip-icon { font-size: 36px; color: var(--main); margin-bottom: 4px; }
+.empty strong { color: var(--text); font-size: 18px; }
+.transport { gap: 5px; border-top: 1px solid var(--line); padding: 5px 8px; }
+.transport button, .transport .tb, #b-full {
+  height: 40px;
+  min-width: 34px;
+  justify-content: center;
+  border-radius: var(--radius-control);
+  padding: 4px;
+}
+.transport .play { min-width: 44px; color: var(--ink); }
+.transport .time { font-size: 10px; }
+.transport .time b { font-size: 12px; }
+.tl { background: #13181b; }
+.ruler i { font-variant-numeric: tabular-nums; }
+.clip { background-color: #29594f; border-color: #427b70; border-radius: 7px; }
+.clip.active { border-color: var(--hot); }
+.tblock, .mblock, .lblock { line-height: 20px; color: #fff; }
+.tblock { background: #654683; border-color: #8e6bb1; }
+.mblock { background: #205948; border-color: #367362; }
+.vblock { background: #733d51; border-color: #9d5c74; }
+.lblock { background: #37567d; border-color: #557ba9; }
+.tblock.sel, .mblock.sel, .lblock.sel { border-color: var(--hot); }
+.tmark { background: var(--panel2); }
+.playhead { background: var(--main); }
+.playhead::before { border-top-color: var(--main); }
+.tlb, .zb button { background: var(--panel); color: var(--text); }
+.tlb.add { background: var(--main); color: var(--ink); }
+.toolbar { padding: 7px 8px; gap: 5px; border-top: 1px solid var(--line); }
+.cat {
+  min-height: 50px;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 11px;
+  gap: 5px;
+}
+.cat i { font-size: 19px; color: var(--main); }
+
+/* 工具、專案、匯出、拍攝 */
+.ctx, #cats, #volp, #pj .box, #xp .box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  box-shadow: var(--sheet-shadow);
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+}
+.ctx h4 { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 12px; }
+.ctx .sm, #cats-g .tb, #pj .it { border: 1px solid var(--line); }
+.ctx .sm, #cats-g .tb, #pj .bigbtn, #xp .bigbtn { min-height: 42px; }
+#cats-g .tb i { color: var(--main); font-size: 21px; }
+.sh-x, #cats-x { color: var(--ink); border-radius: 12px; }
+.ctx .sm.ok, #pj .bigbtn:not(.x), #pj .it button.go,
+#xp .bigbtn:not(.x), #vp-ok { color: var(--ink) !important; }
+.ctx .sm.red, #pj .it button.del { color: var(--err); }
+.tplb svg rect { fill: #75e3c426; stroke: var(--main); }
+#pj, #xp { background: #090c0ec9; }
+#pj h3, #xp h3 { font-size: 19px; margin-bottom: 13px; }
+#pj .it { flex-wrap: wrap; }
+#pj .it .nm { flex: 1 1 90px; }
+#pj .it button { min-height: 35px; }
+#xp .bar { height: 8px; }
+#xp .bar i { background: var(--main); }
+.toast { background: var(--panel2); border: 1px solid var(--line); z-index: 95; }
+#upd { background: var(--hot); }
+[data-ip-camera] { background: #090c0f !important; padding-top: env(safe-area-inset-top); }
+#cm-x, #cm-f { background: var(--panel2) !important; border: 1px solid var(--line) !important; }
+#cm-r { background: #ff697e !important; color: #260a11 !important; border-color: #ffd4da !important; }
+#cm-n { font-variant-numeric: tabular-nums; }
+@media (hover: hover) {
+  #home .tile:hover, #home .hbtn.sub:hover, .cat:hover, .top a:hover, .top #btn-pj:hover {
+    background: var(--panel2);
+  }
+}
+@media (max-width: 360px) {
+  .top { padding-inline: 6px; gap: 4px; }
+  .top b { font-size: 12px; }
+  #home { padding-inline: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ctx, #cats { animation: none; }
+  #lower, .toast, #xp .bar i { transition: none; }
+}
+
+/* 快速小工具 */
+.ip-tools { --card: var(--panel); --main-d: var(--main); }
+.ip-tools header {
+  background: radial-gradient(ellipse at 80% 0%, #243c36, var(--panel) 72%);
+  color: var(--text);
+  padding: calc(20px + env(safe-area-inset-top)) 16px 18px;
+  text-align: left;
+}
+.ip-tools header .head { width: min(100%, 612px); margin: auto; }
+.ip-tools header h1 { font-size: 25px; margin-top: 8px; }
+.ip-tools header a { color: var(--main); text-decoration: none; font-size: 13px; font-weight: 700; }
+.ip-tools .tabs { justify-content: safe center; background: var(--panel); gap: 5px; padding: 8px; }
+.ip-tools .tab { background: var(--panel2); color: var(--text); border-radius: 9px; font-size: 13px; min-height: 42px; padding: 8px; }
+.ip-tools .tab .ip-icon { margin-right: 4px; }
+.ip-tools .tab.on, .ip-tools button.btn { background: var(--main); color: var(--ink); }
+.ip-tools .card { box-shadow: none; border: 1px solid var(--line); }
+.ip-tools .pick { background: #1c2a29; border: 1px dashed #538579; color: var(--main); cursor: pointer; }
+.ip-tools .pick:focus-within { outline: 2px solid var(--main); outline-offset: 2px; }
+.ip-tools .pick input { display: block; position: absolute; width: 1px; height: 1px; opacity: 0; }
+.ip-tools input[type=number], .ip-tools input[type=text], .ip-tools textarea, .ip-tools select,
+.ip-tools button.sm, .ip-tools .nudge, .ip-tools .sub-item, .ip-tools .nudge .btns button {
+  color: var(--text);
+  background: var(--panel2);
+}
+.ip-tools button.sm { min-width: 36px; }
+.ip-tools button.del { color: var(--err); border-color: #78414a; }
+.ip-tools button.btn:disabled { background: var(--panel2); color: var(--sub); }
+.ip-tools button.btn.share { background: var(--ok) !important; color: var(--ink); }
+.ip-tools .result a { color: var(--main); }
+.ip-tools .bar { height: 8px; background: var(--panel2); }
+.ip-tools .bar i { background: var(--main); }
+.ip-tools .warn { background: #2d2720; border: 1px solid #64523c; color: var(--hot); line-height: 1.5; }
+

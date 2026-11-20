@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>I POWER 神剪輯</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%235b86ff'/%3E%3Cstop offset='1' stop-color='%23a05bff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='22' fill='url(%23g)'/%3E%3Ctext x='50' y='52' font-family='Arial,sans-serif' font-weight='900' font-size='44' fill='white' text-anchor='middle'%3EIP%3C/text%3E%3Ctext x='50' y='84' font-family='PingFang TC,Microsoft JhengHei,sans-serif' font-weight='900' font-size='28' fill='white' text-anchor='middle'%3E神剪%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Crect%20width%3D%2224%22%20height%3D%2224%22%20rx%3D%226%22%20fill%3D%22%2375e3c4%22/%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%2309251e%22%20stroke-width%3D%221.65%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M5%205v14m14-14v14M9%207l7%205-7%205z%22/%3E%3C/g%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="IP神剪">
-<meta name="theme-color" content="#14161f">
+<meta name="theme-color" content="#101316">
 <style>
 :root{--bg:#14161f;--panel:#1d2030;--panel2:#262a3d;--line:#343a55;--text:#eef1ff;--sub:#99a2c8;--main:#5b86ff;--hot:#ff9f43;--ok:#2ec27e;--err:#ff6b6b}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
@@ -186,18 +186,302 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 #xp video,#xp audio{width:100%;margin-top:10px;border-radius:10px;max-height:40vh;background:#000}
 #pool{position:fixed;left:0;top:0;width:2px;height:2px;opacity:.02;pointer-events:none;overflow:hidden}
 </style>
+<style id="ip-theme">
+/* IP 神剪 / Graphite */
+:root {
+  color-scheme: dark;
+  --bg: #101316;
+  --panel: #181d21;
+  --panel2: #22292e;
+  --line: #364148;
+  --text: #f3f7f6;
+  --sub: #aab9ba;
+  --main: #75e3c4;
+  --ink: #09251e;
+  --hot: #ffc882;
+  --ok: #79dfad;
+  --err: #ff9a9f;
+  --radius-control: 10px;
+  --radius-sheet: 22px;
+  --sheet-shadow: 0 -12px 42px #0008;
+}
+
+button, select, input, textarea { font-family: inherit; accent-color: var(--main); }
+button, select { cursor: pointer; }
+button:disabled { cursor: default; }
+:where(button, a, input, textarea, select):focus-visible {
+  outline: 2px solid var(--main);
+  outline-offset: 2px;
+}
+.ip-icon {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -.13em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 首頁 */
+#home {
+  display: block;
+  text-align: left;
+  overflow: auto;
+  background: radial-gradient(ellipse at 80% 0%, #19332e 0%, transparent 46%), var(--bg);
+  padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+}
+#home .home-shell { width: min(100%, 640px); margin: clamp(8px, 6vh, 66px) auto 0; animation: none; }
+#home .home-brand { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 800; }
+#home .hlogo, .top .logo {
+  display: inline-grid;
+  place-items: center;
+  background: var(--main);
+  color: var(--ink);
+  transform: none;
+  box-shadow: none;
+  letter-spacing: 0;
+}
+#home .hlogo { width: 35px; height: 35px; border-radius: 10px; font-size: 20px; padding: 0; }
+#home .home-hero {
+  margin-top: 22px;
+  padding: clamp(20px, 5vw, 36px);
+  border: 1px solid #38514d;
+  border-radius: 24px;
+  background: linear-gradient(140deg, #243c36, #1a2327 72%);
+}
+#home h1 { margin: 0; color: var(--text); background: none; font-size: clamp(30px, 6vw, 48px); letter-spacing: -.04em; }
+#home .home-hero p { color: #b9ceca; font-size: 14px; margin: 8px 0 0; line-height: 1.55; }
+#home .hbtn { max-width: none; }
+#home #h-start {
+  width: auto;
+  margin-top: 23px;
+  min-height: 48px;
+  padding: 0 14px;
+  gap: 9px;
+  border-radius: 11px;
+  background: var(--main);
+  color: var(--ink);
+  box-shadow: none;
+  animation: none;
+  letter-spacing: 0;
+  font-size: 15px;
+}
+#home #h-start::after { content: none; }
+#home #h-start .pl { width: auto; height: auto; background: none; box-shadow: none; font-size: 20px; }
+#home #h-start .pl svg { width: 1em; height: 1em; stroke: currentColor; }
+#home #h-start .ar { font-size: 19px; margin-right: 0; padding-left: 8px; }
+#home .home-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 9px; }
+#home .hbtn.sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-height: 48px;
+  padding: 10px;
+  text-align: left;
+  font-size: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+#home .hbtn.sub .ip-icon { font-size: 19px; color: var(--main); flex: none; }
+#home #h-cont { grid-column: 1 / -1; }
+#home .hbox { max-width: none; margin-top: 24px; }
+#home .hbox .ht { margin: 0 0 9px; color: var(--text); font-size: 15px; letter-spacing: 0; }
+#home .hgrid { gap: 7px; }
+#home .tile {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+}
+#home .tile i, #home .tile:active i {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--main);
+  backdrop-filter: none;
+  transform: none;
+}
+#home .tile i svg { width: 19px; height: 19px; }
+#home .hfoot { position: static; text-align: left; margin-top: 3px; font-size: 11px; color: var(--sub); }
+
+/* 剪輯工作區 */
+#app { max-width: 1100px; background: var(--bg); }
+.top {
+  min-height: calc(58px + env(safe-area-inset-top));
+  padding: calc(7px + env(safe-area-inset-top)) 10px 7px;
+  gap: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.top .logo { width: 34px; height: 34px; flex: none; border: 0; border-radius: 10px; font-size: 19px; padding: 0; }
+.top b { font-size: 14px; }
+.top a, .top #btn-pj {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 42px;
+  font-size: 19px;
+  padding: 0;
+  color: var(--text);
+  border-radius: var(--radius-control);
+}
+.top select { min-height: 42px; font-size: 12px; }
+.top .exp { min-height: 42px; color: var(--ink); border-radius: var(--radius-control); }
+.stage { background: #0a0c0e; }
+.empty {
+  inset: 0;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--sub);
+  font-size: 13px;
+}
+.empty .ip-icon { font-size: 36px; color: var(--main); margin-bottom: 4px; }
+.empty strong { color: var(--text); font-size: 18px; }
+.transport { gap: 5px; border-top: 1px solid var(--line); padding: 5px 8px; }
+.transport button, .transport .tb, #b-full {
+  height: 40px;
+  min-width: 34px;
+  justify-content: center;
+  border-radius: var(--radius-control);
+  padding: 4px;
+}
+.transport .play { min-width: 44px; color: var(--ink); }
+.transport .time { font-size: 10px; }
+.transport .time b { font-size: 12px; }
+.tl { background: #13181b; }
+.ruler i { font-variant-numeric: tabular-nums; }
+.clip { background-color: #29594f; border-color: #427b70; border-radius: 7px; }
+.clip.active { border-color: var(--hot); }
+.tblock, .mblock, .lblock { line-height: 20px; color: #fff; }
+.tblock { background: #654683; border-color: #8e6bb1; }
+.mblock { background: #205948; border-color: #367362; }
+.vblock { background: #733d51; border-color: #9d5c74; }
+.lblock { background: #37567d; border-color: #557ba9; }
+.tblock.sel, .mblock.sel, .lblock.sel { border-color: var(--hot); }
+.tmark { background: var(--panel2); }
+.playhead { background: var(--main); }
+.playhead::before { border-top-color: var(--main); }
+.tlb, .zb button { background: var(--panel); color: var(--text); }
+.tlb.add { background: var(--main); color: var(--ink); }
+.toolbar { padding: 7px 8px; gap: 5px; border-top: 1px solid var(--line); }
+.cat {
+  min-height: 50px;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 11px;
+  gap: 5px;
+}
+.cat i { font-size: 19px; color: var(--main); }
+
+/* 工具、專案、匯出、拍攝 */
+.ctx, #cats, #volp, #pj .box, #xp .box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  box-shadow: var(--sheet-shadow);
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+}
+.ctx h4 { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 12px; }
+.ctx .sm, #cats-g .tb, #pj .it { border: 1px solid var(--line); }
+.ctx .sm, #cats-g .tb, #pj .bigbtn, #xp .bigbtn { min-height: 42px; }
+#cats-g .tb i { color: var(--main); font-size: 21px; }
+.sh-x, #cats-x { color: var(--ink); border-radius: 12px; }
+.ctx .sm.ok, #pj .bigbtn:not(.x), #pj .it button.go,
+#xp .bigbtn:not(.x), #vp-ok { color: var(--ink) !important; }
+.ctx .sm.red, #pj .it button.del { color: var(--err); }
+.tplb svg rect { fill: #75e3c426; stroke: var(--main); }
+#pj, #xp { background: #090c0ec9; }
+#pj h3, #xp h3 { font-size: 19px; margin-bottom: 13px; }
+#pj .it { flex-wrap: wrap; }
+#pj .it .nm { flex: 1 1 90px; }
+#pj .it button { min-height: 35px; }
+#xp .bar { height: 8px; }
+#xp .bar i { background: var(--main); }
+.toast { background: var(--panel2); border: 1px solid var(--line); z-index: 95; }
+#upd { background: var(--hot); }
+[data-ip-camera] { background: #090c0f !important; padding-top: env(safe-area-inset-top); }
+#cm-x, #cm-f { background: var(--panel2) !important; border: 1px solid var(--line) !important; }
+#cm-r { background: #ff697e !important; color: #260a11 !important; border-color: #ffd4da !important; }
+#cm-n { font-variant-numeric: tabular-nums; }
+@media (hover: hover) {
+  #home .tile:hover, #home .hbtn.sub:hover, .cat:hover, .top a:hover, .top #btn-pj:hover {
+    background: var(--panel2);
+  }
+}
+@media (max-width: 360px) {
+  .top { padding-inline: 6px; gap: 4px; }
+  .top b { font-size: 12px; }
+  #home { padding-inline: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ctx, #cats { animation: none; }
+  #lower, .toast, #xp .bar i { transition: none; }
+}
+
+/* 快速小工具 */
+.ip-tools { --card: var(--panel); --main-d: var(--main); }
+.ip-tools header {
+  background: radial-gradient(ellipse at 80% 0%, #243c36, var(--panel) 72%);
+  color: var(--text);
+  padding: calc(20px + env(safe-area-inset-top)) 16px 18px;
+  text-align: left;
+}
+.ip-tools header .head { width: min(100%, 612px); margin: auto; }
+.ip-tools header h1 { font-size: 25px; margin-top: 8px; }
+.ip-tools header a { color: var(--main); text-decoration: none; font-size: 13px; font-weight: 700; }
+.ip-tools .tabs { justify-content: safe center; background: var(--panel); gap: 5px; padding: 8px; }
+.ip-tools .tab { background: var(--panel2); color: var(--text); border-radius: 9px; font-size: 13px; min-height: 42px; padding: 8px; }
+.ip-tools .tab .ip-icon { margin-right: 4px; }
+.ip-tools .tab.on, .ip-tools button.btn { background: var(--main); color: var(--ink); }
+.ip-tools .card { box-shadow: none; border: 1px solid var(--line); }
+.ip-tools .pick { background: #1c2a29; border: 1px dashed #538579; color: var(--main); cursor: pointer; }
+.ip-tools .pick:focus-within { outline: 2px solid var(--main); outline-offset: 2px; }
+.ip-tools .pick input { display: block; position: absolute; width: 1px; height: 1px; opacity: 0; }
+.ip-tools input[type=number], .ip-tools input[type=text], .ip-tools textarea, .ip-tools select,
+.ip-tools button.sm, .ip-tools .nudge, .ip-tools .sub-item, .ip-tools .nudge .btns button {
+  color: var(--text);
+  background: var(--panel2);
+}
+.ip-tools button.sm { min-width: 36px; }
+.ip-tools button.del { color: var(--err); border-color: #78414a; }
+.ip-tools button.btn:disabled { background: var(--panel2); color: var(--sub); }
+.ip-tools button.btn.share { background: var(--ok) !important; color: var(--ink); }
+.ip-tools .result a { color: var(--main); }
+.ip-tools .bar { height: 8px; background: var(--panel2); }
+.ip-tools .bar i { background: var(--main); }
+.ip-tools .warn { background: #2d2720; border: 1px solid #64523c; color: var(--hot); line-height: 1.5; }
+
+
+</style>
 </head>
 <body>
 <div id="upd">🔄 有新版本了，點這裡更新（更新後目前剪的內容會消失，請先匯出）</div>
 <div id="home">
-  <div class="bl b1"></div><div class="bl b2"></div><div class="bl b3"></div>
-  <div class="hlogo">IP<br>神剪</div>
-  <h1>I POWER 神剪輯</h1>
-  <div class="chips"><span>免費</span><span>免註冊</span><span>不上傳</span><span>手機裡處理</span></div>
-  <button class="hbtn" id="h-start"><span class="pl"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3.5"/><path d="M10.5 9.5v5l4-2.5z"/></svg></span><span class="lb">開始剪輯</span><span class="ar">›</span></button>
-  <button class="hbtn sub" id="h-cont" style="display:none">繼續剛剛的剪輯</button>
-  <button class="hbtn sub" id="h-cam">📷 直接拍攝（可倒數計時）</button>
-  <button class="hbtn sub" id="h-proj">📁 我的專案（暫存的作品）</button>
+  <main class="home-shell">
+  <div class="home-brand"><span class="hlogo"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5v14m14-14v14M9 7l7 5-7 5z"/></svg></span>IP 神剪</div>
+  <div class="home-hero">
+    <h1>剪輯你的影片</h1>
+    <p>從相簿選取影片或照片，素材在這台裝置上處理。</p>
+    <button class="hbtn" id="h-start"><span class="pl"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 12h8m-4-4v8"/></svg></span><span class="lb">開始剪輯</span><span class="ar" aria-hidden="true">›</span></button>
+  </div>
+  <div class="home-links">
+    <button class="hbtn sub" id="h-cont" style="display:none">繼續剛剛的剪輯</button>
+    <button class="hbtn sub" id="h-cam"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 10l5-3v10l-5-3"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg>直接拍攝</button>
+    <button class="hbtn sub" id="h-proj"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>我的專案</button>
+  </div>
   <div class="hbox"><div class="ht">快速小工具</div><div class="hgrid">
     <a class="tile c1" href="tools.html#trim"><i><svg viewBox="0 0 24 24"><circle cx="6" cy="6.5" r="2.6"/><circle cx="6" cy="17.5" r="2.6"/><path d="M8 8l12 10M8 16L20 6"/></svg></i>剪裁</a>
     <a class="tile c2" href="tools.html#merge"><i><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 1 0-5.6l2.4-2.4a4 4 0 0 1 5.6 5.6l-1.2 1.2M14 10a4 4 0 0 1 0 5.6L11.6 18a4 4 0 0 1-5.6-5.6l1.2-1.2"/></svg></i>合併</a>
@@ -207,20 +491,21 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">按「開始剪輯」會讓你選相簿裡的影片和照片<br>版本 1121-R（介面改版：簡約版）</div>
+  <div class="hfoot">版本 1121-R</div>
+  </main>
 </div>
 <div id="app">
   <div class="top">
-    <span class="logo">IP神剪</span>
-    <b>I POWER 神剪輯</b>
-    <a href="tools.html" title="快速小工具（轉MP3、壓縮…）">🧰</a>
-    <button id="btn-pj" title="我的專案（暫存）">📁</button>
+    <button class="logo" type="button" aria-label="返回首頁"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5v14m14-14v14M9 7l7 5-7 5z"/></svg></button>
+    <b>IP 神剪</b>
+    <a href="tools.html" title="快速小工具（轉MP3、壓縮…）" aria-label="快速小工具"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></a>
+    <button id="btn-pj" title="我的專案（暫存）" aria-label="我的專案"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></button>
     <select id="ratio"><option value="9:16">9:16 直</option><option value="16:9">16:9 橫</option><option value="1:1">1:1 方</option><option value="4:3">4:3 橫</option><option value="3:4">3:4 直</option></select>
     <button class="exp" id="btn-export">匯出</button>
   </div>
   <div class="stage">
     <canvas id="cv" width="360" height="640"></canvas>
-    <div class="empty" id="empty">按時間軸右邊的「＋」<br>選擇活動的影片和照片開始剪輯</div>
+    <div class="empty" id="empty"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 12h8m-4-4v8"/></svg><strong>加入第一段素材</strong><span>點時間軸右側的「＋」，選取影片或照片。</span></div>
   </div>
   <div id="lower">
   <div class="transport">
@@ -228,7 +513,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
     <button id="b-prev">◀1格</button>
     <button class="play" id="b-play">▶</button>
     <button id="b-next">1格▶</button>
-    <button class="tb" data-a="undo" title="復原">↩️</button><button class="tb" data-a="redo" title="重做">↪️</button>
+    <button class="tb" data-a="undo" title="復原" aria-label="復原"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l-5 5 5 5m-5-5h10a5 5 0 0 1 5 5v1"/></svg></button><button class="tb" data-a="redo" title="重做" aria-label="重做"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l5 5-5 5m5-5H10a5 5 0 0 0-5 5v1"/></svg></button>
     <button id="b-full" title="放大預覽">⛶</button>
   </div>
   <div class="tl" id="tl">
@@ -241,7 +526,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
       <div class="row" id="row-vo" style="height:0"></div>
     </div></div>
     <div class="playhead"></div>
-    <button class="tlb vol" id="tl-vol" title="音量">🔊</button>
+    <button class="tlb vol" id="tl-vol" title="音量" aria-label="音量"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l4-4v14l-4-4H4zm11 0a4 4 0 0 1 0 6m2-8a7 7 0 0 1 0 10"/></svg></button>
     <button class="tlb add" id="tl-add" title="加入照片或影片">＋</button>
     <div class="zb"><button id="z-out">－</button><button id="z-in">＋</button></div>
   </div>
@@ -249,32 +534,32 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   </div>
   <div class="quick"><button id="q-text">🅣 添加文字</button><button id="q-music" class="m">🎵 添加音樂</button></div>
   <div class="toolbar" id="toolbar">
-    <button class="cat" data-g="edit"><i>✂️</i>編輯</button>
-    <button class="cat" data-g="music"><i>🎵</i>音樂</button>
-    <button class="cat" data-g="text"><i>🅣</i>文字</button>
-    <button class="cat" data-g="fx"><i>✨</i>特效</button>
-    <button class="cat" data-g="cam"><i>📷</i>拍攝</button>
+    <button class="cat" data-g="edit"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6m6 4v6"/></svg></i>編輯</button>
+    <button class="cat" data-g="music"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V6l10-2v11"/><ellipse cx="6.5" cy="17.5" rx="2.5" ry="2"/><ellipse cx="16.5" cy="15.5" rx="2.5" ry="2"/></svg></i>音樂</button>
+    <button class="cat" data-g="text"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7V5h14v2m-7-2v14m-4 0h8"/></svg></i>文字</button>
+    <button class="cat" data-g="fx"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3ZM20 3v4m-2-2h4"/></svg></i>特效</button>
+    <button class="cat" data-g="cam"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 10l5-3v10l-5-3"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg></i>拍攝</button>
   </div>
   <div id="cats"><div class="hd"><b id="cats-t"></b><button id="cats-x">✓</button></div><div id="cats-g"></div></div>
   <div id="tbpool" hidden>
-    <button class="tb" data-a="split"><i>✂️</i>分割</button>
-    <button class="tb" data-a="freeze"><i>❄️</i>定格</button>
-    <button class="tb" data-a="trimL"><i>⇤</i>裁左邊</button>
-    <button class="tb" data-a="trimR"><i>⇥</i>裁右邊</button>
-    <button class="tb" data-a="del"><i>🗑</i>刪除</button>
-    <button class="tb" data-a="mvL"><i>◀</i>前移</button>
-    <button class="tb" data-a="mvR"><i>▶</i>後移</button>
-    <button class="tb" data-a="fx"><i>🎛</i>調整</button>
-    <button class="tb" data-a="kf"><i>🎞</i>動畫</button>
-    <button class="tb" data-a="clip"><i>🛠</i>片段設定</button>
-    <button class="tb" data-a="music"><i>🎵</i>配樂</button>
-    <button class="tb" data-a="au"><i>🎧</i>音訊與音效</button>
-    <button class="tb" data-a="text"><i>🅣</i>加文字</button>
-    <button class="tb" data-a="st"><i>😀</i>貼圖</button>
-    <button class="tb" data-a="ef"><i>🌈</i>特效包</button>
-    <button class="tb" data-a="ly"><i>🧩</i>拼貼</button>
-    <button class="tb" data-a="auto"><i>✨</i>幻燈片</button>
-    <button class="tb" data-a="tpl"><i>🎬</i>範本</button>
+    <button class="tb" data-a="split"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8 8.5 20 19M8 15.5 20 5"/></svg></i>分割</button>
+    <button class="tb" data-a="freeze"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M4 7l16 10M4 17 20 7M10 5l2 2 2-2m-4 14 2-2 2 2"/></svg></i>定格</button>
+    <button class="tb" data-a="trimL"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16m14-8H8m4-4-4 4 4 4"/></svg></i>裁左邊</button>
+    <button class="tb" data-a="trimR"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4v16M5 12h11m-4-4 4 4-4 4"/></svg></i>裁右邊</button>
+    <button class="tb" data-a="del"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 7v13h10V7m-8 0V4h6v3m-5 4v5m4-5v5"/></svg></i>刪除</button>
+    <button class="tb" data-a="mvL"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 12H6m5-5-5 5 5 5"/></svg></i>前移</button>
+    <button class="tb" data-a="mvR"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12m-5-5 5 5-5 5"/></svg></i>後移</button>
+    <button class="tb" data-a="fx"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3ZM20 3v4m-2-2h4"/></svg></i>調整</button>
+    <button class="tb" data-a="kf"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9zM9 12h6m-3-3v6"/></svg></i>動畫</button>
+    <button class="tb" data-a="clip"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8m-8 4h5"/></svg></i>片段設定</button>
+    <button class="tb" data-a="music"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V6l10-2v11"/><ellipse cx="6.5" cy="17.5" rx="2.5" ry="2"/><ellipse cx="16.5" cy="15.5" rx="2.5" ry="2"/></svg></i>配樂</button>
+    <button class="tb" data-a="au"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h3l2-5 4 10 3-8 2 3h4"/></svg></i>音訊與音效</button>
+    <button class="tb" data-a="text"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7V5h14v2m-7-2v14m-4 0h8"/></svg></i>加文字</button>
+    <button class="tb" data-a="st"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13v-7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7zM13 20v-5a2 2 0 0 1 2-2h5M8 8h.1M15 8h.1M8 12q2 2 4 0"/></svg></i>貼圖</button>
+    <button class="tb" data-a="ef"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3ZM20 3v4m-2-2h4"/></svg></i>特效包</button>
+    <button class="tb" data-a="ly"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5zM3 12l9 5 9-5M3 16l9 5 9-5"/></svg></i>拼貼</button>
+    <button class="tb" data-a="auto"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3ZM20 3v4m-2-2h4"/></svg></i>幻燈片</button>
+    <button class="tb" data-a="tpl"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M10 9v11"/></svg></i>範本</button>
   </div>
   <div class="ctx" id="ctx"></div>
 </div>
@@ -286,10 +571,10 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 <div class="toast" id="toast"></div>
 
 <div id="pj"><div class="box">
-  <h3>📁 我的專案</h3>
+  <h3>我的專案</h3>
   <label>目前這個作品的名稱</label><input type="text" id="pj-name" maxlength="30" placeholder="例如：社團成果影片">
-  <button class="bigbtn" id="pj-save">💾 儲存（暫存起來，之後可以繼續編輯）</button>
-  <button class="bigbtn x" id="pj-new">＋ 開一個新的空白專案</button>
+  <button class="bigbtn" id="pj-save">儲存專案</button>
+  <button class="bigbtn x" id="pj-new">＋ 新增空白專案</button>
   <label>已暫存的專案</label><div id="pj-list"></div>
   <p class="hint" id="pj-st" style="font-size:12px;color:var(--sub)"></p>
   <button class="bigbtn x" id="pj-close">關閉</button>
@@ -299,11 +584,11 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
   <h3>匯出作品</h3>
   <div id="xp-opts">
     <label>輸出種類</label>
-    <select id="xp-fmt"><option value="mp4">🎬 影片（MP4）</option><option value="mp3">🎵 只要聲音（MP3）</option></select>
+    <select id="xp-fmt"><option value="mp4">影片（MP4）</option><option value="mp3">音訊（MP3）</option></select>
     <label id="xp-ql-l">畫質</label>
     <select id="xp-q"><option value="480">省空間（480p，傳 LINE 用）</option><option value="720" selected>一般（720p，建議）</option><option value="1080">高畫質（1080p，最慢）</option></select>
     <label id="xp-mode-l">匯出方式</label>
-    <select id="xp-mode"><option value="fast">⚡ 快速（用手機的影片晶片，預設）</option><option value="compat">🛡 相容（較慢，但最穩）</option></select>
+    <select id="xp-mode"><option value="fast">快速（硬體加速，預設）</option><option value="compat">相容（較慢）</option></select>
     <p class="hint" id="xp-note"></p>
     <button class="bigbtn" id="xp-go">開始匯出</button>
   </div>
@@ -316,7 +601,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 <script src="lib/util.js"></script>
 <script>
 const $ = s => document.querySelector(s);
-const { FFmpeg } = FFmpegWASM, { fetchFile } = FFmpegUtil;
+const fetchFile = (...args) => window.FFmpegUtil.fetchFile(...args);
 
 /* ================= 資料 ================= */
 const assets = new Map();           // id -> {id,kind,file,url,el,img,w,h,dur,name,thumb}
@@ -391,6 +676,7 @@ async function camOpen() {
   if (camS) return;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') return toast('這個瀏覽器不支援直接拍攝，請用時間軸右邊的「＋」選相機拍好的影片');
   const box = document.createElement('div');
+  box.setAttribute('data-ip-camera', '');
   box.style.cssText = 'position:fixed;inset:0;z-index:99;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:space-between';
   box.innerHTML = `<div style="width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 14px;color:#fff;font-size:15px"><button id="cm-x" style="background:#0008;color:#fff;border:0;border-radius:20px;padding:8px 16px;font-size:15px">✕ 取消</button><b id="cm-t">準備拍攝</b><button id="cm-f" style="background:#0008;color:#fff;border:0;border-radius:20px;padding:8px 16px;font-size:15px">🔄 翻轉</button></div>
   <div style="flex:1;width:100%;position:relative;min-height:0"><video playsinline muted style="width:100%;height:100%;object-fit:contain;background:#000"></video><div id="cm-n" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:140px;font-weight:800;color:#fff;text-shadow:0 0 20px #000"></div></div>
@@ -1048,7 +1334,7 @@ const ops = {
 const PANEL_OPS = new Set(['fx', 'ly', 'kf', 'au', 'st', 'ef', 'auto', 'tpl', 'clip', 'text', 'cam']);
 document.addEventListener('click', e => { const b = e.target.closest('.tb'); if (!b || b.disabled || !ops[b.dataset.a]) return; pause(); ops[b.dataset.a](); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); });
 /* ===== 底部浮出：分類面板＋設定面板（不擠壓預覽）===== */
-const CATS = { edit: ['✂️ 編輯', ['split', 'freeze', 'trimL', 'trimR', 'del', 'mvL', 'mvR', 'fx', 'kf', 'clip']], music: ['🎵 音樂', ['music', 'au']], text: ['🅣 文字', ['text', 'st']], fx: ['✨ 特效', ['ef', 'ly', 'auto', 'tpl']] };
+const CATS = { edit: ['編輯', ['split', 'freeze', 'trimL', 'trimR', 'del', 'mvL', 'mvR', 'fx', 'kf', 'clip']], music: ['音樂', ['music', 'au']], text: ['文字', ['text', 'st']], fx: ['特效', ['ef', 'ly', 'auto', 'tpl']] };
 let catKey = null;
 function closeCats() { const g = $('#cats-g'), pool = $('#tbpool'); [...g.children].forEach(b => pool.appendChild(b)); $('#cats').classList.remove('on'); catKey = null; }
 function openCat(k) {
@@ -1719,6 +2005,8 @@ let ff = null, ffLoading = null, ffLog = [], onProg = null;
 async function getFF() {
   if (ff) return ff;
   if (!ffLoading) ffLoading = (async () => {
+    const FFmpeg = window.FFmpegWASM?.FFmpeg;
+    if (!FFmpeg || !window.FFmpegUtil?.fetchFile) throw new Error('缺少 FFmpeg 元件，請確認 lib/ 已完整部署。');
     const f = new FFmpeg();
     f.on('log', ({ message }) => { ffLog.push(message); if (ffLog.length > 300) ffLog.shift(); });
     f.on('progress', ({ progress }) => { if (onProg) onProg(clamp(progress, 0, 1)); });
@@ -2123,7 +2411,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
   const home = document.getElementById('home');
   const hideHome = () => home.classList.add('off');
   const showHome = () => {
-    document.getElementById('h-cont').style.display = (state.clips && state.clips.length) ? 'block' : 'none';
+    document.getElementById('h-cont').style.display = (state.clips && state.clips.length) ? 'flex' : 'none';
     document.querySelector('#h-start .lb').textContent = (state.clips && state.clips.length) ? '再加素材' : '開始剪輯';
     home.classList.remove('off');
   };
