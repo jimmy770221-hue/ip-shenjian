@@ -117,6 +117,13 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .trkdel{left:auto;margin-left:4px;padding:0 7px;color:#ffb3b3;border-color:#6b3a46}
 .trkadd{left:4px;height:24px;line-height:22px;margin:2px 0;background:#3a3470;border-color:#8485c4}
 #row-ladd{height:28px}
+#trkov{position:absolute;left:0;right:0;top:0;bottom:0;pointer-events:none;z-index:5}
+#trkov .tlb{position:absolute;top:auto;width:38px;height:44px;font-size:18px;pointer-events:auto}
+#trkov .tlb.add{right:6px;font-size:26px}#trkov .tlb.vol{left:6px}
+#trkov .trkx{position:absolute;left:50px;width:30px;height:22px;border-radius:11px;background:#262a3d;border:1px solid #6b3a46;color:#ffb3b3;font-size:12px;font-weight:700;pointer-events:auto;padding:0}
+#row-l .lblock.sel{touch-action:none}
+#row-l .lblock .hd{position:absolute;top:0;bottom:0;width:22px;background:rgba(255,179,71,.92);display:flex;align-items:center;justify-content:center;color:#2b1a00;font-weight:900;font-size:14px;touch-action:none;z-index:2}
+#row-l .lblock .hd.l{left:0;border-radius:6px 0 0 6px}#row-l .lblock .hd.r{right:0;border-radius:0 6px 6px 0}
 #row-l .lblock{height:50px;padding:0;line-height:normal;border-radius:8px;border:2px solid #4a5284;background:#3a4166 center/auto 100% repeat-x;overflow:hidden;font-size:11px}
 #row-l .lblock.sel{border-color:var(--hot);box-shadow:0 0 0 1px var(--hot)}
 #row-l .lblock span{position:absolute;left:0;right:0;bottom:0;padding:2px 5px;background:rgba(0,0,0,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
@@ -685,7 +692,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AJ（時間軸固定）</div>
+  <div class="hfoot">版本 1121-AK（第2軌＝完整主軌）</div>
   </main>
 </div>
 <div id="app">
@@ -721,6 +728,7 @@ html, body, .ip-tools { background-color: var(--bg); }
       <div class="row" id="row-vo" style="height:0"></div>
     </div></div>
     <div class="playhead"></div>
+    <div id="trkov"></div>
     <button class="tlb vol" id="tl-vol" title="音量" aria-label="音量"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l4-4v14l-4-4H4zm11 0a4 4 0 0 1 0 6m2-8a7 7 0 0 1 0 10"/></svg></button>
     <button class="tlb add" id="tl-add" title="加入照片或影片">＋</button>
     <div class="zb"><button id="z-out">－</button><button id="z-in">＋</button></div>
@@ -808,7 +816,10 @@ let showClip = false, showAu = false, showSt = false, showEf = false, showKf = f
 let showFx = false, fxTab = 'f', fxIdx = -1, showLy = false, selLy = null, lyTab = 'p', pendingTpl = null;
 let cur = 0, playing = false, pps = 80, selText = null, selMusic = false, selTr = null, showAuto = false, dirty = true;
 let selPic = null;   // 目前「鎖定」可以在畫面上拖移／縮放／旋轉的那一段（clip id）
-function clearSel() { selPic = null; showClip = false; showAu = false; showSt = false; showEf = false; showKf = false; showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
+let lyPick = false;   // 點選第2軌（畫面軌道）的素材＝只選取、不跳選單（和主軌一樣）；要開版位等細項再按下面的工具
+const lyOn = () => !!(selLy && (showLy || lyPick));
+const tvOf = t => (state.tv && state.tv[t] != null) ? state.tv[t] : 1;   // 每一條畫面軌道自己的音量
+function clearSel() { lyPick = false; selPic = null; showClip = false; showAu = false; showSt = false; showEf = false; showKf = false; showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
 let L = [], total = 0;               // 排版結果
 const FXP = {
   none: { n: '原圖', b: 0, ct: 1, sa: 1, r: 1, g: 1, bl: 1 },
@@ -1322,7 +1333,7 @@ function renderFrame() {
   if (state.gfx && hasEf(state.gfx.ef)) { try { applyEf(state.gfx.ef, cur); } catch (er) {} }
   for (const x of state.texts) if (cur >= x.start && cur < x.start + x.dur) drawText(g, cv.width, cv.height, x, cur - x.start);
   if (!xsrc && !exporting) {   // 選取框（只在預覽顯示，不會匯出）
-    if (selLy && showLy) { const l = state.layers.find(x => x.id === selLy); if (l && cur >= l.start && cur < l.start + l.len) lyRot(l, () => { const r = lyRect(l); g.save(); g.setLineDash([8 * pvK, 5 * pvK]); g.lineWidth = 3 * pvK; g.strokeStyle = '#ffb347'; g.strokeRect(r.x + 1.5, r.y + 1.5, r.cw - 3, r.ch - 3); g.restore(); }); }
+    if (lyOn()) { const l = state.layers.find(x => x.id === selLy); if (l && cur >= l.start && cur < l.start + l.len) lyRot(l, () => { const r = lyRect(l); g.save(); g.setLineDash([8 * pvK, 5 * pvK]); g.lineWidth = 3 * pvK; g.strokeStyle = '#ffb347'; g.strokeRect(r.x + 1.5, r.y + 1.5, r.cw - 3, r.ch - 3); g.restore(); }); }
     else { const en = clipAt(cur); if (en && selPic === en.c.id) drawPicFrame(en.c); }
   }
 }
@@ -1367,7 +1378,7 @@ function syncMedia() {
     const act = cur >= l.start && cur < l.start + l.len;
     if (!act) { const e0 = lyEls.get(l.id); if (e0 && !e0.paused) e0.pause(); continue; }
     const el = layerEl(l), sp = spd(l), t = l.in + (cur - l.start) * sp, sm = sp > 2 || sp < 0.5;
-    el.muted = l.mute !== false || sm; el.volume = clamp(state.vol.video, 0, 1);
+    el.muted = l.mute !== false || sm; el.volume = clamp(state.vol.video * tvOf(l.trk || 0), 0, 1);
     try { el.playbackRate = sm ? 1 : sp; } catch (er) {}
     if (playing && sm) { if (!el.paused) el.pause(); if (!el.seeking && Math.abs(el.currentTime - t) > 0.04) el.currentTime = clamp(t, 0, el.duration || 1e9); }
     else if (playing) { if (needSeek(el, t, 0.4)) { el.currentTime = t; } if (el.paused) el.play().catch(() => {}); }
@@ -1486,6 +1497,9 @@ function updateActive() {
 function updateToolbar() {
   const e = clipAt(cur), has = !!e;
   const set = (a, v) => { const b = document.querySelector(`.tb[data-a="${a}"]`); if (b) b.disabled = !v; };
+  if (lyOn()) { const l = state.layers.find(x => x.id === selLy); if (l) { const nb = lyNeighbors(l), mid = cur > l.start + 0.1 && cur < l.start + l.len - 0.1;
+    set('split', mid); set('trimL', mid); set('trimR', mid); set('del', true); set('mvL', !!nb.p); set('mvR', !!nb.n); set('freeze', false);
+    set('text', true); set('fx', true); set('undo', history.length > 0); set('redo', redoStack.length > 0); return; } }
   set('split', has); set('trimL', has); set('trimR', has); set('del', has); set('mvL', has && e.i > 0); set('mvR', has && e.i < L.length - 1);
   set('text', has); set('fx', has); set('freeze', has); set('undo', history.length > 0); set('redo', redoStack.length > 0);
 }
@@ -1507,8 +1521,10 @@ function renderTimeline() {
   // 疊加層軌
   const rl = $('#row-l'), nt = state.ntrk || 0, ty = t => (nt - 1 - t) * 54;   // 高的軌道在上面
   rl.style.height = nt ? nt * 54 + 'px' : '0'; rl.style.width = W + 'px';
-  let rlh = ''; for (let t = nt - 1; t >= 0; t--) rlh += `<div class="trkbg" style="top:${ty(t)}px;width:${W}px"><span class="trklbl" data-trk="${t}">${t + 1}＋</span>${state.layers.some(l => l.trk === t) ? '' : `<span class="trkdel" data-trkdel="${t}">✕</span>`}</div>`;
-  rl.innerHTML = rlh + state.layers.map((l, i) => `<div class="lblock${selLy === l.id ? ' sel' : ''}" data-lid="${l.id}" style="top:${ty(l.trk || 0)}px;left:${l.start * pps}px;width:${Math.max(24, l.len * pps - 2)}px;${(assets.get(l.asset) || {}).thumb ? `background-image:url(${assets.get(l.asset).thumb})` : ''}"><span>${assets.get(l.asset) && assets.get(l.asset).kind === 'image' ? '🖼 ' : ''}${(l.len).toFixed(1)}s・${esc(assets.get(l.asset) ? assets.get(l.asset).name : '')}</span></div>`).join('');
+  let rlh = ''; for (let t = nt - 1; t >= 0; t--) rlh += `<div class="trkbg" style="top:${ty(t)}px;left:${-h}px;width:${W + 2 * h}px"></div>`;
+  rl.innerHTML = rlh + state.layers.map((l, i) => { const sel = selLy === l.id && (showLy || lyPick), w0 = Math.max(24, l.len * pps - 2), as = assets.get(l.asset);
+    return `<div class="lblock${sel ? ' sel' : ''}" data-lid="${l.id}" style="top:${ty(l.trk || 0)}px;left:${l.start * pps}px;width:${w0}px;${(as || {}).thumb ? `background-image:url(${as.thumb})` : ''}"><span>${as && as.kind === 'image' ? '🖼 ' : ''}${(l.len).toFixed(1)}s・${esc(as ? as.name : '')}</span>${sel ? '<i class="hd l" data-h="l">‹</i><i class="hd r" data-h="r">›</i>' : ''}</div>`; }).join('');
+  placeTrkBtns();
   $('#row-ladd').style.display = L.length ? 'block' : 'none';
   // 文字軌（自動分層）
   const rt = $('#row-t'), lanes = [];
@@ -1537,15 +1553,65 @@ $('#row-v').addEventListener('click', e => {
   const own = L[en.i + 1] ? Math.max(0.001, L[en.i + 1].start - en.start) : en.d;
   const keepFx = showFx; pause(); setCur(en.start + clamp(x / pps, 0, own - 0.001)); clearSel(); showFx = keepFx; renderTimeline(); renderCtx();
 });
-let pendingTrk = null;
+let pendingTrk = null, lyDragged = false;
+const MAXTRK = 4;   // 主軌＋畫面軌道，總共最多 4 條（手機同時解碼太多段影片會卡）
+function placeTrkBtns() {   // 每一條畫面軌道在左邊有自己的 🔊 音量、右邊有自己的 ＋ 加素材（和主軌一樣）
+  const ov = $('#trkov'), rl = $('#row-l'), tl = $('#tl'); if (!ov || !rl || !tl) return;
+  const nt = state.ntrk || 0, y0 = rl.getBoundingClientRect().top - tl.getBoundingClientRect().top;
+  let h = ''; for (let t = nt - 1; t >= 0; t--) { const top = Math.round(y0 + (nt - 1 - t) * 54 + 4), emp = !state.layers.some(l => l.trk === t);
+    h += `<button class="tlb vol" style="top:${top}px" data-tv="${t}" title="第 ${t + 2} 軌音量" aria-label="音量"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l4-4v14l-4-4H4zm11 0a4 4 0 0 1 0 6m2-8a7 7 0 0 1 0 10"/></svg></button><button class="tlb add" style="top:${top}px" data-ta="${t}" title="在第 ${t + 2} 軌加素材">＋</button>${emp ? `<button class="trkx" style="top:${top + 11}px" data-tx="${t}">✕</button>` : ''}`; }
+  ov.innerHTML = h;
+}
+$('#trkov').addEventListener('click', e => {
+  const v = e.target.closest('[data-tv]'); if (v) { trkVolOpen(+v.dataset.tv); return; }
+  const a = e.target.closest('[data-ta]'); if (a) { pause(); pendingTpl = null; pendingTrk = +a.dataset.ta; $('#f-layer').click(); return; }
+  const x = e.target.closest('[data-tx]'); if (x) { const t = +x.dataset.tx; commit(); state.layers.forEach(l => { if (l.trk > t) l.trk--; }); if (state.tv) { const n = {}; Object.keys(state.tv).forEach(k => { k = +k; if (k < t) n[k] = state.tv[k]; else if (k > t) n[k - 1] = state.tv[k]; }); state.tv = n; } state.ntrk = Math.max(0, (state.ntrk || 1) - 1); relayout(); renderTimeline(); dirty = true; }
+});
+function trkVolOpen(t) {
+  const bx = $('#volp'), v = tvOf(t);
+  bx.innerHTML = `<b style="font-size:14px">🔊 第 ${t + 2} 軌音量</b><label>這一軌的影片原聲<b id="tv-v">${Math.round(v * 100)}%</b></label><input type="range" id="tv-r" min="0" max="1" step="0.05" value="${v}"><button class="sm ok" id="tv-ok" style="width:100%;margin-top:10px;background:var(--main);color:#fff;border:0;border-radius:8px;padding:10px;font-weight:700">完成</button>`;
+  bx.style.display = 'block';
+  bx.querySelector('#tv-r').oninput = e => { touch('tv' + t); state.tv = state.tv || {}; state.tv[t] = +e.target.value; $('#tv-v').textContent = Math.round(state.tv[t] * 100) + '%'; syncMedia(); };
+  bx.querySelector('#tv-ok').onclick = () => { bx.style.display = 'none'; };
+}
+/* 第2軌素材：點一下＝選取（和主軌一樣不跳選單）；選取後頭尾有把手可往前／往後推，整段也能拖到別的時間點 */
+(function () {
+  const rl = $('#row-l'); let dr = null;
+  const snapT = (v, skip) => { const th = 8 / pps, pts = [0, cur]; L.forEach(e => { pts.push(e.start, e.end); }); state.layers.forEach(o => { if (o !== skip) pts.push(o.start, o.start + o.len); });
+    let best = v, bd = th; pts.forEach(q => { const d = Math.abs(q - v); if (d < bd) { bd = d; best = q; } }); return best; };
+  rl.addEventListener('pointerdown', e => {
+    const blk = e.target.closest('.lblock.sel'); if (!blk) return;
+    const l = state.layers.find(x => x.id === +blk.dataset.lid); if (!l) return;
+    const hd = e.target.closest('.hd'), a = assets.get(l.asset), nb = lyNeighbors(l);
+    dr = { l, blk, mode: hd ? hd.dataset.h : 'm', x0: e.clientX, s0: l.start, n0: l.len, i0: l.in || 0, lo: nb.p ? nb.p.start + nb.p.len : 0, hi: nb.n ? nb.n.start : 1e9, sp: spd(l), vid: a && a.kind === 'video', maxLen: a && a.kind === 'video' ? (a.dur - (l.in || 0)) / spd(l) : 120, moved: false, id: e.pointerId };
+    try { blk.setPointerCapture(e.pointerId); } catch (x) {}
+  });
+  rl.addEventListener('pointermove', e => {
+    if (!dr || e.pointerId !== dr.id) return; const dt = (e.clientX - dr.x0) / pps; if (!dr.moved && Math.abs(e.clientX - dr.x0) < 5) return;
+    if (!dr.moved) { commit(); dr.moved = true; lyDragged = true; }
+    const l = dr.l; let st = dr.s0, ln = dr.n0, inn = dr.i0;
+    if (dr.mode === 'm') { st = snapT(dr.s0 + dt, l); if (st + ln > dr.hi) st = dr.hi - ln; if (st < dr.lo) st = dr.lo; st = Math.max(0, st); }
+    else if (dr.mode === 'l') { let ns = snapT(dr.s0 + dt, l); ns = Math.max(ns, dr.lo, 0); const end = dr.s0 + dr.n0; ns = Math.min(ns, end - 0.3);
+      if (dr.vid) { const din = (ns - dr.s0) * dr.sp; if (dr.i0 + din < 0) ns = dr.s0 - dr.i0 / dr.sp; inn = dr.i0 + (ns - dr.s0) * dr.sp; }
+      st = ns; ln = end - ns; }
+    else { let ne = snapT(dr.s0 + dr.n0 + dt, l); ne = Math.min(ne, dr.hi, dr.s0 + dr.maxLen); ne = Math.max(ne, dr.s0 + 0.3); ln = ne - dr.s0; }
+    l.start = st; l.len = ln; if (dr.vid) l.in = inn;
+    dr.blk.style.left = st * pps + 'px'; dr.blk.style.width = Math.max(24, ln * pps - 2) + 'px'; dirty = true;
+  });
+  const end = e => { if (!dr || (e && e.pointerId !== dr.id)) return; const m = dr.moved; dr = null; if (m) { relayout(); renderTimeline(); setCur(cur); updateToolbar(); dirty = true; setTimeout(() => { lyDragged = false; }, 60); } };
+  rl.addEventListener('pointerup', end); rl.addEventListener('pointercancel', end);
+})();
 $('#row-l').addEventListener('click', e => {
-  const tl = e.target.closest('.trklbl'); if (tl) { pause(); pendingTpl = null; pendingTrk = +tl.dataset.trk; $('#f-layer').click(); return; }
-  const td = e.target.closest('.trkdel'); if (td) { const t = +td.dataset.trkdel; commit(); state.layers.forEach(l => { if (l.trk > t) l.trk--; }); state.ntrk = Math.max(0, (state.ntrk || 1) - 1); relayout(); renderTimeline(); dirty = true; return; }
-  const d = e.target.closest('.lblock'); if (!d) return; clearSel(); showLy = true; selLy = +d.dataset.lid; renderTimeline(); renderCtx(); dirty = true; });
+  if (lyDragged) return;
+  const d = e.target.closest('.lblock'); if (!d) return;
+  const l = state.layers.find(x => x.id === +d.dataset.lid); if (!l) return;
+  const x = e.clientX - d.getBoundingClientRect().left; pause();
+  const keepP = showLy && selLy === l.id; clearSel(); selLy = l.id; if (keepP) showLy = true; else lyPick = true;
+  setCur(clamp(l.start + x / pps, l.start, l.start + l.len - 0.001)); renderTimeline(); renderCtx(); updateToolbar(); dirty = true; });
 $('#row-t').addEventListener('click', e => { const d = e.target.closest('.tblock'); if (!d) return; clearSel(); selText = +d.dataset.tid; renderTimeline(); renderCtx(); });
 $('#row-m').addEventListener('click', e => { if (!e.target.closest('.mblock')) return; clearSel(); selMusic = true; renderTimeline(); renderCtx(); });
 function setPps(v) { pps = clamp(v, 12, 600); renderTimeline(); }
-$('#trk-add').onclick = () => { pause(); commit(); state.ntrk = (state.ntrk || 0) + 1; pendingTpl = null; pendingTrk = state.ntrk - 1; renderTimeline(); $('#f-layer').click(); };
+$('#trk-add').onclick = () => { if ((state.ntrk || 0) + 1 >= MAXTRK) return toast('手機最多 4 條軌道（含主軌），再多會卡'); pause(); commit(); state.ntrk = (state.ntrk || 0) + 1; pendingTpl = null; pendingTrk = state.ntrk - 1; renderTimeline(); $('#f-layer').click(); };
 $('#z-in').onclick = () => setPps(pps * 1.5); $('#z-out').onclick = () => setPps(pps / 1.5);
 // 兩指縮放
 let pz = null;
@@ -1610,7 +1676,7 @@ const ops = {
   music() { $('#f-music').click(); },
   lib() { libOpen(); },
   fx() { clearSel(); showFx = true; renderTimeline(); renderCtx(); },
-  ly() { clearSel(); showLy = true; renderTimeline(); renderCtx(); dirty = true; },
+  ly() { clearSel(); showLy = true; renderTimeline(); renderCtx(); dirty = true; },   // （已選了第2軌素材時，會走 LYOPS.ly）
   kf() { const m = (showLy && selLy) ? 'ly' : 'clip', id = selLy; clearSel(); showKf = true; kfMode = m; kfLyId = id; renderTimeline(); renderCtx(); dirty = true; },
   au() { clearSel(); showAu = true; renderTimeline(); renderCtx(); dirty = true; },
   st() { clearSel(); showSt = true; renderTimeline(); renderCtx(); dirty = true; },
@@ -1620,15 +1686,47 @@ const ops = {
   tpl() { clearSel(); showAuto = true; autoMode = 'tpl'; renderTimeline(); renderCtx(); },
   undo, redo
 };
+/* ===== 第2軌（畫面軌道）素材的剪接：和主軌同樣的「分割／裁掉左邊／裁掉右邊／刪除／前後換位」===== */
+function lyNeighbors(l) {   // 同一條軌道裡，左邊和右邊最靠近的素材
+  const same = state.layers.filter(o => o !== l && (o.trk || 0) === (l.trk || 0));
+  let p = null, n = null; same.forEach(o => { if (o.start + o.len <= l.start + 0.001) { if (!p || o.start > p.start) p = o; } else if (o.start >= l.start + l.len - 0.001) { if (!n || o.start < n.start) n = o; } });
+  return { p, n };
+}
+const lyAfter = () => { relayout(); renderAll(); setCur(cur); updateToolbar(); };
+const LYOPS = {
+  split(l) {
+    const local = cur - l.start; if (local < 0.1 || l.len - local < 0.1) return toast('請把時間線移到這一段「中間」再分割');
+    commit(); const sp = spd(l), b = { ...l, id: uid++ }, a = assets.get(l.asset);
+    b.start = cur; b.len = l.len - local; if (a && a.kind === 'video') b.in = l.in + local * sp; if (l.kf) b.kf = l.kf.map(k => ({ ...k, t: +(k.t - local).toFixed(3) }));
+    l.len = local; state.layers.splice(state.layers.indexOf(l) + 1, 0, b); lyAfter(); toast('已分割');
+  },
+  trimL(l) {
+    const local = cur - l.start; if (local < 0.05 || l.len - local < 0.3) return toast('這裡沒有東西可以裁，請把時間線移到這一段中間');
+    commit(); const a = assets.get(l.asset); if (a && a.kind === 'video') l.in += local * spd(l); if (l.kf) l.kf = l.kf.map(k => ({ ...k, t: +(k.t - local).toFixed(3) })); l.start = cur; l.len -= local; lyAfter(); toast('已裁掉左邊');
+  },
+  trimR(l) {
+    const local = cur - l.start; if (local < 0.3 || l.len - local < 0.05) return toast('這裡沒有東西可以裁，請把時間線移到這一段中間');
+    commit(); l.len = local; lyAfter(); toast('已裁掉右邊');
+  },
+  del(l) { commit(); state.layers = state.layers.filter(x => x !== l); const e0 = lyEls.get(l.id); if (e0) { e0.pause(); e0.remove(); lyEls.delete(l.id); } selLy = null; lyPick = false; showLy = false; lyAfter(); toast('已刪除這一段'); },
+  mvL(l) { const { p } = lyNeighbors(l); if (!p) return; commit(); const gap = l.start - (p.start + p.len), ps = p.start; l.start = ps; p.start = ps + l.len + gap; lyAfter(); setCur(l.start); },
+  mvR(l) { const { n } = lyNeighbors(l); if (!n) return; commit(); const gap = n.start - (l.start + l.len), ls = l.start; n.start = ls; l.start = ls + n.len + gap; lyAfter(); setCur(l.start); },
+  fx(l) { showLy = true; lyTab = 'f'; renderTimeline(); renderCtx(); dirty = true; },
+  clip(l) { showLy = true; lyTab = 'x'; renderTimeline(); renderCtx(); dirty = true; },
+  ly(l) { showLy = true; lyTab = 'p'; renderTimeline(); renderCtx(); dirty = true; },
+  kf(l) { const id = selLy; clearSel(); showKf = true; kfMode = 'ly'; kfLyId = id; renderTimeline(); renderCtx(); dirty = true; }
+};
 const PANEL_OPS = new Set(['lib', 'fx', 'ly', 'kf', 'au', 'st', 'ef', 'auto', 'tpl', 'clip', 'text', 'cam']);
-document.addEventListener('click', e => { const b = e.target.closest('.tb'); if (!b || b.disabled || !ops[b.dataset.a]) return; pause(); ops[b.dataset.a](); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); });
+document.addEventListener('click', e => { const b = e.target.closest('.tb'); if (!b || b.disabled || !ops[b.dataset.a]) return; pause();
+  { const ly0 = lyOn() && state.layers.find(x => x.id === selLy), f0 = ly0 && LYOPS[b.dataset.a]; if (f0) { f0(ly0); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); return; } }
+  ops[b.dataset.a](); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); });
 /* ===== 底部浮出：分類面板＋設定面板（不擠壓預覽）===== */
 const CATS = { edit: ['編輯', ['split', 'freeze', 'trimL', 'trimR', 'del', 'mvL', 'mvR', 'fx', 'kf', 'clip']], music: ['音樂', ['lib', 'music', 'au']], text: ['文字', ['text', 'st']], fx: ['特效', ['ef', 'ly', 'auto', 'tpl']] };
 let catKey = null;
 function closeCats() { const g = $('#cats-g'), pool = $('#tbpool'); [...g.children].forEach(b => pool.appendChild(b)); $('#cats').classList.remove('on'); catKey = null; }
 function openCat(k) {
   if (catKey === k) { closeCats(); layoutSheet(); return; }
-  closeCats(); clearSel(); renderTimeline(); renderCtx();
+  closeCats(); { const kp = lyOn() ? selLy : null; clearSel(); if (kp) { selLy = kp; lyPick = true; } } renderTimeline(); renderCtx();
   const g = $('#cats-g'), pool = $('#tbpool'); $('#cats-t').textContent = CATS[k][0];
   CATS[k][1].forEach(a => { const b = pool.querySelector(`.tb[data-a="${a}"]`); if (b) g.appendChild(b); });
   $('#cats').classList.add('on'); catKey = k; layoutSheet(); updateToolbar();
@@ -2113,7 +2211,7 @@ function lyHtml() {
   } else {
     h += `<div class="r2"><div><label>從第幾秒開始出現</label><input type="number" id="ly-s" step="0.1" min="0" value="${l.start.toFixed(1)}"></div><div><label>出現多久（秒）</label><input type="number" id="ly-d" step="0.1" min="0.3" value="${l.len.toFixed(1)}"></div></div>
     <div class="r2" style="margin-top:8px"><button class="sm" id="ly-ss">開始＝目前位置</button><button class="sm" id="ly-se">結束＝目前位置</button></div>
-    ${isV ? `<label class="chk"><input type="checkbox" id="ly-snd"${l.mute === false ? ' checked' : ''}> 這一格要有聲音（預設靜音，免得好幾個聲音混在一起）</label>` : ''}
+    ${isV ? `<label class="chk"><input type="checkbox" id="ly-snd"${l.mute === false ? ' checked' : ''}> 這一格要有原本的聲音（這一軌的音量按軌道左邊的 🔊 調）</label>` : ''}
     <div class="r2" style="margin-top:8px"><button class="sm" id="ly-up">⬆ 移到上一條軌道</button><button class="sm" id="ly-dn">⬇ 移到下一條軌道</button></div>
     <button class="sm red" id="ly-del" style="margin-top:8px;width:100%">刪除這一格</button>`;
   }
@@ -2160,8 +2258,8 @@ function bindLy(on) {
   on('#ly-snd', 'change', e => { commit(); l.mute = !e.target.checked; syncMedia(); });
   on('#ly-up', 'click', () => { if ((l.trk || 0) >= (state.ntrk || 1) - 1) return toast('已經在最上面的軌道'); commit(); l.trk = (l.trk || 0) + 1; relayout(); renderTimeline(); renderCtx(); dirty = true; });
   on('#ly-dn', 'click', () => { if ((l.trk || 0) < 1) return toast('已經在最下面的軌道'); commit(); l.trk = (l.trk || 0) - 1; relayout(); renderTimeline(); renderCtx(); dirty = true; });
-  on('#ly-del', 'click', () => { commit(); state.layers = state.layers.filter(x => x !== l); const e0 = lyEls.get(l.id); if (e0) { e0.pause(); e0.remove(); lyEls.delete(l.id); } selLy = null; re(); });
-  on('#ly-back', 'click', () => { selLy = null; renderTimeline(); renderCtx(); dirty = true; });
+  on('#ly-del', 'click', () => { commit(); state.layers = state.layers.filter(x => x !== l); const e0 = lyEls.get(l.id); if (e0) { e0.pause(); e0.remove(); lyEls.delete(l.id); } selLy = null; showLy = false; lyPick = false; re(); });
+  on('#ly-back', 'click', () => { showLy = false; lyPick = true; renderTimeline(); renderCtx(); updateToolbar(); dirty = true; });
 }
 async function addLayers(files, tplKey, want) {
   toast('匯入中…'); commit();
@@ -2175,12 +2273,12 @@ async function addLayers(files, tplKey, want) {
       if (want != null) { tk = want; for (let g2 = 0; g2 < 60; g2++) { const o = state.layers.find(o => o.trk === want && o.start < st + ln - 0.001 && o.start + o.len > st + 0.001); if (!o) break; st = o.start + o.len; } }   // 指定的軌道這個時間已經有素材：接在後面
       else { tk = 0; while (tk < (state.ntrk || 0) && busy(tk, st)) tk++; }   // 沒指定：放進第一條空著的軌道，沒有就自動新增一條
       state.ntrk = Math.max(state.ntrk || 0, tk + 1);
-      const l = { id: uid++, asset: a.id, start: st, in: 0, len: ln, x, y, w, ar, fit: 'cover', mute: true, trk: tk };
+      const l = { id: uid++, asset: a.id, start: st, in: 0, len: ln, x, y, w, ar, fit: 'cover', mute: false, trk: tk };
       state.layers.push(l); last = l; n++;
     } catch (e) { toast(e.message); }
   }
-  clearSel(); showLy = true; lyTab = 'p'; selLy = (!tpl && last) ? last.id : null;
-  relayout(); renderAll(); setCur(cur);
+  clearSel(); if (tpl) { showLy = true; lyTab = 'p'; } else if (last) { selLy = last.id; lyPick = true; }
+  relayout(); renderAll(); setCur(!tpl && last ? last.start : cur);
   toast(tpl ? (n < tpl.c.length ? `放了 ${n} 格，還有 ${tpl.c.length - n} 格是空的，可再用「自由加一層」補` : '已放進版面') : '已加一層');
 }
 $('#f-layer').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; const t = pendingTpl, tk = pendingTrk; pendingTpl = null; pendingTrk = null; if (fs.length) { pause(); addLayers(fs, t, tk); } };
@@ -2585,7 +2683,7 @@ $('#xp-go').onclick = async () => {
       if (needA) {
         const aL = [];
         const afx = audFilters(aud); parts.push(`[0:a]${padT > 0 ? `apad=pad_dur=${padT.toFixed(3)},` : ''}${afx.length ? afx.join(',') + ',' : ''}volume=${V1}[a0]`); aL.push('[a0]');
-        layerAudio.forEach(it => { const sp = spd(it.l); parts.push(`[${it.i}:a]${sp !== 1 ? atempoStr(sp) + ',' : ''}adelay=${Math.round(it.l.start * 1000)}:all=1[la${it.i}]`); aL.push(`[la${it.i}]`); });
+        layerAudio.forEach(it => { const sp = spd(it.l); parts.push(`[${it.i}:a]${sp !== 1 ? atempoStr(sp) + ',' : ''}adelay=${Math.round(it.l.start * 1000)}:all=1,volume=${(V1 * ((snap.tv && snap.tv[it.l.trk || 0] != null) ? snap.tv[it.l.trk || 0] : 1)).toFixed(3)}[la${it.i}]`); aL.push(`[la${it.i}]`); });
         if (music) { const ms = Math.round(music.offset * 1000); parts.push(`[${mi}:a]volume=${Vm}${ms > 0 ? `,adelay=${ms}:all=1` : ''}[am]`); aL.push('[am]'); }
         vos.forEach(v => { parts.push(`[${v.i}:a]aresample=44100,volume=${v.vol == null ? 1 : v.vol}${v.offset > 0 ? `,adelay=${Math.round(v.offset * 1000)}:all=1` : ''}[vo${v.i}]`); aL.push(`[vo${v.i}]`); });
         if (aL.length > 1) { parts.push(`${aL.join('')}amix=inputs=${aL.length}:duration=first:normalize=0[aout]`); amap = '[aout]'; } else amap = aL[0];
@@ -2624,7 +2722,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AJ';
+const VER_NOW = '1121-AK';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2757,7 +2855,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
     if (pts.length >= 2) return { n: 2, cx: (pts[0].x + pts[1].x) / 2, cy: (pts[0].y + pts[1].y) / 2, d: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y), a: Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x) };
     return { n: 1, cx: pts[0].x, cy: pts[0].y, d: 0, a: 0 };
   };
-  const reset = () => { if (!ptr.size) { target = null; start = null; committed = false; return; } lyMode = !!(showLy && selLy); const en = clipAt(cur);
+  const reset = () => { if (!ptr.size) { target = null; start = null; committed = false; return; } lyMode = lyOn(); const en = clipAt(cur);
     target = lyMode ? (state.layers.find(x => x.id === selLy) || null) : (en && selPic === en.c.id ? en.c : null); start = info();
     if (lyMode && target) { start.z = target.w; start.x = target.x; start.y = target.y; } else { start.z = target && target.z || 1; start.x = target && target.x || 0; start.y = target && target.y || 0; }
     start.ang = target && target.ang || 0; };
@@ -2783,10 +2881,10 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
       if (vb && vb.style.display === 'block') vb.style.display = 'none';
       const p = toCv(e.clientX, e.clientY), hit = state.layers.slice().reverse().find(l => cur >= l.start && cur < l.start + l.len && lyHit(l, p.x, p.y));
       if (hit) {
-        if (!(showLy && selLy === hit.id)) { clearSel(); showLy = true; selLy = hit.id; renderTimeline(); renderCtx(); dirty = true; }
+        if (!(lyOn() && selLy === hit.id)) { const keepP = showLy && selLy; clearSel(); selLy = hit.id; if (keepP) { showLy = true; } else lyPick = true; renderTimeline(); renderCtx(); updateToolbar(); dirty = true; }
       } else {
-        const en = clipAt(cur), was = en && selPic === en.c.id && !open && !(showLy && selLy);
-        if (open || (showLy && selLy)) { closeCats(); clearSel(); renderTimeline(); renderCtx(); layoutSheet(); updateToolbar(); }
+        const en = clipAt(cur), was = en && selPic === en.c.id && !open && !lyOn();
+        if (open || lyOn()) { closeCats(); clearSel(); renderTimeline(); renderCtx(); layoutSheet(); updateToolbar(); }
         selPic = en && !was ? en.c.id : null; dirty = true;
       }
     }
@@ -2845,7 +2943,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AJ', upd = document.getElementById('upd');
+  const VER = '1121-AK', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
