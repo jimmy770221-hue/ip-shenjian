@@ -677,7 +677,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AA（新範本：派對快閃／故事字幕）</div>
+  <div class="hfoot">版本 1121-AB（一鍵全自動套版）</div>
   </main>
 </div>
 <div id="app">
@@ -2170,6 +2170,7 @@ const CLUBTPL = [
 function tplHtml() {
   const hasM = !!state.music;
   return `<h4>🎬 剪輯範本：先時間軸右邊的「＋」選好照片影片，再一鍵套用</h4>
+  <button class="sm ok" id="tp-auto" style="width:100%;padding:12px;font-size:15px;margin:4px 0 8px">✨ 一鍵全自動（不用填，隨機挑風格）</button>
   <label>範本風格</label><select id="tp-st">${CLUBTPL.map((x, i) => `<option value="${i}">${x.n}</option>`).join('')}</select>
   <label>活動名稱（片頭大字）</label><input type="text" id="tp-title" maxlength="20" placeholder="例如：暑期營隊回顧">
   <label>日期或副標（選填，片頭小字）</label><input type="text" id="tp-sub" maxlength="24" placeholder="例如：2026.07.20">
@@ -2182,13 +2183,15 @@ function tplHtml() {
 }
 function bindTpl(on) {
   on('#tp-x', 'click', () => { showAuto = false; renderCtx(); });
+  let autoFlag = false;
+  on('#tp-auto', 'click', () => { const st = $('#tp-st'); st.value = String(Math.floor(Math.random() * CLUBTPL.length)); $('#tp-title').value = ''; $('#tp-sub').value = ''; $('#tp-end').value = ''; if ($('#tp-cap')) $('#tp-cap').value = ''; autoFlag = true; $('#tp-go').click(); });
   on('#tp-go', 'click', async () => {
     if (!state.clips.length) return toast('請先按時間軸右邊的「＋」加入照片和影片');
-    const T = CLUBTPL[+$('#tp-st').value], title = $('#tp-title').value.trim() || '活動回顧', sub = $('#tp-sub').value.trim(), endT = $('#tp-end').value.trim();
+    const T = CLUBTPL[+$('#tp-st').value], title = $('#tp-title').value.trim() || (autoFlag ? '' : '活動回顧'), sub = $('#tp-sub').value.trim(), endT = $('#tp-end').value.trim();
     const beat = $('#tp-beat').checked && !!state.music, sfx = $('#tp-sfx').checked, caps = ($('#tp-cap') ? $('#tp-cap').value : '').split('\n').map(x => x.trim()).filter(Boolean);
     if (T.kb) state.kb = true;
     if (beat && !(state.beats || []).length) { await detectBeats(); }
-    commit();
+    autoFlag = false; commit();
     // 1. 每段上限秒數＋換頁
     state.clips.forEach((c, i) => {
       const a = assets.get(c.asset), sp = spd(c);
@@ -2215,7 +2218,7 @@ function bindTpl(on) {
     // 3. 片頭片尾文字（再套用會取代上一次範本的字）
     state.texts = state.texts.filter(x => !x.tpl);
     const td = Math.min(T.ph, Math.max(1, total * 0.4));
-    state.texts.push({ id: uid++, tpl: 1, text: title, start: 0.2, dur: td, color: T.c, size: 11, pos: 'middle', an: 'pop', sh: 1 });
+    if (title) state.texts.push({ id: uid++, tpl: 1, text: title, start: 0.2, dur: td, color: T.c, size: 11, pos: 'middle', an: 'pop', sh: 1 });
     if (sub) state.texts.push({ id: uid++, tpl: 1, text: sub, start: 0.5, dur: Math.max(0.8, td - 0.3), color: '#ffffff', size: 5, pos: 'middle', ty: 0.12, an: 'fade', sh: 1 });
     if (endT) { const ed = Math.min(2.5, Math.max(1, total * 0.3)); state.texts.push({ id: uid++, tpl: 1, text: endT, start: Math.max(0, total - ed), dur: ed, color: T.end, size: 10, pos: 'middle', an: 'rise', sh: 1 }); }
     caps.forEach((t, i) => { const e = L[i]; if (!e) return; state.texts.push({ id: uid++, tpl: 1, text: t, start: e.start + 0.15, dur: Math.max(0.8, Math.min(3.2, e.d - 0.3)), color: '#ffffff', size: 6.5, pos: 'bottom', ty: -0.12, an: 'fade', sh: 1 }); });
@@ -2533,7 +2536,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AA';
+const VER_NOW = '1121-AB';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2706,7 +2709,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AA', upd = document.getElementById('upd');
+  const VER = '1121-AB', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
