@@ -37,7 +37,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .ruler{position:relative;height:20px}
 .ruler i{position:absolute;top:0;font-style:normal;font-size:10px;color:var(--sub);border-left:1px solid var(--line);padding-left:3px;height:20px;line-height:18px;white-space:nowrap}
 .row{position:relative;margin-top:4px}
-.row.v{height:50px}
+.row.v{height:78px}
 .clip{position:absolute;top:0;height:50px;border-radius:8px;overflow:hidden;background:#3a4166 center/auto 100% repeat-x;border:2px solid #4a5284;color:#fff;font-size:11px}
 .clip.active{border-color:var(--hot);box-shadow:0 0 0 1px var(--hot)}
 .clip span{position:absolute;left:0;right:0;bottom:0;padding:2px 5px;background:rgba(0,0,0,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -103,7 +103,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .ctx .sm.ok{background:var(--main);border-color:var(--main)}
 .chk{display:flex;align-items:center;gap:8px;margin:8px 0;color:var(--text);font-size:14px}
 .hint{font-size:12px;color:var(--sub);margin:4px 0}
-.tmark{position:absolute;top:16px;width:26px;height:26px;margin-left:-13px;border-radius:50%;background:#262a3d;border:2px solid #fff;color:#fff;font-size:13px;line-height:22px;text-align:center;z-index:30;box-shadow:0 1px 4px #0008}
+.tmark{position:absolute;top:52px;width:26px;height:26px;margin-left:-13px;border-radius:50%;background:#262a3d;border:2px solid #fff;color:#fff;font-size:13px;line-height:22px;text-align:center;z-index:30;box-shadow:0 1px 4px #0008}
 .tmark.on{background:var(--hot);border-color:var(--hot);color:#000;font-weight:800}
 .tmark.sel{box-shadow:0 0 0 3px #fff8}
 .tabs3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
@@ -677,7 +677,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AG（預覽更清晰）</div>
+  <div class="hfoot">版本 1121-AH（選取才能編輯・任意旋轉）</div>
   </main>
 </div>
 <div id="app">
@@ -798,7 +798,8 @@ let history = [], redoStack = [], lastTouch = null;
 let showClip = false, showAu = false, showSt = false, showEf = false, showKf = false, kfMode = 'clip', kfLyId = null, kfIdx = -1;
 let showFx = false, fxTab = 'f', fxIdx = -1, showLy = false, selLy = null, lyTab = 'p', pendingTpl = null;
 let cur = 0, playing = false, pps = 80, selText = null, selMusic = false, selTr = null, showAuto = false, dirty = true;
-function clearSel() { showClip = false; showAu = false; showSt = false; showEf = false; showKf = false; showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
+let selPic = null;   // 目前「鎖定」可以在畫面上拖移／縮放／旋轉的那一段（clip id）
+function clearSel() { selPic = null; showClip = false; showAu = false; showSt = false; showEf = false; showKf = false; showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
 let L = [], total = 0;               // 排版結果
 const FXP = {
   none: { n: '原圖', b: 0, ct: 1, sa: 1, r: 1, g: 1, bl: 1 },
@@ -1023,9 +1024,9 @@ function drawText(g, W, H, x, tl) {
   g.restore();
 }
 function drawContain(T, src, sw, sh, c) {
-  const W = cv.width, H = cv.height, z = (c && c.z) || 1, ox = (c && c.x) || 0, oy = (c && c.y) || 0, rot = (c && c.rot) || 0;
+  const W = cv.width, H = cv.height, z = (c && c.z) || 1, ox = (c && c.x) || 0, oy = (c && c.y) || 0, rot = (c && c.rot) || 0, ang = (c && c.ang) || 0;
   const sw2 = rot % 180 ? sh : sw, sh2 = rot % 180 ? sw : sh, s = Math.min(W / sw2, H / sh2) * z;
-  T.save(); T.translate(W / 2 + ox * W, H / 2 + oy * H); T.rotate(rot * Math.PI / 180); T.scale(c && c.fh ? -1 : 1, c && c.fv ? -1 : 1);
+  T.save(); T.translate(W / 2 + ox * W, H / 2 + oy * H); T.rotate((rot + ang) * Math.PI / 180); T.scale(c && c.fh ? -1 : 1, c && c.fv ? -1 : 1);
   T.drawImage(src, -sw * s / 2, -sh * s / 2, sw * s, sh * s); T.restore();
 }
 let xsrc = null;   // 快速匯出時：每一格的影片畫面（key → canvas）
@@ -1074,6 +1075,21 @@ function layerEl(l) {
   let e = lyEls.get(l.id);
   if (!e) { const a = assets.get(l.asset); e = document.createElement('video'); e.playsInline = true; e.preload = 'auto'; e.muted = true; e.src = a.url; e.setAttribute('playsinline', ''); $('#pool').appendChild(e); e.addEventListener('seeked', () => dirty = true); e.addEventListener('loadeddata', () => dirty = true); lyEls.set(l.id, e); }
   return e;
+}
+function lyRot(l, f) {   // 拼貼的任意角度旋轉：以這一格的中心轉
+  if (!l.ang) return f();
+  const r = lyRect(l), cx = r.x + r.cw / 2, cy = r.y + r.ch / 2; g.save(); g.translate(cx, cy); g.rotate(l.ang * Math.PI / 180); g.translate(-cx, -cy);
+  try { f(); } finally { g.restore(); }
+}
+function lyHit(l, px, py) {
+  const r = lyRect(l), cx = r.x + r.cw / 2, cy = r.y + r.ch / 2, a = -(l.ang || 0) * Math.PI / 180, dx = px - cx, dy = py - cy;
+  return Math.abs(dx * Math.cos(a) - dy * Math.sin(a)) <= r.cw / 2 && Math.abs(dx * Math.sin(a) + dy * Math.cos(a)) <= r.ch / 2;
+}
+function drawPicFrame(c) {
+  const a = assets.get(c.asset); if (!a || !a.w) return;
+  const W = cv.width, H = cv.height, rot = c.rot || 0, sw2 = rot % 180 ? a.h : a.w, sh2 = rot % 180 ? a.w : a.h, s = Math.min(W / sw2, H / sh2) * (c.z || 1), w = a.w * s, h = a.h * s;
+  g.save(); g.translate(W / 2 + (c.x || 0) * W, H / 2 + (c.y || 0) * H); g.rotate((rot + (c.ang || 0)) * Math.PI / 180);
+  g.setLineDash([8 * pvK, 5 * pvK]); g.lineWidth = 3 * pvK; g.strokeStyle = '#ffb347'; g.strokeRect(-w / 2, -h / 2, w, h); g.restore();
 }
 function lyRect(l) { const W = cv.width, H = cv.height, cw = l.w * W, ch = cw / l.ar; return { cw, ch, x: l.x * W - cw / 2, y: l.y * H - ch / 2 }; }
 const MASKS = [['', '無'], ['circle', '圓形'], ['round', '圓角'], ['heart', '愛心'], ['star', '星形'], ['diamond', '菱形'], ['fadeb', '下淡出'], ['fadet', '上淡出'], ['fadel', '左淡出'], ['fader', '右淡出']];
@@ -1233,7 +1249,7 @@ function drawEntry(e) {
   if (fx) { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); T = fxg; }
   if (tf) { g.save(); applyTf(g, cv.width / 2, cv.height / 2, kk, cv.width, cv.height); g.globalAlpha *= kk.o; }
   try {
-    if (e.c.bb && !tf && !(state.kb && a.kind === 'image') && !((e.c.z && e.c.z !== 1) || e.c.x || e.c.y)) { const sb = a.kind === 'image' ? a.img : xsrc ? xsrc['c' + e.c.id] : (a.el.readyState >= 2 ? a.el : null); if (sb) drawBlurBg(T, sb, xsrc && a.kind !== 'image' ? sb.width : a.w, xsrc && a.kind !== 'image' ? sb.height : a.h, e.c); }
+    if (e.c.bb && !tf && !(state.kb && a.kind === 'image') && !((e.c.z && e.c.z !== 1) || e.c.x || e.c.y || e.c.ang)) { const sb = a.kind === 'image' ? a.img : xsrc ? xsrc['c' + e.c.id] : (a.el.readyState >= 2 ? a.el : null); if (sb) drawBlurBg(T, sb, xsrc && a.kind !== 'image' ? sb.width : a.w, xsrc && a.kind !== 'image' ? sb.height : a.h, e.c); }
     if (a.kind === 'image') {
       const z = state.kb ? 1 + 0.12 * clamp((cur - e.start) / e.d, 0, 1) : 1;
       T.save(); T.translate(cv.width / 2, cv.height / 2); T.scale(z, z); T.translate(-cv.width / 2, -cv.height / 2);
@@ -1284,11 +1300,14 @@ function renderFrame() {
     const sameVideo = ts.A.c.asset === ts.B.c.asset && assets.get(ts.B.c.asset).kind === 'video';
     if (sameVideo) drawEntry(ts.B); else drawTrans(ts.B.c.tr.type, ts.p, () => drawEntry(ts.A), () => drawEntry(ts.B));
   } else { const act = activeEntries(); if (act.length) drawEntry(act[act.length - 1]); }
-  for (const l of state.layers) if (cur >= l.start && cur < l.start + l.len) drawLayer(l);
+  for (const l of state.layers) if (cur >= l.start && cur < l.start + l.len) lyRot(l, () => drawLayer(l));
   if (state.gfx && hasFx(state.gfx)) { try { if (fxc.width !== cv.width || fxc.height !== cv.height) { fxc.width = cv.width; fxc.height = cv.height; } fxg.clearRect(0, 0, fxc.width, fxc.height); fxg.drawImage(cv, 0, 0); applyFx(state.gfx); g.drawImage(fxc, 0, 0); } catch (er) {} }
   if (state.gfx && hasEf(state.gfx.ef)) { try { applyEf(state.gfx.ef, cur); } catch (er) {} }
   for (const x of state.texts) if (cur >= x.start && cur < x.start + x.dur) drawText(g, cv.width, cv.height, x, cur - x.start);
-  if (selLy && showLy && !xsrc) { const l = state.layers.find(x => x.id === selLy); if (l && cur >= l.start && cur < l.start + l.len) { const r = lyRect(l); g.save(); g.setLineDash([8, 5]); g.lineWidth = 3; g.strokeStyle = '#ffb347'; g.strokeRect(r.x + 1.5, r.y + 1.5, r.cw - 3, r.ch - 3); g.restore(); } }
+  if (!xsrc && !exporting) {   // 選取框（只在預覽顯示，不會匯出）
+    if (selLy && showLy) { const l = state.layers.find(x => x.id === selLy); if (l && cur >= l.start && cur < l.start + l.len) lyRot(l, () => { const r = lyRect(l); g.save(); g.setLineDash([8 * pvK, 5 * pvK]); g.lineWidth = 3 * pvK; g.strokeStyle = '#ffb347'; g.strokeRect(r.x + 1.5, r.y + 1.5, r.cw - 3, r.ch - 3); g.restore(); }); }
+    else { const en = clipAt(cur); if (en && selPic === en.c.id) drawPicFrame(en.c); }
+  }
 }
 // 播放中校正：只有偏差很大、而且離上次校正超過1秒才跳轉，避免音樂/聲音一直被打斷（斷斷續續）
 // 配樂改用 WebAudio 解碼後播放（比 <audio> 穩，手機預覽不會斷斷續續）；太長的音樂（>6分鐘）維持原本方式
@@ -1496,8 +1515,9 @@ $('#row-v').addEventListener('click', e => {
   const m = e.target.closest('.tmark');
   if (m) { const i = +m.dataset.ti; pause(); clearSel(); selTr = i; setCur(L[i].start + L[i].td / 2); renderTimeline(); renderCtx(); return; }
   const d = e.target.closest('.clip'); if (!d) return; const en = L[+d.dataset.i];
-  const x = e.clientX - d.getBoundingClientRect().left; // 點到哪裡就跳到哪裡
-  const keepFx = showFx; pause(); setCur(en.start + clamp(x / pps, 0, en.d - 0.001)); clearSel(); showFx = keepFx; renderTimeline(); renderCtx();
+  const x = e.clientX - d.getBoundingClientRect().left; // 點到哪裡就跳到哪裡（轉場重疊的部分算在後一段，所以限制在自己的範圍內，才選得到這一段）
+  const own = L[en.i + 1] ? Math.max(0.001, L[en.i + 1].start - en.start) : en.d;
+  const keepFx = showFx; pause(); setCur(en.start + clamp(x / pps, 0, own - 0.001)); clearSel(); showFx = keepFx; renderTimeline(); renderCtx();
 });
 $('#row-l').addEventListener('click', e => { const d = e.target.closest('.lblock'); if (!d) return; clearSel(); showLy = true; selLy = +d.dataset.lid; renderTimeline(); renderCtx(); dirty = true; });
 $('#row-t').addEventListener('click', e => { const d = e.target.closest('.tblock'); if (!d) return; clearSel(); selText = +d.dataset.tid; renderTimeline(); renderCtx(); });
@@ -1746,6 +1766,7 @@ function fxHtml() {
   } else {
     h += `<div class="r2"><button class="sm" data-x="rot">↻ 轉 90°</button><button class="sm" data-x="fh">⇋ 左右翻轉</button></div>
     <div class="r2" style="margin-top:8px"><button class="sm" data-x="fv">⇅ 上下翻轉</button><button class="sm" data-x="reset">還原</button></div>
+    <label style="display:block;margin-top:8px">🔄 任意角度旋轉：<b id="fx-ang-v">${c.ang || 0}°</b>（也可以先點畫面選取，再用兩指轉動）</label><input type="range" id="fx-ang" min="-180" max="180" step="1" value="${c.ang || 0}" style="width:100%">
     <label class="chk"><input type="checkbox" id="fx-bb"${c.bb ? ' checked' : ''}> 🌫 背景模糊填滿（畫面沒填滿時，黑邊改成模糊的同一畫面）</label>
     <p class="hint">目前：旋轉 ${c.rot || 0}°${c.fh ? '・左右翻轉' : ''}${c.fv ? '・上下翻轉' : ''}　（有縮放或照片推近時，背景模糊不會作用）</p>`;
   }
@@ -1775,9 +1796,10 @@ function bindFx(on) {
     if (k === 'rot') { c.rot = ((c.rot || 0) + 90) % 360; if (!c.rot) delete c.rot; }
     else if (k === 'fh') { if (c.fh) delete c.fh; else c.fh = true; }
     else if (k === 'fv') { if (c.fv) delete c.fv; else c.fv = true; }
-    else { delete c.rot; delete c.fh; delete c.fv; }
+    else { delete c.rot; delete c.fh; delete c.fv; delete c.ang; }
     dirty = true; renderCtx();
   });
+  { const sl = document.querySelector('#fx-ang'); if (sl) { sl.oninput = () => { if (!sl._c) { commit(); sl._c = 1; } const v = +sl.value; if (v) c.ang = v; else delete c.ang; document.querySelector('#fx-ang-v').textContent = v + '°'; dirty = true; }; sl.onchange = () => { sl._c = 0; }; } }
   on('#fx-bb', 'change', ev => { commit(); if (ev.target.checked) c.bb = true; else delete c.bb; dirty = true; });
   on('#fx-ok', 'click', () => { showFx = false; renderTimeline(); renderCtx(); });
 }
@@ -2062,6 +2084,7 @@ function lyHtml() {
     h += `<div class="r2"><button class="sm" data-lx="rot">↻ 轉 90°</button><button class="sm" data-lx="fh">⇋ 左右翻轉</button></div>
     <div class="r2" style="margin-top:8px"><button class="sm" data-lx="fv">⇅ 上下翻轉</button><button class="sm" data-lx="reset">還原</button></div>`;
     if (isV) h += `<label>速度</label><div class="fchips">${SPEEDS.map(v => `<button class="sm${spd(l) === v ? ' ok' : ''}" data-lsp="${v}">${v}x</button>`).join('')}</div>`;
+    h += `<label style="display:block;margin-top:8px">🔄 任意角度旋轉（整格轉）：<b id="ly-ang-v">${l.ang || 0}°</b></label><input type="range" id="ly-ang" min="-180" max="180" step="1" value="${l.ang || 0}" style="width:100%">`;
     h += `<p class="hint">目前：旋轉 ${l.rot || 0}°${l.fh ? '・左右翻轉' : ''}${l.fv ? '・上下翻轉' : ''}${isV ? '・速度 ' + spd(l) + 'x' : ''}</p>`;
   } else {
     h += `<div class="r2"><div><label>從第幾秒開始出現</label><input type="number" id="ly-s" step="0.1" min="0" value="${l.start.toFixed(1)}"></div><div><label>出現多久（秒）</label><input type="number" id="ly-d" step="0.1" min="0.3" value="${l.len.toFixed(1)}"></div></div>
@@ -2103,7 +2126,8 @@ function bindLy(on) {
   }
   all('[data-mk]').forEach(b => b.onclick = () => { commit(); if (b.dataset.mk) l.mk = b.dataset.mk; else delete l.mk; dirty = true; renderCtx(); });
   on('#ly-bm', 'change', e => { commit(); if (e.target.value) l.bm = e.target.value; else delete l.bm; dirty = true; });
-  all('[data-lx]').forEach(b => b.onclick = () => { commit(); const k = b.dataset.lx; if (k === 'rot') { l.rot = ((l.rot || 0) + 90) % 360; if (!l.rot) delete l.rot; } else if (k === 'fh') { if (l.fh) delete l.fh; else l.fh = true; } else if (k === 'fv') { if (l.fv) delete l.fv; else l.fv = true; } else { delete l.rot; delete l.fh; delete l.fv; } dirty = true; renderCtx(); });
+  all('[data-lx]').forEach(b => b.onclick = () => { commit(); const k = b.dataset.lx; if (k === 'rot') { l.rot = ((l.rot || 0) + 90) % 360; if (!l.rot) delete l.rot; } else if (k === 'fh') { if (l.fh) delete l.fh; else l.fh = true; } else if (k === 'fv') { if (l.fv) delete l.fv; else l.fv = true; } else { delete l.rot; delete l.fh; delete l.fv; delete l.ang; } dirty = true; renderCtx(); });
+  { const sl = document.querySelector('#ly-ang'); if (sl) { sl.oninput = () => { if (!sl._c) { commit(); sl._c = 1; } const v = +sl.value; if (v) l.ang = v; else delete l.ang; document.querySelector('#ly-ang-v').textContent = v + '°'; dirty = true; }; sl.onchange = () => { sl._c = 0; }; } }
   all('[data-lsp]').forEach(b => b.onclick = () => { commit(); const v = +b.dataset.lsp, a = assets.get(l.asset); if (v === 1) delete l.sp; else l.sp = v; l.len = Math.min(Math.max(0.3, l.len), (a.dur - l.in) / spd(l)); re(); });
   on('#ly-s', 'change', e => { commit(); l.start = Math.max(0, +e.target.value || 0); re(); });
   on('#ly-d', 'change', e => { commit(); const a = assets.get(l.asset), mx = a.kind === 'video' ? (a.dur - l.in) / spd(l) : 120; l.len = clamp(+e.target.value || 1, 0.3, mx); re(); });
@@ -2398,12 +2422,13 @@ $('#xp-go').onclick = async () => {
       if (audioOnly) args.push('-vn', '-map', am, ...afA, '-t', String(len), '-c:a', 'aac', '-ar', '44100', '-ac', '2');
       else {
         let vf, fcv = null;
-        const tz = c.z || 1, tx = c.x || 0, ty = c.y || 0, hasT = Math.abs(tz - 1) > 0.001 || Math.abs(tx) > 0.0005 || Math.abs(ty) > 0.0005;
-        const compose = (Wt, Ht) => `color=c=black:s=${Wt}x${Ht}:r=30[bg];[0:v]${pre}scale=${Wt}:${Ht}:force_original_aspect_ratio=decrease,${fxs}scale=trunc(iw*${tz.toFixed(4)}/2)*2:trunc(ih*${tz.toFixed(4)}/2)*2,setsar=1[fg];[bg][fg]overlay=x=(main_w-overlay_w)/2+${(tx * Wt).toFixed(2)}:y=(main_h-overlay_h)/2+${(ty * Ht).toFixed(2)}:shortest=1,setsar=1`;
+        const tz = c.z || 1, tx = c.x || 0, ty = c.y || 0, hasT = Math.abs(tz - 1) > 0.001 || Math.abs(tx) > 0.0005 || Math.abs(ty) > 0.0005 || !!c.ang;
+        const rotf = (Wt, Ht) => { if (!c.ang) return ''; let D = Math.ceil(Math.hypot(Wt, Ht) * Math.max(1, tz)); if (D % 2) D++; return `,format=yuva420p,rotate=${(c.ang * Math.PI / 180).toFixed(5)}:ow=${D}:oh=${D}:c=black@0`; };
+        const compose = (Wt, Ht) => `color=c=black:s=${Wt}x${Ht}:r=30[bg];[0:v]${pre}scale=${Wt}:${Ht}:force_original_aspect_ratio=decrease,${fxs}scale=trunc(iw*${tz.toFixed(4)}/2)*2:trunc(ih*${tz.toFixed(4)}/2)*2,setsar=1${rotf(Wt, Ht)}[fg];[bg][fg]overlay=x=(main_w-overlay_w)/2+${(tx * Wt).toFixed(2)}:y=(main_h-overlay_h)/2+${(ty * Ht).toFixed(2)}:shortest=1${c.ang ? ':format=auto' : ''},setsar=1`;
         if (hasT && useKB) { const nf = Math.max(1, Math.round(len * 30)); fcv = `${compose(W * 2, H * 2)},zoompan=z='1+0.12*(${off.toFixed(3)}+on/30)/${d.toFixed(3)}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${nf}:s=${W}x${H}:fps=30,format=yuv420p[vout]`; }
         else if (!useKB && c.kf && c.kf.length) {
           const kb = kfBuild(c.kf, W, H, W, H, -off, Math.round(W / 2 + tx * W), Math.round(H / 2 + ty * H), c.kfe);
-          fcv = `color=c=black:s=${W}x${H}:r=30[bg];[0:v]${pre}scale=${W}:${H}:force_original_aspect_ratio=decrease,${fxs}scale=trunc(iw*${tz.toFixed(4)}/2)*2:trunc(ih*${tz.toFixed(4)}/2)*2,setsar=1${kb.chain ? ',' + kb.chain : ''}[fg];[bg][fg]overlay=${kb.ox}:${kb.oy}:shortest=1:format=auto,setsar=1,fps=30,format=yuv420p[vout]`;
+          fcv = `color=c=black:s=${W}x${H}:r=30[bg];[0:v]${pre}scale=${W}:${H}:force_original_aspect_ratio=decrease,${fxs}scale=trunc(iw*${tz.toFixed(4)}/2)*2:trunc(ih*${tz.toFixed(4)}/2)*2,setsar=1${rotf(W, H)}${kb.chain ? ',' + kb.chain : ''}[fg];[bg][fg]overlay=${kb.ox}:${kb.oy}:shortest=1:format=auto,setsar=1,fps=30,format=yuv420p[vout]`;
         }
         else if (hasT) { fcv = `${compose(W, H)},fps=30,format=yuv420p[vout]`; }
         else if (c.bb && !useKB) { const rad = Math.max(10, Math.round(Math.min(W, H) / 18)); fcv = `[0:v]${pre}${fxs}split[bs][fs];[bs]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},boxblur=${rad}:2,lutyuv=y=val*0.82[bg];[fs]scale=${W}:${H}:force_original_aspect_ratio=decrease,setsar=1[fg];[bg][fg]overlay=x=(main_w-overlay_w)/2:y=(main_h-overlay_h)/2,setsar=1,fps=30,format=yuv420p[vout]`; }
@@ -2506,7 +2531,8 @@ $('#xp-go').onclick = async () => {
             else parts.push(`[cl${k}][mg${k}]alphamerge,setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
           } else parts.push(`${cell},setpts=PTS-STARTPTS+${l.start.toFixed(3)}/TB[ly${k}]`);
           let ex = `x=${Math.round(l.x * W - cw / 2)}`, ey = `y=${Math.round(l.y * H - ch / 2)}`, lyN = `ly${k}`, ovf = '';
-          if (l.kf && l.kf.length) { const kb = kfBuild(l.kf, cw, ch, W, H, l.start, Math.round(l.x * W), Math.round(l.y * H), l.kfe); if (kb.chain) { parts.push(`[ly${k}]${kb.chain}[lk${k}]`); lyN = `lk${k}`; } ex = kb.ox; ey = kb.oy; ovf = ':format=auto'; }
+          if (l.ang) { let D = Math.ceil(Math.hypot(cw, ch)); if (D % 2) D++; parts.push(`[ly${k}]format=yuva420p,rotate=${(l.ang * Math.PI / 180).toFixed(5)}:ow=${D}:oh=${D}:c=black@0[la${k}]`); lyN = `la${k}`; ex = `x=${Math.round(l.x * W - D / 2)}`; ey = `y=${Math.round(l.y * H - D / 2)}`; ovf = ':format=auto'; }
+          if (l.kf && l.kf.length) { const kb = kfBuild(l.kf, cw, ch, W, H, l.start, Math.round(l.x * W), Math.round(l.y * H), l.kfe); if (kb.chain) { parts.push(`[${lyN}]${kb.chain}[lk${k}]`); lyN = `lk${k}`; } ex = kb.ox; ey = kb.oy; ovf = ':format=auto'; }
           if (l.bm) {
             parts.push(`color=c=${BLEND_NEUTRAL[l.bm]}:s=${W}x${H}:r=30:d=${TT.toFixed(3)}[bn${k}]`, `[bn${k}][${lyN}]overlay=${ex}:${ey}:eof_action=pass:format=auto,format=yuv420p[bf${k}]`,
               `[${prev}]format=yuv420p[bp${k}]`, `[bp${k}][bf${k}]blend=all_mode=${FF_BLEND[l.bm]}:all_opacity=${op.toFixed(2)}:shortest=1[vl${k}]`);
@@ -2570,7 +2596,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AG';
+const VER_NOW = '1121-AH';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2692,18 +2718,21 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
   ['gesturestart', 'gesturechange', 'gestureend'].forEach(n => document.addEventListener(n, e => e.preventDefault(), { passive: false }));
 })();
 
-// ===== 預覽畫面：兩指縮放、一指拖移（只作用在目前這一段） =====
+// ===== 預覽畫面：先「輕點」選取（鎖定）素材，才能一指拖移、兩指縮放／旋轉 =====
 (function () {
   const stage = document.querySelector('.stage'), ptr = new Map();
   let target = null, start = null, committed = false, lyMode = false;
   const dispK = () => { const r = cv.getBoundingClientRect(); return Math.min(r.width / cv.width, r.height / cv.height) || 1; };
+  const toCv = (x, y) => { const r = cv.getBoundingClientRect(), k = dispK(); return { x: (x - (r.left + (r.width - cv.width * k) / 2)) / k, y: (y - (r.top + (r.height - cv.height * k) / 2)) / k }; };
   const info = () => {
     const pts = [...ptr.values()];
-    if (pts.length >= 2) return { n: 2, cx: (pts[0].x + pts[1].x) / 2, cy: (pts[0].y + pts[1].y) / 2, d: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) };
-    return { n: 1, cx: pts[0].x, cy: pts[0].y, d: 0 };
+    if (pts.length >= 2) return { n: 2, cx: (pts[0].x + pts[1].x) / 2, cy: (pts[0].y + pts[1].y) / 2, d: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y), a: Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x) };
+    return { n: 1, cx: pts[0].x, cy: pts[0].y, d: 0, a: 0 };
   };
-  const reset = () => { if (!ptr.size) { target = null; start = null; committed = false; return; } lyMode = !!(showLy && selLy); const en = clipAt(cur); target = lyMode ? (state.layers.find(x => x.id === selLy) || null) : (en ? en.c : null); start = info();
-    if (lyMode && target) { start.z = target.w; start.x = target.x; start.y = target.y; } else { start.z = target && target.z || 1; start.x = target && target.x || 0; start.y = target && target.y || 0; } };
+  const reset = () => { if (!ptr.size) { target = null; start = null; committed = false; return; } lyMode = !!(showLy && selLy); const en = clipAt(cur);
+    target = lyMode ? (state.layers.find(x => x.id === selLy) || null) : (en && selPic === en.c.id ? en.c : null); start = info();
+    if (lyMode && target) { start.z = target.w; start.x = target.x; start.y = target.y; } else { start.z = target && target.z || 1; start.x = target && target.x || 0; start.y = target && target.y || 0; }
+    start.ang = target && target.ang || 0; };
   let tap0 = null;
   stage.addEventListener('pointerdown', e => { if (!L.length && !state.layers.length) return; if (!ptr.size) tap0 = { x: e.clientX, y: e.clientY, t: Date.now() }; else tap0 = null; ptr.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { stage.setPointerCapture(e.pointerId); } catch (x) {} reset(); });
   stage.addEventListener('pointermove', e => {
@@ -2711,17 +2740,27 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
     ptr.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const now = info(); if (now.n !== start.n) { reset(); return; }
     const k = dispK(), dx = (now.cx - start.cx) / (k * cv.width), dy = (now.cy - start.cy) / (k * cv.height);
-    const nz = now.n === 2 && start.d > 10 ? (lyMode ? clamp(start.z * now.d / start.d, 0.1, 2) : clamp(start.z * now.d / start.d, 0.3, 5)) : start.z;
+    const two = now.n === 2 && start.d > 10;
+    const nz = two ? (lyMode ? clamp(start.z * now.d / start.d, 0.1, 2) : clamp(start.z * now.d / start.d, 0.3, 5)) : start.z;
     const nx = lyMode ? clamp(start.x + dx, -0.3, 1.3) : clamp(start.x + dx, -1.5, 1.5), ny = lyMode ? clamp(start.y + dy, -0.3, 1.3) : clamp(start.y + dy, -1.5, 1.5);
-    if (!committed && (Math.abs(nz - start.z) > 0.005 || Math.abs(nx - start.x) > 0.003 || Math.abs(ny - start.y) > 0.003)) { commit(); committed = true; }
-    if (committed) { if (lyMode) target.w = nz; else target.z = nz; target.x = nx; target.y = ny; dirty = true; }
+    let na = start.ang;
+    if (two) { let da = (now.a - start.a) * 180 / Math.PI; da = ((da + 540) % 360 + 360) % 360 - 180; na = start.ang + da; const m = Math.round(na / 90) * 90; if (Math.abs(na - m) < 3) na = m; na = ((na + 180) % 360 + 360) % 360 - 180; }
+    if (!committed && (Math.abs(nz - start.z) > 0.005 || Math.abs(nx - start.x) > 0.003 || Math.abs(ny - start.y) > 0.003 || Math.abs(na - start.ang) > 0.5)) { commit(); committed = true; }
+    if (committed) { if (lyMode) target.w = nz; else target.z = nz; target.x = nx; target.y = ny; if (Math.abs(na) < 0.05) delete target.ang; else target.ang = +na.toFixed(1); dirty = true; }
   });
   const up = e => {
     const tp = tap0; tap0 = null;
-    if (e.type === 'pointerup' && tp && ptr.size === 1 && Math.hypot(e.clientX - tp.x, e.clientY - tp.y) < 8 && Date.now() - tp.t < 500) {   // 輕點預覽畫面＝收起下方的工具面板
+    if (e.type === 'pointerup' && tp && ptr.size === 1 && Math.hypot(e.clientX - tp.x, e.clientY - tp.y) < 8 && Date.now() - tp.t < 500 && (L.length || state.layers.length)) {   // 輕點預覽畫面＝選取那個素材（再點一次取消）；有開著的工具面板就順便收起
       const vb = $('#volp'), open = $('#cats').classList.contains('on') || $('#ctx').style.display === 'block' || (vb && vb.style.display === 'block');
       if (vb && vb.style.display === 'block') vb.style.display = 'none';
-      if (open && !(showLy && selLy)) { closeCats(); clearSel(); renderTimeline(); renderCtx(); layoutSheet(); updateToolbar(); }
+      const p = toCv(e.clientX, e.clientY), hit = state.layers.slice().reverse().find(l => cur >= l.start && cur < l.start + l.len && lyHit(l, p.x, p.y));
+      if (hit) {
+        if (!(showLy && selLy === hit.id)) { clearSel(); showLy = true; selLy = hit.id; renderTimeline(); renderCtx(); dirty = true; }
+      } else {
+        const en = clipAt(cur), was = en && selPic === en.c.id && !open && !(showLy && selLy);
+        if (open || (showLy && selLy)) { closeCats(); clearSel(); renderTimeline(); renderCtx(); layoutSheet(); updateToolbar(); }
+        selPic = en && !was ? en.c.id : null; dirty = true;
+      }
     }
     ptr.delete(e.pointerId); reset();
   };
@@ -2778,7 +2817,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AG', upd = document.getElementById('upd');
+  const VER = '1121-AH', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
