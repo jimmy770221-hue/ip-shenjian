@@ -697,6 +697,7 @@ html, body, .ip-tools { background-color: var(--bg); }
 #qm .qgrid s{position:absolute;bottom:2px;width:24px;height:24px;border-radius:12px;background:#000a;text-decoration:none;font-size:16px;line-height:22px;text-align:center}
 #qm .qsty{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:2px solid #2d3050;background:#171828;color:#fff;border-radius:16px;padding:12px 14px;margin-bottom:8px;font-family:inherit}
 #qm .qsty.on{border-color:#ff6b9d;background:#3a1f3c}#qm .qsty b{font-size:17px;display:block}#qm .qsty small{color:#b9b6d6;font-size:12px}
+#qm .qrow{display:flex;gap:8px;align-items:center;margin:6px 0}#qm .qtg{flex:none;min-width:64px;border:2px solid #2d3050;background:#171828;color:#b9b6d6;border-radius:12px;padding:10px 12px;font-size:15px;font-weight:800;font-family:inherit}#qm .qtg.on{border-color:#ff6b9d;background:#3a1f3c;color:#fff}#qm .qbg{display:flex;gap:8px;align-items:center;margin:4px 0 6px}#qm .qbg button{border:1px solid #2d3050;background:#171828;color:#fff;border-radius:10px;padding:8px 10px;font-size:13px;font-family:inherit}#qm .qbg span{font-size:12px;color:#b9b6d6;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#qm .qchips.sm button{padding:10px 14px;font-size:15px}#qm h2.sm{font-size:17px;margin:12px 0 6px}#qm .qsty.sm{padding:9px 12px;margin-bottom:6px}#qm .qsty.sm b{font-size:15px}
 #qm input[type=text]{width:100%;box-sizing:border-box;background:#171828;border:1px solid #2d3050;color:#fff;border-radius:12px;padding:12px;font-size:16px;font-family:inherit}
 #qm .qtabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px}#qm .qtabs button{flex:none;border:0;border-radius:18px;padding:8px 14px;font-size:14px;color:#fff;background:#2c2f45;font-family:inherit}#qm .qtabs button.on{background:#7c5cff}
 #qm .qsong{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #23253a}
@@ -735,7 +736,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AV（預覽／軌道可拖曳調整大小）</div>
+  <div class="hfoot">版本 1121-AW（快速成片三步驟＋片頭片尾編輯）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -2840,7 +2841,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AV';
+const VER_NOW = '1121-AW';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2972,7 +2973,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
     { id: 'funny', n: '😂 搞笑整人', d: '放大衝進、撕紙、搞笑貼紙', tr: ['zoom', 'star', 'torn', 'slidedown'], dur: 0.5, cap: 2.6, ph: 2.2, c: '#ffe14d', end: '#ff6b6b', stk: 1 }
   ];
   const QSTK = ['太好玩了！', '來！', '讚！', '笑死', '好吃！', '開心', '超可愛', '耶！'];
-  const Q = { step: 1, len: 30, ratio: '9:16', files: [], sty: 0, title: '', end: '', mus: 'auto', mstyle: 'party', song: null, busy: false, lib: null, pv: null, done: null };
+  const Q = { step: 1, len: 30, ratio: '9:16', files: [], sty: 0, title: '', end: '', tOn: false, eOn: false, tBg: null, eBg: null, mus: 'auto', mstyle: 'party', song: null, busy: false, lib: null, pv: null, done: null };
   const qm = document.getElementById('qm'), body = document.getElementById('qm-body'), nextB = document.getElementById('qm-next'), backB = document.getElementById('qm-back');
   const urls = new Map();
   const fileUrl = f => { if (!urls.has(f)) urls.set(f, URL.createObjectURL(f)); return urls.get(f); };
@@ -2982,7 +2983,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
   const recRange = () => [Math.max(3, Math.round(Q.len / 6)), Math.max(6, Math.round(Q.len / 3))];
 
   function open() {
-    Object.assign(Q, { step: 1, files: [], busy: false, done: null, song: null, mus: 'auto' }); Q.mstyle = QSTY[Q.sty].id;
+    Object.assign(Q, { step: 1, files: [], busy: false, done: null, song: null, mus: 'auto', tBg: null, eBg: null }); Q.mstyle = QSTY[Q.sty].id;
     qm.classList.add('on'); render();
   }
   function close() { stopPv(); qm.classList.remove('on'); clearUrls(); Q.files = []; }
@@ -2990,22 +2991,38 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
 
   function render() {
     const st = Q.step;
-    document.getElementById('qm-dots').innerHTML = [1, 2, 3, 4, 5].map(i => `<i class="${i <= st ? 'on' : ''}"></i>`).join('');
-    document.getElementById('qm-step').textContent = Q.done || Q.busy ? '' : st + ' / 5';
+    document.getElementById('qm-dots').innerHTML = [1, 2, 3].map(i => `<i class="${i <= st ? 'on' : ''}"></i>`).join('');
+    document.getElementById('qm-step').textContent = Q.done || Q.busy ? '' : st + ' / 3';
     backB.style.visibility = Q.busy ? 'hidden' : 'visible'; document.getElementById('qm-x').style.visibility = Q.busy ? 'hidden' : 'visible';
     const foot = document.getElementById('qm-foot');
     if (Q.busy) { foot.style.display = 'none'; return; }
     foot.style.display = 'flex';
     if (Q.done) { document.getElementById('qm-title').textContent = '完成了！'; body.innerHTML = doneHtml(); foot.innerHTML = '<button class="alt" id="qm-again">重做一支</button><button id="qm-edit">進編輯器微調</button>'; bindDone(); return; }
-    document.getElementById('qm-title').textContent = ['', '要做多長的影片？', '選畫面尺寸', '選照片或影片', '選一個風格', '選配樂'][st];
-    foot.innerHTML = '<button id="qm-next">' + (st === 5 ? '✨ 開始生成' : '下一步') + '</button>';
+    document.getElementById('qm-title').textContent = ['', '選時間、尺寸、風格', '選照片或影片', '選配樂'][st];
+    foot.innerHTML = '<button id="qm-next">' + (st === 3 ? '✨ 開始生成' : '下一步') + '</button>';
     const nb = document.getElementById('qm-next'); nb.onclick = next;
-    if (st === 1) { body.innerHTML = `<p class="qh">選好時間，我會自動算出需要幾張照片、幾段影片。</p><div class="qchips" id="q-len">${QLEN.map(l => `<button data-v="${l[0]}" class="${Q.len === l[0] ? 'on' : ''}">${l[1]}</button>`).join('')}</div>`;
-      body.querySelectorAll('#q-len button').forEach(b => b.onclick = () => { Q.len = +b.dataset.v; render(); });
+    if (st === 1) {
+      const T0 = QSTY[Q.sty], hasPk = !!T0.pk, keep = body.scrollTop;
+      const cardRow = (k, label, on, txt, ph, bg) => `<h2 class="sm">${label}</h2><div class="qrow"><button class="qtg${on ? ' on' : ''}" id="q-${k}-on">${on ? '開' : '關'}</button><input type="text" id="q-${k}" maxlength="20" placeholder="${ph}" value="${esc(txt)}"></div>`
+        + (hasPk ? `<div class="qbg"><span>背景：${bg ? esc(bg.name.slice(0, 18)) : '素材包預設'}</span><button id="q-${k}-bg">🖼 換背景照片</button>${bg ? `<button id="q-${k}-bgx">還原</button>` : ''}</div>` : '');
+      body.innerHTML = `<h2 class="sm" style="margin-top:2px">⏱ 時間</h2><div class="qchips sm" id="q-len">${QLEN.map(l => `<button data-v="${l[0]}" class="${Q.len === l[0] ? 'on' : ''}">${l[1]}</button>`).join('')}</div>`
+        + `<h2 class="sm">📐 尺寸</h2><div class="qchips sm" id="q-ratio">${[['9:16', '📱 直式 9:16'], ['16:9', '🖥 橫式 16:9'], ['1:1', '⬜ 方形 1:1']].map(r => `<button data-v="${r[0]}" class="${Q.ratio === r[0] ? 'on' : ''}">${r[1]}</button>`).join('')}</div>`
+        + `<h2 class="sm">🎨 風格</h2>${QSTY.map((x, i) => `<button class="qsty sm${Q.sty === i ? ' on' : ''}" data-i="${i}"><span><b>${x.n}</b><small>${x.d}</small></span></button>`).join('')}`
+        + cardRow('title', '🎬 片頭', Q.tOn, Q.title, '例如：暑期營隊回顧', Q.tBg) + cardRow('end', '🏁 片尾', Q.eOn, Q.end, '例如：謝謝大家', Q.eBg)
+        + (hasPk ? '' : '<p class="qh">這個風格沒有片頭片尾畫面，文字會直接疊在影片開頭／結尾。</p>');
+      body.scrollTop = keep;
+      const sv = () => { const t = document.getElementById('q-title'), e = document.getElementById('q-end'); if (t) Q.title = t.value; if (e) Q.end = e.value; };
+      body.querySelectorAll('#q-len button').forEach(b => b.onclick = () => { sv(); Q.len = +b.dataset.v; render(); });
+      body.querySelectorAll('#q-ratio button').forEach(b => b.onclick = () => { sv(); Q.ratio = b.dataset.v; render(); });
+      body.querySelectorAll('.qsty').forEach(b => b.onclick = () => { sv(); Q.sty = +b.dataset.i; Q.mstyle = QSTY[Q.sty].id; Q.song = null; render(); });
+      [['title', 'tOn', 'tBg'], ['end', 'eOn', 'eBg']].forEach(([k, on, bg]) => {
+        const inp = document.getElementById('q-' + k);
+        document.getElementById('q-' + k + '-on').onclick = () => { sv(); Q[on] = !Q[on]; render(); };
+        inp.oninput = () => { if (inp.value.trim() && !Q[on]) { Q[on] = true; const tg = document.getElementById('q-' + k + '-on'); tg.classList.add('on'); tg.textContent = '開'; } };
+        const pick = document.getElementById('q-' + k + '-bg'); if (pick) pick.onclick = () => { const f = document.createElement('input'); f.type = 'file'; f.accept = 'image/*'; f.onchange = () => { if (f.files[0]) { sv(); Q[bg] = f.files[0]; Q[on] = true; render(); } }; f.click(); };
+        const clr = document.getElementById('q-' + k + '-bgx'); if (clr) clr.onclick = () => { sv(); Q[bg] = null; render(); };
+      });
     } else if (st === 2) {
-      body.innerHTML = `<p class="qh">影片要放在哪裡看？選好尺寸，之後的素材都會照這個尺寸排好。</p>${[['9:16', '📱 直式 9:16', '手機直拍、限時動態、短影音'], ['16:9', '🖥 橫式 16:9', '電腦、電視、YouTube'], ['1:1', '⬜ 方形 1:1', 'Instagram 貼文']].map(r => `<button class="qsty${Q.ratio === r[0] ? ' on' : ''}" data-v="${r[0]}"><span><b>${r[1]}</b><small>${r[2]}</small></span></button>`).join('')}`;
-      body.querySelectorAll('.qsty').forEach(b => b.onclick = () => { Q.ratio = b.dataset.v; render(); });
-    } else if (st === 3) {
       const [a, b] = recRange(), im = Q.files.filter(isImg).length, vd = Q.files.length - im;
       body.innerHTML = `<p class="qh">${QLEN.find(l => l[0] === Q.len)[1]}的影片，建議選約 <b style="color:#ffb347">${a}～${b} 個</b>照片或影片（可以混著選）。影片我會自動挑出畫面清楚、有動作的精彩片段；一支影片比較長時，會分成好幾段使用。<br><b style="color:#ffb347">影片會照下面的編號順序播放</b>（照片、影片混著選也一樣，不會亂跳）；點 ‹ › 可以調順序。</p>
       <button class="qpick" id="q-pick">＋ 選取照片／影片</button>
@@ -3015,10 +3032,6 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
       document.getElementById('q-pick').onclick = () => { const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; inp.accept = 'image/*,video/*'; inp.onchange = () => { Q.files.push(...inp.files); render(); }; inp.click(); };
       body.querySelectorAll('[data-mv]').forEach(x => x.onclick = e => { e.stopPropagation(); const i = +x.dataset.mv, j = i + +x.dataset.d; [Q.files[i], Q.files[j]] = [Q.files[j], Q.files[i]]; render(); });
       body.querySelectorAll('[data-rm]').forEach(x => x.onclick = e => { e.stopPropagation(); Q.files.splice(+x.dataset.rm, 1); render(); });
-    } else if (st === 4) {
-      body.innerHTML = QSTY.map((x, i) => `<button class="qsty${Q.sty === i ? ' on' : ''}" data-i="${i}"><span><b>${x.n}</b><small>${x.d}</small></span></button>`).join('')
-        + `<h2>片頭文字（選填）</h2><input type="text" id="q-title" maxlength="20" placeholder="例如：暑期營隊回顧" value="${esc(Q.title)}"><h2>片尾文字（選填）</h2><input type="text" id="q-end" maxlength="20" value="${esc(Q.end)}">`;
-      body.querySelectorAll('.qsty').forEach(b => b.onclick = () => { Q.title = document.getElementById('q-title').value; Q.end = document.getElementById('q-end').value; Q.sty = +b.dataset.i; Q.mstyle = QSTY[Q.sty].id; Q.song = null; render(); });
     } else {
       body.innerHTML = `<button class="qopt${Q.mus === 'auto' ? ' on' : ''}" id="q-auto">🎲 自動幫我挑（${(QSTY.find(x => x.id === Q.mstyle) || QSTY[0]).n}風格）</button><button class="qopt${Q.mus === 'none' ? ' on' : ''}" id="q-none">🔇 不要配樂</button><h2 style="font-size:16px">或自己挑一首</h2><div class="qtabs" id="q-tabs"></div><div id="q-songs"><p class="qh">載入配樂中…</p></div>`;
       document.getElementById('q-auto').onclick = () => { Q.mus = 'auto'; Q.song = null; stopPv(); render(); };
@@ -3037,11 +3050,11 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
     }
   }
   function next() {
-    if (Q.step === 4) { const t = document.getElementById('q-title'), e = document.getElementById('q-end'); if (t) Q.title = t.value.trim(); if (e) Q.end = e.value.trim(); }
-    if (Q.step === 3 && !Q.files.length) return;
-    if (Q.step < 5) { Q.step++; stopPv(); render(); body.scrollTop = 0; } else generate();
+    if (Q.step === 1) { const t = document.getElementById('q-title'), e = document.getElementById('q-end'); if (t) Q.title = t.value.trim(); if (e) Q.end = e.value.trim(); }
+    if (Q.step === 2 && !Q.files.length) return;
+    if (Q.step < 3) { Q.step++; stopPv(); render(); body.scrollTop = 0; } else generate();
   }
-  backB.onclick = () => { if (Q.done) { Q.done = null; Q.step = 5; render(); return; } if (Q.step > 1) { if (Q.step === 4) { const t = document.getElementById('q-title'), e = document.getElementById('q-end'); if (t) Q.title = t.value.trim(); if (e) Q.end = e.value.trim(); } Q.step--; stopPv(); render(); } else close(); };
+  backB.onclick = () => { if (Q.done) { Q.done = null; Q.step = 3; render(); return; } if (Q.step > 1) { if (Q.step === 1) { const t = document.getElementById('q-title'), e = document.getElementById('q-end'); if (t) Q.title = t.value.trim(); if (e) Q.end = e.value.trim(); } Q.step--; stopPv(); render(); } else close(); };
   document.getElementById('qm-x').onclick = close;
 
   /* ---- 找精彩片段：每隔一小段取一張縮圖，算「清楚度」和「動作多寡」，挑分數最高又不重疊的幾段 ---- */
@@ -3101,9 +3114,10 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
   const bannerW = (W, H) => (W > H ? 0.62 : 0.9) * W;
   const fitSize = (n, W, H) => Math.min(11, Math.max(3, bannerW(W, H) * Math.min(0.8 / Math.max(1, n), 0.15) / H * 100));
   // 片頭／片尾卡：背景＋四個角落裝飾＋橫幅（文字另外疊上去）
-  async function cardFile(pk, kind, W, H) {
+  async function cardFile(pk, kind, W, H, bgFile) {
     const c = newCv(W, H), x = c.getContext('2d'), o = H > W ? 'v' : 'h';
-    drawCover(x, await qImg(pk, (kind === 'title' ? 'titlebg_' : 'endbg_') + o + '_01'), W, H);
+    if (bgFile) { const bm = await createImageBitmap(bgFile); drawCover(x, bm, W, H); if (bm.close) bm.close(); }   // 用自己的照片當背景
+    else drawCover(x, await qImg(pk, (kind === 'title' ? 'titlebg_' : 'endbg_') + o + '_01'), W, H);
     const cs = Math.min(W, H) * 0.3;
     x.drawImage(await qImg(pk, 'corner_tl'), 0, 0, cs, cs); x.drawImage(await qImg(pk, 'corner_tr'), W - cs, 0, cs, cs);
     x.drawImage(await qImg(pk, 'corner_bl'), 0, H - cs, cs, cs); x.drawImage(await qImg(pk, 'corner_br'), W - cs, H - cs, cs, cs);
@@ -3192,13 +3206,13 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
       for (const it of items) { if (it.a.kind === 'image') { it.cands = [{ t: 0, score: 1 }]; continue; } setProg(25 + 40 * vi / Math.max(1, vids.length), `正在找精彩片段 ${vi + 1} / ${vids.length}…`); it.cands = await findCands(it.a, T.cap); vi++; }
       // 3. 排版
       setProg(68, '正在排版…');
-      let PK = T.pk || null; const cIn = PK && Q.title ? 2.8 : 0, cOut = PK && Q.end ? 2.6 : 0, DM = QDIM[Q.ratio] || QDIM['9:16'], cuts = [];
+      let PK = T.pk || null; const cIn = PK && Q.tOn ? 2.8 : 0, cOut = PK && Q.eOn ? 2.6 : 0, DM = QDIM[Q.ratio] || QDIM['9:16'], cuts = [];
       const pl = plan(items, PK ? Math.max(4, D - cIn - cOut) : D, T);
       state.clips = pl.map((o, i) => { const c = { id: uid++, asset: o.a.id, in: o.in, out: o.in + o.len, mute: false }; if (i) c.tr = { type: T.tr[(i - 1) % T.tr.length], dur: T.dur }; return c; });
       if (PK) {   // 素材包：片頭卡、片尾卡，中間的換片交替用「遮罩條帶」和「漏光」
         try {
-          if (cIn) state.clips.unshift({ id: uid++, asset: (await makeAsset(await cardFile(PK, 'title', DM[0], DM[1]))).id, in: 0, out: cIn, mute: false, card: 1 });
-          if (cOut) state.clips.push({ id: uid++, asset: (await makeAsset(await cardFile(PK, 'end', DM[0], DM[1]))).id, in: 0, out: cOut, mute: false, card: 1 });
+          if (cIn) state.clips.unshift({ id: uid++, asset: (await makeAsset(await cardFile(PK, 'title', DM[0], DM[1], Q.tBg))).id, in: 0, out: cIn, mute: false, card: 1, cardKind: 'title' });
+          if (cOut) state.clips.push({ id: uid++, asset: (await makeAsset(await cardFile(PK, 'end', DM[0], DM[1], Q.eBg))).id, in: 0, out: cOut, mute: false, card: 1, cardKind: 'end' });
           state.clips.forEach((c, i) => {
             if (!i) { delete c.tr; return; }
             const pv = state.clips[i - 1];
@@ -3232,21 +3246,42 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
       // 5. 文字與貼紙
       setProg(92, '正在加上文字…');
       const td = Math.min(2.6, Math.max(1, total * 0.2));
-      if (PK && Q.title) state.texts.push({ id: uid++, tpl: 1, text: Q.title, start: 0.3, dur: cIn - 0.6, color: T.tc, size: +fitSize([...Q.title].length, DM[0], DM[1]).toFixed(1), pos: 'middle', an: 'pop', sh: 0, ow: PK === 'warm' ? 0 : 1 });
-      else if (Q.title) state.texts.push({ id: uid++, tpl: 1, text: Q.title, start: 0.2, dur: td, color: T.c, size: 11, pos: 'middle', an: 'pop', sh: 1 });
-      if (PK && Q.end) { const le = L[L.length - 1]; state.texts.push({ id: uid++, tpl: 1, text: Q.end, start: le.start + 0.6, dur: Math.max(1, cOut - 0.8), color: T.tc, size: +fitSize([...Q.end].length, DM[0], DM[1]).toFixed(1), pos: 'middle', an: 'rise', sh: 0, ow: PK === 'warm' ? 0 : 1 }); }
-      else if (Q.end) { const ed = Math.min(2.5, Math.max(1, total * 0.15)); state.texts.push({ id: uid++, tpl: 1, text: Q.end, start: Math.max(0, total - ed), dur: ed, color: T.end, size: 10, pos: 'middle', an: 'rise', sh: 1 }); }
+      if (PK && Q.tOn && Q.title) state.texts.push({ id: Q.gtid = uid++, tpl: 1, text: Q.title, start: 0.3, dur: cIn - 0.6, color: T.tc, size: +fitSize([...Q.title].length, DM[0], DM[1]).toFixed(1), pos: 'middle', an: 'pop', sh: 0, ow: PK === 'warm' ? 0 : 1 });
+      else if (Q.tOn && Q.title) state.texts.push({ id: uid++, tpl: 1, text: Q.title, start: 0.2, dur: td, color: T.c, size: 11, pos: 'middle', an: 'pop', sh: 1 });
+      if (PK && Q.eOn && Q.end) { const le = L[L.length - 1]; state.texts.push({ id: Q.geid = uid++, tpl: 1, text: Q.end, start: le.start + 0.6, dur: Math.max(1, cOut - 0.8), color: T.tc, size: +fitSize([...Q.end].length, DM[0], DM[1]).toFixed(1), pos: 'middle', an: 'rise', sh: 0, ow: PK === 'warm' ? 0 : 1 }); }
+      else if (Q.eOn && Q.end) { const ed = Math.min(2.5, Math.max(1, total * 0.15)); state.texts.push({ id: uid++, tpl: 1, text: Q.end, start: Math.max(0, total - ed), dur: ed, color: T.end, size: 10, pos: 'middle', an: 'rise', sh: 1 }); }
       if (T.stk) { let k = 0; for (let i = 1; i < L.length; i++) { if ((i + 1) % 3) continue; const e = L[i]; state.texts.push({ id: uid++, tpl: 1, text: QSTK[(k * 3 + i) % QSTK.length], start: e.start + 0.3, dur: Math.max(0.8, Math.min(1.6, e.d - 0.5)), color: '#222222', size: 6.5, pos: 'middle', ty: -0.2, tx: k % 2 ? 0.14 : -0.14, ow: 0, an: 'pop', bx: k % 2 ? 'burst' : 'bubble' }); k++; } }
       if (PK) { try { relayout(); await packLayers(PK, L[L.length - 1].end, cuts); relayout(); } catch (e) { toast('素材包沒有完整載入（要連網路），其餘照做好了'); } }
       clearSel(); renderAll(); setCur(0); history = []; redoStack = []; updateToolbar();
+      Q.gen = { pk: PK, DM, cIn, cOut, T }; if (!(PK && Q.tOn && Q.title)) Q.gtid = null; if (!(PK && Q.eOn && Q.end)) Q.geid = null;
       Q.done = { sec: total, n: state.clips.length, short: total < D * 0.8, errs: errs.length, music: musicOk };
-    } catch (e) { toast('做不出來：' + (e && e.message || '發生問題')); Q.done = null; Q.busy = false; Q.step = 3; render(); return; }
+    } catch (e) { toast('做不出來：' + (e && e.message || '發生問題')); Q.done = null; Q.busy = false; Q.step = 2; render(); return; }
     finally { if (wake) try { wake.release(); } catch (e) {} }
     Q.busy = false; render();
   }
   const doneHtml = () => { const d = Q.done; return `<div class="qbig"><div class="em">🎉</div><h2>做好了！總長 ${fmt(d.sec)}</h2><p class="qh">用了 ${d.n} 段素材${d.music ? '，已配上音樂' : ''}。${d.short ? '素材不夠長，所以比你選的時間短一些；多選一點素材會更接近。' : ''}${d.errs ? `有 ${d.errs} 個素材讀不了，已跳過。` : ''}</p></div>
-    <button class="qopt" id="q-play" style="margin-top:20px">▶ 先看看成果</button><button class="qopt" id="q-exp">📤 直接匯出</button>`; };
+    ${cardEditHtml()}<button class="qopt" id="q-play" style="margin-top:20px">▶ 先看看成果</button><button class="qopt" id="q-exp">📤 直接匯出</button>`; };
+  function cardEditHtml() {   // 做完後還能改片頭／片尾的文字和背景
+    const g = Q.gen; if (!g || !g.pk || (!g.cIn && !g.cOut)) return '';
+    const one = (k, lab, id) => { const t = state.texts.find(x => x.id === id); return `<h2 class="sm">${lab}</h2><div class="qrow"><input type="text" id="d-${k}" maxlength="20" value="${esc(t ? t.text : '')}" placeholder="文字（留空＝不放字）"><button class="qtg on" id="d-${k}-ok">套用</button></div><div class="qbg"><button id="d-${k}-bg">🖼 換背景照片</button><span id="d-${k}-st"></span></div>`; };
+    return `<div style="text-align:left">${g.cIn ? one('title', '🎬 片頭', Q.gtid) : ''}${g.cOut ? one('end', '🏁 片尾', Q.geid) : ''}</div>`;
+  }
+  function bindCardEdit() {
+    const g = Q.gen; if (!g) return;
+    [['title', 'gtid', g.cIn], ['end', 'geid', g.cOut]].forEach(([k, idk, has]) => {
+      if (!has) return; const ok = document.getElementById('d-' + k + '-ok'), bg = document.getElementById('d-' + k + '-bg'), st = document.getElementById('d-' + k + '-st'); if (!ok) return;
+      ok.onclick = () => {
+        const txt = document.getElementById('d-' + k).value.trim(), i = state.texts.findIndex(x => x.id === Q[idk]);
+        if (!txt) { if (i >= 0) state.texts.splice(i, 1); Q[idk] = null; }
+        else if (i >= 0) { state.texts[i].text = txt; state.texts[i].size = +fitSize([...txt].length, g.DM[0], g.DM[1]).toFixed(1); }
+        else { const T = g.T, le = L[L.length - 1], tt = k === 'title'; Q[idk] = uid++; state.texts.push({ id: Q[idk], tpl: 1, text: txt, start: tt ? 0.3 : le.start + 0.6, dur: tt ? g.cIn - 0.6 : Math.max(1, g.cOut - 0.8), color: T.tc, size: +fitSize([...txt].length, g.DM[0], g.DM[1]).toFixed(1), pos: 'middle', an: tt ? 'pop' : 'rise', sh: 0, ow: g.pk === 'warm' ? 0 : 1 }); }
+        renderAll(); st.textContent = '已套用 ✓';
+      };
+      bg.onclick = () => { const f = document.createElement('input'); f.type = 'file'; f.accept = 'image/*'; f.onchange = async () => { if (!f.files[0]) return; st.textContent = '處理中…'; try { const a = await makeAsset(await cardFile(g.pk, k, g.DM[0], g.DM[1], f.files[0])), c = state.clips.find(x => x.card && x.cardKind === k); if (c) { c.asset = a.id; renderAll(); st.textContent = '已換背景 ✓'; } } catch (e) { st.textContent = '換不成功'; } }; f.click(); };
+    });
+  }
   function bindDone() {
+    bindCardEdit();
     document.getElementById('q-play').onclick = () => { close(); if (window.__hideHome) window.__hideHome(); setCur(0); play(); };
     document.getElementById('q-exp').onclick = () => { close(); if (window.__hideHome) window.__hideHome(); $('#btn-export').click(); };
     document.getElementById('qm-edit').onclick = () => { close(); if (window.__hideHome) window.__hideHome(); };
@@ -3359,7 +3394,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AV', upd = document.getElementById('upd');
+  const VER = '1121-AW', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
