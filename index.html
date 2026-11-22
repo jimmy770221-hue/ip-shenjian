@@ -744,7 +744,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1123-A（服務社五大主題配樂）</div>
+  <div class="hfoot">版本 1123-B（服務社五大主題配樂）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -900,6 +900,18 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), 2200); }
 
+/* 離開畫面也盡量繼續製作：匯出時循環播一段「無聲音訊」，讓手機把這頁當成正在播放聲音，不要立刻暫停（實驗性，是否有效依手機而定） */
+let bgAu = null;
+function bgKeepOn(title) {
+  try {
+    if (!bgAu) { const n = 8000, b = new ArrayBuffer(44 + n * 2), v = new DataView(b), w = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+      w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 16000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+      bgAu = new Audio(URL.createObjectURL(new Blob([b], { type: 'audio/wav' }))); bgAu.loop = true; bgAu.setAttribute('playsinline', ''); }
+    bgAu.play().catch(() => {});
+    if ('mediaSession' in navigator) { navigator.mediaSession.metadata = new MediaMetadata({ title, artist: 'IP神剪' }); ['play', 'pause', 'stop'].forEach(a => { try { navigator.mediaSession.setActionHandler(a, () => { try { bgAu && bgAu.play(); } catch (e) {} }); } catch (e) {} }); }
+  } catch (e) {}
+}
+function bgKeepOff() { try { if (bgAu) { bgAu.pause(); bgAu.currentTime = 0; } if ('mediaSession' in navigator) { navigator.mediaSession.metadata = null; ['play', 'pause', 'stop'].forEach(a => { try { navigator.mediaSession.setActionHandler(a, null); } catch (e) {} }); } } catch (e) {} }
 function commit() { history.push(JSON.stringify(state)); if (history.length > 60) history.shift(); redoStack = []; lastTouch = null; }
 function touch(kind) { if (lastTouch !== kind) { commit(); lastTouch = kind; } }
 function restore(s) {
@@ -2728,7 +2740,7 @@ $('#xp-go').onclick = async () => {
   const fast = !isMp3 && !compat && !!window.VideoEncoder && !state.clips.some(c => c.rev), audioOnly = isMp3 || fast;
   const [W, H] = exportDims(S), snap = JSON.parse(JSON.stringify(state)), LL = L.map(e => ({ ...e })), TT = total;
   exporting = true; $('#xp-opts').style.display = 'none'; $('#xp-res').innerHTML = ''; xProg(0);
-  const files = []; let wake = null;
+  const files = []; let wake = null; bgKeepOn('匯出影片中…');
   try { wake = await navigator.wakeLock?.request('screen'); } catch (e) {}
   try {
     progMode = fast ? 1 : 0; xStatus('正在載入處理程式…（第一次約 30 秒）');
@@ -2932,14 +2944,14 @@ $('#xp-go').onclick = async () => {
     xbar.style.display = 'none'; xStatus('失敗了：' + (e.message || e) + '\n（可能是影片太長或手機記憶體不足，試試縮短作品或選「省空間」畫質）' + '\n\n【除錯資訊，請截圖給我】\n' + (window.lastFastErr ? '快速匯出失敗原因：' + window.lastFastErr + '\n' : '') + '相容匯出最後訊息：' + ffLog.slice(-4).join(' | ').slice(-380), 'err');
     $('#xp-opts').style.display = 'block';
   } finally {
-    onProg = null; exporting = false; progMode = 0; try { wake && wake.release(); } catch (e) {}
+    onProg = null; exporting = false; progMode = 0; bgKeepOff(); try { wake && wake.release(); } catch (e) {}
     if (ff) for (const n of files) { try { await ff.deleteFile(n); } catch (e) {} }
   }
 };
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1123-A';
+const VER_NOW = '1123-B';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3297,7 +3309,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
   async function generate() {
     if (state.clips.length || state.layers.length) { if (!(await pjAskSave())) return; }
     stopPv(); Q.busy = true; render(); prog(2, '準備中…');
-    const T = QSTY[Q.sty], D = Q.len; let wake = null; try { wake = await navigator.wakeLock?.request('screen'); } catch (e) {}
+    const T = QSTY[Q.sty], D = Q.len; let wake = null; bgKeepOn('製作影片中…'); try { wake = await navigator.wakeLock?.request('screen'); } catch (e) {}
     try {
       pjReset(); state = { ratio: Q.ratio, clips: [], layers: [], texts: [], music: null, kb: false, vol: { video: 1, music: 0.6 } }; uid = 1; PJ.cur = null; PJ.name = ''; PJ.savedStr = ''; PJ.stored = new Set(); $('#ratio').value = state.ratio; applyRatio(); relayout(); renderAll();
       // 1. 匯入
@@ -3359,7 +3371,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
       Q.gen = { pk: PK, DM, cIn, cOut, T }; if (!(PK && Q.tOn && Q.title)) Q.gtid = null; if (!(PK && Q.eOn && Q.end)) Q.geid = null;
       Q.done = { sec: total, n: state.clips.length, short: total < D * 0.8, errs: errs.length, music: musicOk };
     } catch (e) { toast('做不出來：' + (e && e.message || '發生問題')); Q.done = null; Q.busy = false; Q.step = 2; render(); return; }
-    finally { if (wake) try { wake.release(); } catch (e) {} }
+    finally { bgKeepOff(); if (wake) try { wake.release(); } catch (e) {} }
     Q.busy = false; render();
   }
   const doneHtml = () => { const d = Q.done; return `<div class="qbig"><div class="em">🎉</div><h2>做好了！總長 ${fmt(d.sec)}</h2><p class="qh">用了 ${d.n} 段素材${d.music ? '，已配上音樂' : ''}。${d.short ? '素材不夠長，所以比你選的時間短一些；多選一點素材會更接近。' : ''}${d.errs ? `有 ${d.errs} 個素材讀不了，已跳過。` : ''}</p></div>
@@ -3497,7 +3509,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1123-A', upd = document.getElementById('upd');
+  const VER = '1123-B', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
