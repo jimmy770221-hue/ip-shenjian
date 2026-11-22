@@ -46,6 +46,14 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .clip{position:absolute;top:0;height:50px;border-radius:8px;overflow:hidden;background:#3a4166 center/auto 100% repeat-x;border:2px solid #4a5284;color:#fff;font-size:11px}
 .clip.active{border-color:var(--hot);box-shadow:0 0 0 1px var(--hot)}
 .clip span{position:absolute;left:0;right:0;bottom:0;padding:2px 5px;background:rgba(0,0,0,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#row-v .clip{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#row-v .clip .hd{display:none;position:absolute;top:0;bottom:0;width:min(22px,30%);background:rgba(255,179,71,.92);align-items:center;justify-content:center;color:#2b1a00;font-weight:900;font-size:14px;touch-action:none;z-index:2}
+#row-v .clip.active{z-index:30!important}
+#row-v .clip.active .hd{display:flex}
+#row-v .clip .hd.l{left:0;border-radius:6px 0 0 6px}#row-v .clip .hd.r{right:0;border-radius:0 6px 6px 0}
+#row-v .clip.grab{z-index:60!important;transform:scale(1.06);box-shadow:0 8px 18px rgba(0,0,0,.55);opacity:.92;border-color:var(--hot);touch-action:none}
+.lblock.grab{transform:scale(1.04);box-shadow:0 8px 18px rgba(0,0,0,.55);opacity:.92}
+.dropmk{position:absolute;top:-2px;height:54px;width:4px;margin-left:-2px;background:var(--hot);border-radius:2px;z-index:70;pointer-events:none}
 .clip.mute::after{content:"🔇";position:absolute;right:3px;top:2px;font-size:12px}
 .tblock,.mblock{position:absolute;height:24px;border-radius:6px;font-size:12px;line-height:24px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tblock{background:#7a52d6;border:2px solid #7a52d6}
@@ -736,7 +744,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-BD（服務社五大主題配樂）</div>
+  <div class="hfoot">版本 1123-A（服務社五大主題配樂）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -797,6 +805,8 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tb" data-a="freeze"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M4 7l16 10M4 17 20 7M10 5l2 2 2-2m-4 14 2-2 2 2"/></svg></i>定格</button>
     <button class="tb" data-a="trimL"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16m14-8H8m4-4-4 4 4 4"/></svg></i>裁左邊</button>
     <button class="tb" data-a="trimR"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 4v16M5 12h11m-4-4 4 4-4 4"/></svg></i>裁右邊</button>
+    <button class="tb" data-a="copy"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></i>複製</button>
+    <button class="tb" data-a="paste"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6v3H9zM9 5.5H7a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5a2 2 0 0 0-2-2h-2M9 13h6m-3-3v6"/></svg></i>貼上</button>
     <button class="tb" data-a="del"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 7v13h10V7m-8 0V4h6v3m-5 4v5m4-5v5"/></svg></i>刪除</button>
     <button class="tb" data-a="mvL"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 12H6m5-5-5 5 5 5"/></svg></i>前移</button>
     <button class="tb" data-a="mvR"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12m-5-5 5 5-5 5"/></svg></i>後移</button>
@@ -863,6 +873,7 @@ let history = [], redoStack = [], lastTouch = null;
 let showClip = false, showAu = false, showSt = false, showEf = false, showKf = false, kfMode = 'clip', kfLyId = null, kfIdx = -1;
 let showFx = false, fxTab = 'f', fxIdx = -1, showLy = false, selLy = null, lyTab = 'p', pendingTpl = null;
 let cur = 0, playing = false, pps = 80, selText = null, selMusic = false, selTr = null, showAuto = false, dirty = true;
+let clipBd = null, mainDragged = false;   // 複製的素材 / 剛拖過主軌素材（避免放開時又觸發點選）
 let selPic = null;   // 目前「鎖定」可以在畫面上拖移／縮放／旋轉的那一段（clip id）
 let lyPick = false;   // 點選第2軌（畫面軌道）的素材＝只選取、不跳選單（和主軌一樣）；要開版位等細項再按下面的工具
 const lyOn = () => !!(selLy && (showLy || lyPick));
@@ -1607,9 +1618,9 @@ function updateToolbar() {
   const set = (a, v) => { const b = document.querySelector(`.tb[data-a="${a}"]`); if (b) b.disabled = !v; };
   if (lyOn()) { const l = state.layers.find(x => x.id === selLy); if (l) { const nb = lyNeighbors(l), mid = cur > l.start + 0.1 && cur < l.start + l.len - 0.1;
     set('split', mid); set('trimL', mid); set('trimR', mid); set('del', true); set('mvL', !!nb.p); set('mvR', !!nb.n); set('freeze', false);
-    set('text', true); set('fx', true); set('undo', history.length > 0); set('redo', redoStack.length > 0); return; } }
+    set('text', true); set('fx', true); set('copy', true); set('paste', !!clipBd); set('undo', history.length > 0); set('redo', redoStack.length > 0); return; } }
   set('split', has); set('trimL', has); set('trimR', has); set('del', has); set('mvL', has && e.i > 0); set('mvR', has && e.i < L.length - 1);
-  set('text', has); set('fx', has); set('freeze', has); set('undo', history.length > 0); set('redo', redoStack.length > 0);
+  set('text', has); set('fx', has); set('freeze', has); set('copy', has); set('paste', !!clipBd); set('undo', history.length > 0); set('redo', redoStack.length > 0);
 }
 function renderTimeline() {
   const h = half(); $('#inner').style.padding = `0 ${h}px 6px`;
@@ -1624,7 +1635,7 @@ function renderTimeline() {
   const rv = $('#row-v'); rv.style.width = W + 'px';
   rv.innerHTML = L.map(e => {
     const a = assets.get(e.c.asset);
-    return `<div class="clip${e.c.mute ? ' mute' : ''}" data-i="${e.i}" style="z-index:${e.i + 1};left:${e.start * pps}px;width:${Math.max(4, e.d * pps - 2)}px;${a.thumb ? `background-image:url(${a.thumb})` : ''}"><span>${a.kind === 'image' ? '🖼 ' : ''}${e.i + 1}・${e.d.toFixed(1)}秒${e.c.sp && e.c.sp !== 1 ? ' ⚡' + e.c.sp + 'x' : ''}${e.c.rev ? ' ↺' : ''}${hasFx(e.c) ? ' 🎨' : ''}</span></div>`;
+    return `<div class="clip${e.c.mute ? ' mute' : ''}" data-i="${e.i}" style="z-index:${e.i + 1};left:${e.start * pps}px;width:${Math.max(4, e.d * pps - 2)}px;${a.thumb ? `background-image:url(${a.thumb})` : ''}"><span>${a.kind === 'image' ? '🖼 ' : ''}${e.i + 1}・${e.d.toFixed(1)}秒${e.c.sp && e.c.sp !== 1 ? ' ⚡' + e.c.sp + 'x' : ''}${e.c.rev ? ' ↺' : ''}${hasFx(e.c) ? ' 🎨' : ''}</span>${a.kind === 'image' ? '' : '<i class="hd l" data-h="l">‹</i>'}<i class="hd r" data-h="r">›</i></div>`;
   }).join('') + L.slice(1).map(e => `<div class="tmark${e.td > 0 ? ' on' : ''}${selTr === e.i ? ' sel' : ''}" data-ti="${e.i}" style="left:${(e.start + e.td / 2) * pps}px">${e.td > 0 ? '⟷' : '＋'}</div>`).join('');
   // 疊加層軌
   const rl = $('#row-l'), nt = state.ntrk || 0, ty = t => (nt - 1 - t) * 54;   // 高的軌道在上面
@@ -1656,6 +1667,7 @@ function renderTimeline() {
 $('#row-v').addEventListener('click', e => {
   const m = e.target.closest('.tmark');
   if (m) { const i = +m.dataset.ti; pause(); clearSel(); selTr = i; setCur(L[i].start + L[i].td / 2); renderTimeline(); renderCtx(); return; }
+  if (mainDragged || e.target.closest('.hd')) return;
   const d = e.target.closest('.clip'); if (!d) return; const en = L[+d.dataset.i];
   const x = e.clientX - d.getBoundingClientRect().left; // 點到哪裡就跳到哪裡（轉場重疊的部分算在後一段，所以限制在自己的範圍內，才選得到這一段）
   const own = L[en.i + 1] ? Math.max(0.001, L[en.i + 1].start - en.start) : en.d;
@@ -1697,14 +1709,22 @@ function trkVolOpen(t) {
   const rl = $('#row-l'); let dr = null;
   const snapT = (v, skip) => { const th = 8 / pps, pts = [0, cur]; L.forEach(e => { pts.push(e.start, e.end); }); state.layers.forEach(o => { if (o !== skip) pts.push(o.start, o.start + o.len); });
     let best = v, bd = th; pts.forEach(q => { const d = Math.abs(q - v); if (d < bd) { bd = d; best = q; } }); return best; };
+  const mk = (l, blk, mode, e) => { const a = assets.get(l.asset), nb = lyNeighbors(l);
+    dr = { l, blk, mode, x0: e.clientX, s0: l.start, n0: l.len, i0: l.in || 0, lo: nb.p ? nb.p.start + nb.p.len : 0, hi: nb.n ? nb.n.start : 1e9, sp: spd(l), vid: a && a.kind === 'video', maxLen: a && a.kind === 'video' ? (a.dur - (l.in || 0)) / spd(l) : 120, moved: false, id: e.pointerId };
+    try { blk.setPointerCapture(e.pointerId); } catch (x) {} };
+  let lp = null;   // 長按還沒選取的素材：按住 0.4 秒就選取並「抓起來」，接著可以左右拖
+  const lpStop = () => { if (lp) { clearTimeout(lp.t); lp = null; } };
   rl.addEventListener('pointerdown', e => {
-    const blk = e.target.closest('.lblock.sel'); if (!blk) return;
+    const blk = e.target.closest('.lblock.sel');
+    if (!blk) { const ub = e.target.closest('.lblock'); if (!ub || (e.pointerType === 'mouse' && e.button !== 0)) return; const lid = +ub.dataset.lid, pe = { clientX: e.clientX, pointerId: e.pointerId }, y0 = e.clientY;
+      lpStop(); lp = { x0: e.clientX, y0, id: e.pointerId, t: setTimeout(() => { lp = null; const l = state.layers.find(x => x.id === lid); if (!l) return; pause(); clearSel(); selLy = l.id; lyPick = true; renderTimeline(); renderCtx(); updateToolbar(); dirty = true;
+        const nb = rl.querySelector(`.lblock[data-lid="${lid}"]`); if (!nb) return; nb.classList.add('grab'); try { navigator.vibrate && navigator.vibrate(15); } catch (x) {} mk(l, nb, 'm', pe); lyDragged = true; }, 400) }; return; }
     const l = state.layers.find(x => x.id === +blk.dataset.lid); if (!l) return;
-    const hd = e.target.closest('.hd'), a = assets.get(l.asset), nb = lyNeighbors(l);
-    dr = { l, blk, mode: hd ? hd.dataset.h : 'm', x0: e.clientX, s0: l.start, n0: l.len, i0: l.in || 0, lo: nb.p ? nb.p.start + nb.p.len : 0, hi: nb.n ? nb.n.start : 1e9, sp: spd(l), vid: a && a.kind === 'video', maxLen: a && a.kind === 'video' ? (a.dur - (l.in || 0)) / spd(l) : 120, moved: false, id: e.pointerId };
-    try { blk.setPointerCapture(e.pointerId); } catch (x) {}
+    const hd = e.target.closest('.hd'); mk(l, blk, hd ? hd.dataset.h : 'm', e);
   });
+  rl.addEventListener('touchmove', e => { if (dr && dr.moved || (dr && dr.blk.classList.contains('grab'))) e.preventDefault(); }, { passive: false });
   rl.addEventListener('pointermove', e => {
+    if (lp && e.pointerId === lp.id && Math.hypot(e.clientX - lp.x0, e.clientY - lp.y0) > 8) lpStop();
     if (!dr || e.pointerId !== dr.id) return; const dt = (e.clientX - dr.x0) / pps; if (!dr.moved && Math.abs(e.clientX - dr.x0) < 5) return;
     if (!dr.moved) { commit(); dr.moved = true; lyDragged = true; }
     const l = dr.l; let st = dr.s0, ln = dr.n0, inn = dr.i0;
@@ -1716,8 +1736,70 @@ function trkVolOpen(t) {
     l.start = st; l.len = ln; if (dr.vid) l.in = inn;
     dr.blk.style.left = st * pps + 'px'; dr.blk.style.width = Math.max(24, ln * pps - 2) + 'px'; dirty = true;
   });
-  const end = e => { if (!dr || (e && e.pointerId !== dr.id)) return; const m = dr.moved; dr = null; if (m) { relayout(); renderTimeline(); setCur(cur); updateToolbar(); dirty = true; setTimeout(() => { lyDragged = false; }, 60); } };
+  const end = e => { lpStop(); if (!dr || (e && e.pointerId !== dr.id)) return; const m = dr.moved; dr.blk.classList.remove('grab'); dr = null; if (!m) setTimeout(() => { lyDragged = false; }, 60); if (m) { relayout(); renderTimeline(); setCur(cur); updateToolbar(); dirty = true; setTimeout(() => { lyDragged = false; }, 60); } };
   rl.addEventListener('pointerup', end); rl.addEventListener('pointercancel', end);
+})();
+/* 主軌素材：①選取後兩端的橘色把手＝拉長（把裁掉的找回來）或縮短；②長按素材「抓起來」，左右拖到別的素材前／後放開＝換位置 */
+(function () {
+  const rv = $('#row-v'); let dr = null, gb = null, lp = null;
+  const MIN = 0.3, noClick = () => { mainDragged = true; setTimeout(() => { mainDragged = false; }, 80); };
+  const place = (only) => {
+    rv.querySelectorAll('.clip').forEach(d => { const e = L[+d.dataset.i]; if (!e || (only != null && +d.dataset.i !== only)) return; d.style.left = e.start * pps + 'px'; d.style.width = Math.max(4, e.d * pps - 2) + 'px'; const sp = d.querySelector('span'); if (sp) sp.textContent = sp.textContent.replace(/・[\d.]+秒/, '・' + e.d.toFixed(1) + '秒'); });
+    rv.querySelectorAll('.tmark').forEach(m => { const e = L[+m.dataset.ti]; if (e) m.style.left = (e.start + e.td / 2) * pps + 'px'; });
+  };
+  const lpStop = () => { if (lp) { clearTimeout(lp.t); lp = null; } };
+  rv.addEventListener('touchmove', e => { if (dr || gb) e.preventDefault(); }, { passive: false });
+  rv.addEventListener('pointerdown', e => {
+    const d = e.target.closest('.clip'); if (!d || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    const i = +d.dataset.i, en = L[i]; if (!en) return; const c = en.c, a = assets.get(c.asset), hd = e.target.closest('.hd');
+    if (hd) {
+      dr = { i, c, d, mode: hd.dataset.h, x0: e.clientX, id: e.pointerId, moved: false, in0: c.in, out0: c.out, kf0: c.kf ? JSON.parse(JSON.stringify(c.kf)) : null, d0: en.d, sp: spd(c), rev: !!c.rev, img: a.kind === 'image', max: a.kind === 'image' ? 30 : a.dur, cur0: cur, lim: false };
+      try { hd.setPointerCapture(e.pointerId); } catch (x) {} return;
+    }
+    lpStop(); lp = { x0: e.clientX, y0: e.clientY, id: e.pointerId, t: setTimeout(() => {
+      lp = null; const en2 = L[i]; if (!en2) return; pause();
+      gb = { i, d, id: e.pointerId, x0: e.clientX, left0: en2.start * pps, sc0: sc.scrollLeft, cx: e.clientX, k: i, vel: 0 };
+      d.classList.add('grab'); try { navigator.vibrate && navigator.vibrate(15); } catch (x) {} try { d.setPointerCapture(e.pointerId); } catch (x) {}
+      const mk = document.createElement('div'); mk.className = 'dropmk'; rv.appendChild(mk); gb.mk = mk; gbUpd();
+      gb.tm = setInterval(() => { if (gb && gb.vel) { sc.scrollLeft += gb.vel; gbUpd(); } }, 16);
+    }, 400) };
+  });
+  function gbUpd() {
+    if (!gb) return; const w = L[gb.i].d * pps, left = gb.left0 + (gb.cx - gb.x0) + (sc.scrollLeft - gb.sc0); gb.d.style.left = left + 'px';
+    const ct = (left + w / 2) / pps, others = L.filter(x => x.i !== gb.i); let k = 0; others.forEach(x => { if (x.start + x.d / 2 < ct) k++; }); gb.k = k;
+    gb.mk.style.left = (others.length ? (k < others.length ? others[k].start : others[others.length - 1].end) : 0) * pps + 'px';
+  }
+  rv.addEventListener('pointermove', e => {
+    if (lp && e.pointerId === lp.id && Math.hypot(e.clientX - lp.x0, e.clientY - lp.y0) > 8) lpStop();
+    if (gb && e.pointerId === gb.id) { gb.cx = e.clientX; const r = sc.getBoundingClientRect(); gb.vel = e.clientX < r.left + 40 ? -10 : e.clientX > r.right - 40 ? 10 : 0; gbUpd(); return; }
+    if (!dr || e.pointerId !== dr.id) return; const dt = (e.clientX - dr.x0) / pps; if (!dr.moved && Math.abs(e.clientX - dr.x0) < 4) return;
+    if (!dr.moved) { commit(); dr.moved = true; noClick(); }
+    const c = dr.c, sp = dr.sp, mn = dr.img ? 0.5 : MIN; let nd;
+    if (dr.mode === 'l') {
+      if (!dr.rev) { let v = dr.in0 + dt * sp; const lo = 0, hi = dr.out0 - mn * sp; dr.lim = v <= lo || v >= hi; v = clamp(v, lo, hi); c.in = v; }
+      else { let v = dr.out0 - dt * sp; const lo = dr.in0 + mn * sp, hi = dr.max; dr.lim = v <= lo || v >= hi; v = clamp(v, lo, hi); c.out = v; }
+    } else {
+      if (!dr.rev) { let v = dr.out0 + dt * sp; const lo = dr.in0 + mn * sp, hi = dr.max; dr.lim = v <= lo || v >= hi; v = clamp(v, lo, hi); c.out = v; }
+      else { let v = dr.in0 - dt * sp; const lo = 0, hi = dr.out0 - mn * sp; dr.lim = v <= lo || v >= hi; v = clamp(v, lo, hi); c.in = v; }
+    }
+    nd = (c.out - c.in) / sp;
+    if (dr.mode === 'l' && dr.kf0) c.kf = dr.kf0.map(k => ({ ...k, t: +(k.t - (dr.d0 - nd)).toFixed(3) }));
+    const cu = cur; relayout(); cur = cu;
+    if (dr.mode === 'l') { place(dr.i); dr.d.style.left = (L[dr.i].start + (dr.d0 - nd)) * pps + 'px'; } else place();
+    dirty = true;
+  });
+  const end = e => {
+    lpStop();
+    if (gb && (!e || e.pointerId === gb.id)) {
+      clearInterval(gb.tm); gb.mk.remove(); gb.d.classList.remove('grab'); const g = gb; gb = null; noClick();
+      if (g.k !== g.i) { commit(); const c = state.clips.splice(g.i, 1)[0]; state.clips.splice(g.k, 0, c); relayout(); selTr = null; afterEdit(L[g.k].start + 0.05); toast('已移動位置'); }
+      else renderTimeline();
+      return;
+    }
+    if (!dr || (e && e.pointerId !== dr.id)) return; const m = dr.moved, i = dr.i, c0 = dr.cur0, lim = dr.lim; dr = null;
+    if (m) { relayout(); const en = L[i]; afterEdit(clamp(c0, en.start, Math.max(en.start, en.end - 0.01))); if (lim) toast('已經到頭了（最前面／最後面或最短）'); }
+  };
+  rv.addEventListener('pointerup', end); rv.addEventListener('pointercancel', end);
 })();
 $('#row-l').addEventListener('click', e => {
   if (lyDragged) return;
@@ -1783,6 +1865,8 @@ const ops = {
     if (local < 0.1) return toast('裁掉後片段太短了');
     commit(); if (e.c.rev) e.c.in = e.c.out - local * spd(e.c); else e.c.out = e.c.in + local * spd(e.c); afterEdit(e.start + local - 0.01); toast('已裁掉右邊');
   },
+  copy() { const e = clipAt(cur); if (!e) return; clipBd = { k: 'c', v: JSON.parse(JSON.stringify(e.c)) }; updateToolbar(); toast('已複製這一段，移到想放的位置按「貼上」（會放在目前這段後面）'); },
+  paste() { pasteAny(); },
   del() { const e = clipAt(cur); commit(); state.clips.splice(e.i, 1); afterEdit(Math.min(e.start, Math.max(0, total - e.d))); toast('已刪除這一段'); },
   mvL() { const e = clipAt(cur); if (e.i < 1) return; commit(); const c = state.clips; [c[e.i - 1], c[e.i]] = [c[e.i], c[e.i - 1]]; relayout(); afterEdit(L[e.i - 1].start + (cur - e.start)); },
   mvR() { const e = clipAt(cur); if (e.i >= L.length - 1) return; commit(); const c = state.clips; [c[e.i + 1], c[e.i]] = [c[e.i], c[e.i + 1]]; relayout(); afterEdit(L[e.i + 1].start + (cur - e.start)); },
@@ -1811,7 +1895,21 @@ function lyNeighbors(l) {   // 同一條軌道裡，左邊和右邊最靠近的�
   return { p, n };
 }
 const lyAfter = () => { relayout(); renderAll(); setCur(cur); updateToolbar(); };
+function pasteAny() {
+  if (!clipBd) return toast('請先選一段素材按「複製」');
+  const v = JSON.parse(JSON.stringify(clipBd.v)); v.id = uid++;
+  if (clipBd.k === 'c') {
+    const e = clipAt(cur), idx = e ? e.i + 1 : state.clips.length; commit(); state.clips.splice(idx, 0, v); relayout(); selLy = null; lyPick = false; showLy = false; afterEdit(L[idx].start + 0.05); toast('已貼上');
+  } else {
+    const sl = selLy && state.layers.find(x => x.id === selLy); if (sl) v.trk = sl.trk || 0;
+    let st = cur, hit = true, n = 0;
+    while (hit && n++ < 50) { hit = state.layers.find(o => (o.trk || 0) === (v.trk || 0) && o.start < st + v.len - 0.001 && o.start + o.len > st + 0.001); if (hit) st = hit.start + hit.len; }
+    commit(); v.start = st; state.layers.push(v); selLy = v.id; lyPick = true; relayout(); normLy(); renderAll(); setCur(st); updateToolbar(); dirty = true; toast('已貼上');
+  }
+}
 const LYOPS = {
+  copy(l) { clipBd = { k: 'l', v: JSON.parse(JSON.stringify(l)) }; updateToolbar(); toast('已複製，移到想放的位置按「貼上」'); },
+  paste() { pasteAny(); },
   split(l) {
     const local = cur - l.start; if (local < 0.1 || l.len - local < 0.1) return toast('請把時間線移到這一段「中間」再分割');
     commit(); const sp = spd(l), b = { ...l, id: uid++ }, a = assets.get(l.asset);
@@ -1839,7 +1937,7 @@ document.addEventListener('click', e => { const b = e.target.closest('.tb'); if 
   { const ly0 = lyOn() && state.layers.find(x => x.id === selLy), f0 = ly0 && LYOPS[b.dataset.a]; if (f0) { f0(ly0); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); return; } }
   ops[b.dataset.a](); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); });
 /* ===== 底部浮出：分類面板＋設定面板（不擠壓預覽）===== */
-const CATS = { edit: ['編輯', ['split', 'freeze', 'trimL', 'trimR', 'del', 'mvL', 'mvR', 'fx', 'kf', 'clip']], music: ['音樂', ['lib', 'music', 'au']], text: ['文字', ['text', 'st']], fx: ['特效', ['ef', 'ly', 'auto', 'tpl']] };
+const CATS = { edit: ['編輯', ['split', 'freeze', 'trimL', 'trimR', 'copy', 'paste', 'del', 'mvL', 'mvR', 'fx', 'kf', 'clip']], music: ['音樂', ['lib', 'music', 'au']], text: ['文字', ['text', 'st']], fx: ['特效', ['ef', 'ly', 'auto', 'tpl']] };
 let catKey = null;
 function closeCats() { const g = $('#cats-g'), pool = $('#tbpool'); [...g.children].forEach(b => pool.appendChild(b)); $('#cats').classList.remove('on'); catKey = null; }
 function openCat(k) {
@@ -2841,7 +2939,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-BD';
+const VER_NOW = '1123-A';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3399,7 +3497,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-BD', upd = document.getElementById('upd');
+  const VER = '1123-A', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
