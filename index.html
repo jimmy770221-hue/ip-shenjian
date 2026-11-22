@@ -736,7 +736,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1121-AZ（快速成片 9 種風格都有專屬套版）</div>
+  <div class="hfoot">版本 1121-BB（快速成片新增服務社五大主題套版）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -2841,7 +2841,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1121-AZ';
+const VER_NOW = '1121-BB';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -2970,7 +2970,12 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
     { id: 'touch', n: '🥹 感動時刻', d: '慢慢推近、柔光淡入', tr: ['fade', 'fadewhite', 'fade'], dur: 1.2, cap: 5, ph: 3, c: '#ffffff', end: '#ffffff', kb: 1, pk: 'touch', tc: '#8a5a3c' },
     { id: 'retro', n: '📼 復古底片', d: '黑場過渡、撕紙感', tr: ['fadeblack', 'torn', 'fade'], dur: 0.8, cap: 3.5, ph: 2.8, c: '#ffd59a', end: '#ffd59a', kb: 1, pk: 'retro', tc: '#5a3a1e' },
     { id: 'util', n: '✂️ 實用轉場', d: '溶解、馬賽克、百葉窗、對開、翻頁、甩動', tr: ['dissolve', 'mosaic', 'blinds', 'split', 'pageturn', 'whip'], dur: 0.6, cap: 3.5, ph: 2.6, c: '#ffffff', end: '#ffffff' },
-    { id: 'funny', n: '😂 搞笑整人', d: '放大衝進、撕紙、搞笑貼紙', tr: ['zoom', 'star', 'torn', 'slidedown'], dur: 0.5, cap: 2.6, ph: 2.2, c: '#ffe14d', end: '#ff6b6b', stk: 1, pk: 'funny', tc: '#c0392b' }
+    { id: 'funny', n: '😂 搞笑整人', d: '放大衝進、撕紙、搞笑貼紙', tr: ['zoom', 'star', 'torn', 'slidedown'], dur: 0.5, cap: 2.6, ph: 2.2, c: '#ffe14d', end: '#ff6b6b', stk: 1, pk: 'funny', tc: '#c0392b' },
+    { id: 'ipower', n: '🙌 I POWER 服務志工', d: '活力熱血、愛心與握手，服務社影片專用', tr: ['slideup', 'circleopen', 'zoom', 'fade'], dur: 0.6, cap: 3.6, ph: 2.8, c: '#ff7a1a', end: '#ffb300', pk: 'ipower', tc: '#e8620c' },
+    { id: 'senior', n: '👵 青銀共融', d: '溫暖柔和，長輩與青年的互動', tr: ['fade', 'fadewhite', 'slideleft'], dur: 0.9, cap: 4.5, ph: 3, c: '#ffd9b0', end: '#ffd9b0', kb: 1, pk: 'senior', tc: '#7a4a2a' },
+    { id: 'dementia', n: '🧠 預防失智', d: '清爽柔和，鼓勵動腦、運動、多社交', tr: ['fade', 'circleopen', 'slideup'], dur: 0.8, cap: 4, ph: 3, c: '#bfe6ee', end: '#bfe6ee', pk: 'dementia', tc: '#2f6f7a' },
+    { id: 'nodrug', n: '✋ 拒絕毒品', d: '明亮有力、正向守護，青少年反毒宣導', tr: ['wipeleft', 'zoom', 'slideup', 'circleclose'], dur: 0.5, cap: 3.2, ph: 2.6, c: '#a8e63a', end: '#a8e63a', pk: 'nodrug', tc: '#c6ff3d' },
+    { id: 'antiscam', n: '🛡️ 防制詐騙', d: '警示守護，提醒家人不上當', tr: ['slideleft', 'zoom', 'fadewhite', 'circleopen'], dur: 0.55, cap: 3.4, ph: 2.7, c: '#ffc700', end: '#ffc700', pk: 'antiscam', tc: '#1b2f5e' }
   ];
   const QSTK = ['太好玩了！', '來！', '讚！', '笑死', '好吃！', '開心', '超可愛', '耶！'];
   const Q = { step: 1, len: 30, ratio: '9:16', files: [], sty: 0, title: '', end: '', tOn: false, eOn: false, tBg: null, eBg: null, mus: 'auto', mstyle: 'party', song: null, busy: false, lib: null, pv: null, done: null };
@@ -3394,7 +3399,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1121-AZ', upd = document.getElementById('upd');
+  const VER = '1121-BB', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
