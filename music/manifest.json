@@ -1,6 +1,161 @@
 {
  "styles": [
   {
+   "id": "ipower",
+   "name": "I POWER 服務志工",
+   "emoji": "🙌",
+   "tracks": [
+    {
+     "file": "ipower-01a.mp3",
+     "name": "I POWER 服務志工 01"
+    },
+    {
+     "file": "ipower-01b.mp3",
+     "name": "I POWER 服務志工 01（B版）"
+    },
+    {
+     "file": "ipower-02a.mp3",
+     "name": "I POWER 服務志工 02"
+    },
+    {
+     "file": "ipower-02b.mp3",
+     "name": "I POWER 服務志工 02（B版）"
+    },
+    {
+     "file": "ipower-03a.mp3",
+     "name": "I POWER 服務志工 03"
+    },
+    {
+     "file": "ipower-03b.mp3",
+     "name": "I POWER 服務志工 03（B版）"
+    }
+   ]
+  },
+  {
+   "id": "senior",
+   "name": "青銀共融",
+   "emoji": "👵",
+   "tracks": [
+    {
+     "file": "senior-01a.mp3",
+     "name": "青銀共融 01"
+    },
+    {
+     "file": "senior-01b.mp3",
+     "name": "青銀共融 01（B版）"
+    },
+    {
+     "file": "senior-02a.mp3",
+     "name": "青銀共融 02"
+    },
+    {
+     "file": "senior-02b.mp3",
+     "name": "青銀共融 02（B版）"
+    },
+    {
+     "file": "senior-03a.mp3",
+     "name": "青銀共融 03"
+    },
+    {
+     "file": "senior-03b.mp3",
+     "name": "青銀共融 03（B版）"
+    }
+   ]
+  },
+  {
+   "id": "dementia",
+   "name": "預防失智",
+   "emoji": "🧠",
+   "tracks": [
+    {
+     "file": "dementia-01a.mp3",
+     "name": "預防失智 01"
+    },
+    {
+     "file": "dementia-01b.mp3",
+     "name": "預防失智 01（B版）"
+    },
+    {
+     "file": "dementia-02a.mp3",
+     "name": "預防失智 02"
+    },
+    {
+     "file": "dementia-02b.mp3",
+     "name": "預防失智 02（B版）"
+    },
+    {
+     "file": "dementia-03a.mp3",
+     "name": "預防失智 03"
+    },
+    {
+     "file": "dementia-03b.mp3",
+     "name": "預防失智 03（B版）"
+    }
+   ]
+  },
+  {
+   "id": "nodrug",
+   "name": "拒絕毒品",
+   "emoji": "✋",
+   "tracks": [
+    {
+     "file": "nodrug-01a.mp3",
+     "name": "拒絕毒品 01"
+    },
+    {
+     "file": "nodrug-01b.mp3",
+     "name": "拒絕毒品 01（B版）"
+    },
+    {
+     "file": "nodrug-02a.mp3",
+     "name": "拒絕毒品 02"
+    },
+    {
+     "file": "nodrug-02b.mp3",
+     "name": "拒絕毒品 02（B版）"
+    },
+    {
+     "file": "nodrug-03a.mp3",
+     "name": "拒絕毒品 03"
+    },
+    {
+     "file": "nodrug-03b.mp3",
+     "name": "拒絕毒品 03（B版）"
+    }
+   ]
+  },
+  {
+   "id": "antiscam",
+   "name": "防制詐騙",
+   "emoji": "🛡️",
+   "tracks": [
+    {
+     "file": "antiscam-01a.mp3",
+     "name": "防制詐騙 01"
+    },
+    {
+     "file": "antiscam-01b.mp3",
+     "name": "防制詐騙 01（B版）"
+    },
+    {
+     "file": "antiscam-02a.mp3",
+     "name": "防制詐騙 02"
+    },
+    {
+     "file": "antiscam-02b.mp3",
+     "name": "防制詐騙 02（B版）"
+    },
+    {
+     "file": "antiscam-03a.mp3",
+     "name": "防制詐騙 03"
+    },
+    {
+     "file": "antiscam-03b.mp3",
+     "name": "防制詐騙 03（B版）"
+    }
+   ]
+  },
+  {
    "id": "party",
    "name": "活力派對",
    "emoji": "🎉",
