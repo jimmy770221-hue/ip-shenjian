@@ -744,7 +744,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1123-B（服務社五大主題配樂）</div>
+  <div class="hfoot">版本 1124-A（服務社五大主題配樂）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -888,7 +888,15 @@ const FXP = {
   bw: { n: '黑白', b: 0, ct: 1.15, sa: 0, r: 1, g: 1, bl: 1 },
   vivid: { n: '鮮豔', b: 0, ct: 1.1, sa: 1.5, r: 1, g: 1, bl: 1 },
   cool: { n: '冷調', b: 0, ct: 1, sa: 1, r: .92, g: 1, bl: 1.1 },
-  warm: { n: '暖調', b: 0, ct: 1, sa: 1, r: 1.1, g: 1.02, bl: .9 }
+  warm: { n: '暖調', b: 0, ct: 1, sa: 1, r: 1.1, g: 1.02, bl: .9 },
+  manga: { n: '漫畫', b: .02, ct: 1.9, sa: 0, r: 1, g: 1, bl: 1 },
+  pastel: { n: '粉彩', b: .1, ct: .8, sa: .8, r: 1.05, g: 1, bl: 1.05 },
+  cyber: { n: '賽博', b: -.02, ct: 1.2, sa: 1.35, r: .9, g: .85, bl: 1.25 },
+  lomo: { n: 'LOMO', b: -.04, ct: 1.35, sa: 1.4, r: 1.1, g: 1.02, bl: .88 },
+  sepia: { n: '懷舊黃', b: .02, ct: 1.05, sa: .45, r: 1.2, g: 1.05, bl: .7 },
+  fresh: { n: '清新', b: .06, ct: 1.05, sa: 1.15, r: .97, g: 1.06, bl: 1 },
+  sunset: { n: '夕陽', b: 0, ct: 1.1, sa: 1.3, r: 1.2, g: .95, bl: .8 },
+  moon: { n: '月光', b: -.06, ct: 1.1, sa: .7, r: .85, g: .95, bl: 1.2 }
 };
 const fxP = c => { const p = FXP[c.fp] || FXP.none; return { b: p.b + (c.fb || 0), ct: p.ct * (c.fc == null ? 1 : c.fc), sa: p.sa * (c.fs == null ? 1 : c.fs), r: p.r, g: p.g, bl: p.bl }; };
 const hasFx = c => { const q = fxP(c); return Math.abs(q.b) > .001 || Math.abs(q.ct - 1) > .001 || Math.abs(q.sa - 1) > .001 || q.r !== 1 || q.g !== 1 || q.bl !== 1; };
@@ -1255,7 +1263,7 @@ function kfBuild(kf, cw, ch, W, H, base, cx, cy, em) {
 }
 
 /* ===== 特效包（整個畫面）===== */
-const EFX = [['blur', '模糊'], ['sketch', '線稿描邊'], ['mirror', '鏡像分身'], ['chroma', '色差'], ['glitch', '故障閃動'], ['vig', '暗角'], ['grain', '顆粒雜訊']];
+const EFX = [['blur', '模糊'], ['sketch', '線稿描邊'], ['mirror', '鏡像分身'], ['chroma', '色差'], ['glitch', '故障閃動'], ['vig', '暗角'], ['grain', '顆粒雜訊'], ['shake', '畫面震動'], ['pulse', '心跳放大'], ['mosaic', '馬賽克'], ['flash', '閃光閃爍'], ['tv', '電視雜訊'], ['focus', '漫畫集中線'], ['speed', '漫畫速度線']];
 const hasEf = ef => !!ef && EFX.some(([k]) => (ef[k] || 0) > 0.001);
 const glOn = t => (t % 1.4) < 0.18;
 function rgbShiftPrev(rn, bn, gv) {
@@ -1266,6 +1274,27 @@ function rgbShiftPrev(rn, bn, gv) {
     o[i] = s[(y * W + xr) * 4]; o[i + 1] = s[(yg * W + x) * 4 + 1]; o[i + 2] = s[(y * W + xb) * 4 + 2];
   }
   im.data.set(o); g.putImageData(im, 0, 0);
+}
+/* 綜藝特效：集中線／速度線（用固定亂數，預覽、快速匯出、相容匯出畫出來一樣；每 1/8 秒換一種畫法才有動感） */
+function efRng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function drawLines(x, W, H, kind, v, variant) {
+  const R = efRng((variant + 1) * 7919 + (kind === 'focus' ? 11 : 23)), sc = W / 360;
+  if (kind === 'focus') {
+    const cx = W / 2, cy = H / 2, Rr = Math.hypot(W, H) / 2 + 4, ri = Rr * (0.62 - 0.4 * v), n = 70 + Math.round(v * 40);
+    x.fillStyle = `rgba(0,0,0,${(0.55 + 0.4 * v).toFixed(2)})`;
+    for (let i = 0; i < n; i++) { const a = R() * Math.PI * 2, w = (0.004 + R() * 0.016) * (0.6 + v * 0.8), r0 = ri * (0.85 + R() * 0.5);
+      x.beginPath(); x.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); x.lineTo(cx + Math.cos(a - w) * Rr, cy + Math.sin(a - w) * Rr); x.lineTo(cx + Math.cos(a + w) * Rr, cy + Math.sin(a + w) * Rr); x.closePath(); x.fill(); }
+  } else {
+    const n = 14 + Math.round(v * 34);
+    for (let i = 0; i < n; i++) { const y = R() * H, len = (0.25 + R() * 0.55) * W, th = Math.max(1, (1 + R() * 3) * sc * (0.6 + v * 0.6)), left = R() < 0.5, x0 = left ? -R() * 0.1 * W : W - len + R() * 0.1 * W, al = 0.35 + 0.5 * R();
+      const gr = x.createLinearGradient(x0, 0, x0 + len, 0); gr.addColorStop(left ? 0 : 1, `rgba(255,255,255,${al.toFixed(2)})`); gr.addColorStop(left ? 1 : 0, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(x0, y, len, th); }
+  }
+}
+const lnCache = new Map();
+function lineCv(kind, W, H, v, vr) {
+  const qv = Math.round(v * 20) / 20, key = kind + W + 'x' + H + ':' + qv + ':' + vr; let c = lnCache.get(key);
+  if (!c) { if (lnCache.size >= 8) lnCache.clear(); c = document.createElement('canvas'); c.width = W; c.height = H; drawLines(c.getContext('2d'), W, H, kind, qv, vr); lnCache.set(key, c); }
+  return c;
 }
 function applyEf(ef, t) {
   const W = cv.width, H = cv.height, sc = W / 360;
@@ -1296,9 +1325,19 @@ function applyEf(ef, t) {
     for (let y = 0, i = 0; y < H; y++) for (let x = 0; x < W; x++, i += 4) { const r = rn[((y / bs) | 0) * nb + ((x / bs) | 0)]; d[i] += r; d[i + 1] += r; d[i + 2] += r; }
     g.putImageData(im, 0, 0);
   }
+  if (ef.shake > 0.001) { const A = ef.shake * 0.02 * W, z = 1 + 0.045 * ef.shake, dx = A * Math.sin(t * 2 * Math.PI * 7.3), dy = A * Math.cos(t * 2 * Math.PI * 9.1); fxg.clearRect(0, 0, W, H); fxg.drawImage(cv, 0, 0); g.drawImage(fxc, (W - W * z) / 2 - dx, (H - H * z) / 2 - dy, W * z, H * z); }
+  if (ef.pulse > 0.001) { const z = 1 + 0.12 * ef.pulse * Math.exp(-10 * (t % 0.8)); if (z > 1.0005) { fxg.clearRect(0, 0, W, H); fxg.drawImage(cv, 0, 0); g.drawImage(fxc, (W - W * z) / 2, (H - H * z) / 2, W * z, H * z); } }
+  if (ef.mosaic > 0.001) { const b = Math.max(2, Math.round((4 + 36 * ef.mosaic) * sc)), w = Math.ceil(W / b), h = Math.ceil(H / b); blc.width = w; blc.height = h; blg.drawImage(cv, 0, 0, w, h); g.save(); g.imageSmoothingEnabled = false; g.drawImage(blc, 0, 0, W, H); g.restore(); }
+  if (ef.flash > 0.001) { const pl = Math.max(0, 1 - (t % 1.2) / 0.18); if (pl > 0) { g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = Math.min(1, 0.7 * ef.flash * pl); g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); g.restore(); } }
+  if (ef.tv > 0.001) {
+    const lh = Math.max(1, Math.round(sc)); g.save(); g.fillStyle = `rgba(0,0,0,${(0.35 * ef.tv).toFixed(3)})`; for (let y = 0; y < H; y += 3 * lh) g.fillRect(0, y, W, lh); g.restore();
+    const im = g.getImageData(0, 0, W, H), d = im.data, N = ef.tv * 30; for (let i = 0; i < d.length; i += 4) { const r = (Math.random() * 2 - 1) * N; d[i] += r; d[i + 1] += r; d[i + 2] += r; } g.putImageData(im, 0, 0);
+  }
+  for (const k of ['focus', 'speed']) if (ef[k] > 0.001) g.drawImage(lineCv(k, W, H, ef[k], Math.floor(t * 8) % 4), 0, 0);
 }
 // 匯出用：把特效串接到 filter_complex，回傳最後的標籤
-function efParts(ef, prev, parts, W, H) {
+async function linePng(kind, W, H, v, q) { const c = document.createElement('canvas'); c.width = W; c.height = H; drawLines(c.getContext('2d'), W, H, kind, Math.round(v * 20) / 20, q); const b = await new Promise(r => c.toBlob(r, 'image/png')); return new Uint8Array(await b.arrayBuffer()); }
+function efParts(ef, prev, parts, W, H, efIn) {
   const sc = W / 360; let n = 0; const nx = () => 'ef' + (n++);
   const lin = f => { const o = nx(); parts.push(`[${prev}]${f}[${o}]`); prev = o; };
   for (const [k] of EFX) {
@@ -1309,6 +1348,12 @@ function efParts(ef, prev, parts, W, H) {
     else if (k === 'vig') lin(`vignette=angle=${(.15 + v * 1.2).toFixed(3)}`);
     else if (k === 'grain') { const g1 = nx(), o = nx(), q = Math.max(2, Math.round(4 * sc)); parts.push(`color=c=0x808080:s=${Math.ceil(W / q)}x${Math.ceil(H / q)}:r=30,noise=c0s=${Math.round(v * 30)}:c0f=t,fps=10,scale=${W}:${H}:flags=neighbor,fps=30,format=yuv420p[${g1}]`, `[${prev}]format=yuv420p[${o}p]`, `[${o}p][${g1}]blend=c0_mode=grainmerge:c1_expr=A:c2_expr=A:shortest=1[${o}]`); prev = o; }
     else if (k === 'mirror') { const a = nx(), b = nx(), m = nx(), o = nx(); parts.push(`[${prev}]split[${a}][${b}]`, `[${b}]hflip,format=yuva420p,colorchannelmixer=aa=${(v * 0.6).toFixed(3)}[${m}]`, `[${a}]format=yuv420p[${a}f]`, `[${a}f][${m}]overlay=format=auto,format=yuv420p[${o}]`); prev = o; }
+    else if (k === 'shake') { const A = (v * 0.02 * W).toFixed(2), z = 1 + 0.045 * v, e2 = n => { n = Math.round(n); return n % 2 ? n + 1 : n; }; lin(`scale=${e2(W * z)}:${e2(H * z)},crop=${W}:${H}:x='(iw-${W})/2+${A}*sin(2*PI*7.3*t)':y='(ih-${H})/2+${A}*cos(2*PI*9.1*t)'`); }
+    else if (k === 'pulse') { const a = (0.12 * v).toFixed(4), zz = nx(), bg = nx(), o = nx(); parts.push(`[${prev}]scale=w='trunc(${W}*(1+${a}*exp(-10*mod(t,0.8)))/2)*2':h='trunc(${H}*(1+${a}*exp(-10*mod(t,0.8)))/2)*2':eval=frame[${zz}]`, `color=c=black:s=${W}x${H}:r=30[${bg}]`, `[${bg}][${zz}]overlay=x='(${W}-overlay_w)/2':y='(${H}-overlay_h)/2':shortest=1,format=yuv420p[${o}]`); prev = o; }
+    else if (k === 'mosaic') { const b = Math.max(2, Math.round((4 + 36 * v) * sc)); lin(`scale=${Math.ceil(W / b)}:${Math.ceil(H / b)}:flags=area,scale=${W}:${H}:flags=neighbor`); }
+    else if (k === 'flash') lin(`eq=brightness='${(0.58 * v).toFixed(3)}*max(0,1-mod(t,1.2)/0.18)':eval=frame`);
+    else if (k === 'tv') { const lh = Math.max(1, Math.round(sc)); lin(`drawgrid=w=0:h=${3 * lh}:t=${lh}:c=black@${(0.35 * v).toFixed(3)},noise=alls=${Math.round(v * 30)}:allf=t`); }
+    else if (k === 'focus' || k === 'speed') { (efIn && efIn[k] || []).forEach((ix, q) => { const o = nx(); parts.push(`[${prev}][${ix}:v]overlay=0:0:eof_action=pass:format=auto:enable='between(mod(t,0.5),${(q * 0.125).toFixed(3)},${((q + 1) * 0.125).toFixed(3)})',format=yuv420p[${o}]`); prev = o; }); }
     else if (k === 'sketch') { const a = nx(), b = nx(), e = nx(), o = nx(); parts.push(`[${prev}]split[${a}][${b}]`, `[${b}]edgedetect=mode=wires:low=0.1:high=0.3,dilation,dilation,negate,format=yuv420p,lutyuv=y='if(gt(val,128),255,0)'[${e}]`, `[${a}]format=yuv420p[${a}f]`, `[${a}f][${e}]blend=c0_mode=multiply:c0_opacity=${v.toFixed(3)}:c1_expr=A:c2_expr=A[${o}]`); prev = o; }
   }
   return prev;
@@ -2854,6 +2899,8 @@ $('#xp-go').onclick = async () => {
       xStatus(audioOnly ? '正在混音…' : '正在合成畫面、文字與配樂…'); prog(0.8, 1);
       const args = ['-i', base]; let idx = 1;
       for (const x of texts) { const pn = `t${idx}.png`; await f.writeFile(pn, await textPng(x, W, H)); files.push(pn); if (x.an) args.push('-loop', '1', '-framerate', '30', '-t', Math.max(0.2, Math.min(x.dur, TT - x.start)).toFixed(3), '-i', pn); else args.push('-i', pn); idx++; }
+      const efIn = {};
+      if (!audioOnly && efOn) for (const k of ['focus', 'speed']) { const v = snap.gfx.ef[k] || 0; if (v > 0.001) { efIn[k] = []; for (let q = 0; q < 4; q++) { const pn = `ef_${k}${q}.png`; await f.writeFile(pn, await linePng(k, W, H, v, q)); files.push(pn); args.push('-loop', '1', '-framerate', '30', '-t', TT.toFixed(3), '-i', pn); efIn[k].push(idx++); } } }
       for (const it of lyInfo) {
         it.i = idx++;
         if (it.la.kind === 'image') args.push('-loop', '1', '-framerate', '30', '-t', it.l.len.toFixed(3), '-i', it.ln);
@@ -2895,7 +2942,7 @@ $('#xp-go').onclick = async () => {
           prev = `vl${k}`;
         });
         if (gfxOn) { parts.push(`[${prev}]${fxString(snap.gfx)}[vg]`); prev = 'vg'; }
-        if (efOn) prev = efParts(snap.gfx.ef, prev, parts, W, H);
+        if (efOn) prev = efParts(snap.gfx.ef, prev, parts, W, H, efIn);
         texts.forEach((x, k) => {
           const nx = `v${k + 1}`;
           if (!x.an) { parts.push(`[${prev}][${k + 1}:v]overlay=0:0:enable='between(t,${x.start.toFixed(2)},${(x.start + x.dur).toFixed(2)})'[${nx}]`); prev = nx; return; }
@@ -2951,7 +2998,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1123-B';
+const VER_NOW = '1124-A';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3509,7 +3556,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1123-B', upd = document.getElementById('upd');
+  const VER = '1124-A', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
