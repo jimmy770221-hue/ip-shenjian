@@ -745,7 +745,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1126-A（字幕進階：樣式、逐詞大字、SRT）</div>
+  <div class="hfoot">版本 1126-B（配樂自動壓低、字幕進階）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -1545,7 +1545,7 @@ function musicDecode(m) {
 function musicBuf(m, mw) {   // 回傳 true 表示已由 WebAudio 負責
   if (!playing || mw < 0 || mw >= m.dur) { musicBufStop(); return !!m.buf; }
   const c = awCtx(); if (!mbGain) { mbGain = c.createGain(); mbGain.connect(awMaster); }
-  mbGain.gain.value = clamp(state.vol.music, 0, 1);
+  mbGain.gain.value = clamp(state.vol.music * duckAt(cur), 0, 1);
   if (mbSrc && mbAsset === m) { const exp = mbOff + (c.currentTime - mbT0); if (Math.abs(exp - mw) < 0.35) return true; }
   musicBufStop(); const src = c.createBufferSource(); src.buffer = m.buf; src.connect(mbGain); src.start(0, Math.min(mw, m.buf.duration - 0.01));
   mbSrc = src; mbAsset = m; mbT0 = c.currentTime; mbOff = mw; return true;
@@ -1555,6 +1555,36 @@ function needSeek(el, t, tol) {
   const now = performance.now(); if (el._sk && now - el._sk < 1200) return false;
   if (Math.abs(el.currentTime - t) > tol) { el._sk = now; return true; } return false;
 }
+/* ===== 人聲自動壓低配樂：影片原聲或配音有聲音的時候，配樂自動變小（預覽與匯出用同一份曲線）===== */
+function duckAt(t) {
+  const d = state.duck; if (!d || !d.on || !d.env || !d.env.length) return 1; const e = d.env;
+  if (t <= e[0][0]) return e[0][1]; if (t >= e[e.length - 1][0]) return e[e.length - 1][1];
+  for (let i = 0; i < e.length - 1; i++) if (t < e[i + 1][0]) { const p = (t - e[i][0]) / Math.max(1e-6, e[i + 1][0] - e[i][0]); return e[i][1] + (e[i + 1][1] - e[i][1]) * p; }
+  return 1;
+}
+async function duckAnalyze(silent) {
+  const d = state.duck; if (!d) return; const amt = d.amt == null ? 0.35 : d.amt, segs = [], bufs = new Map();
+  const srcs = []; L.forEach(e => { const a = assets.get(e.c.asset); if (a && a.kind === 'video' && !e.c.mute && !e.c.rev) srcs.push({ a, from: e.c.in, len: e.c.out - e.c.in, map: t => e.start + t / spd(e.c), end: e.end, g: e.c.vol == null ? 1 : e.c.vol }); });
+  (state.vo || []).forEach(v => { const a = assets.get(v.asset); if (a) srcs.push({ a, from: 0, len: a.dur || 0, map: t => v.offset + t, end: v.offset + (a.dur || 0), g: v.vol == null ? 1 : v.vol }); });
+  if (!silent) toast('分析聲音中…');
+  for (const sr of srcs) {
+    let buf = bufs.get(sr.a.id);
+    if (!buf) { const ac = new (window.AudioContext || window.webkitAudioContext)(); try { buf = await ac.decodeAudioData(await sr.a.file.arrayBuffer()); } catch (e) { ac.close && ac.close(); continue; } ac.close && ac.close(); bufs.set(sr.a.id, buf); }
+    const ch = buf.getChannelData(0), sRate = buf.sampleRate, win = Math.round(sRate * 0.05), i0 = Math.floor(sr.from * sRate / win), i1 = Math.min(Math.floor(buf.length / win), Math.ceil((sr.from + sr.len) * sRate / win));
+    const rms = []; for (let i = i0; i < i1; i++) { let q = 0; for (let j = i * win, e = j + win; j < e; j += 3) q += ch[j] * ch[j]; rms.push(Math.sqrt(q / (win / 3)) * sr.g); }
+    const srt = rms.slice().sort((a, b) => a - b), p90 = srt.length ? srt[Math.floor(srt.length * 0.9)] : 0, thr = Math.max(0.012, p90 * 0.25);
+    let a0 = -1; const flush = (k) => { if (a0 >= 0 && k - a0 >= 5) segs.push([sr.map((a0 + i0) * win / sRate - sr.from + sr.from), Math.min(sr.end, sr.map((k + i0) * win / sRate))]); a0 = -1; };
+    let quiet = 0; for (let k = 0; k < rms.length; k++) { if (rms[k] > thr) { if (a0 < 0) a0 = k; quiet = 0; } else if (a0 >= 0 && ++quiet > 10) { flush(k - quiet + 1); quiet = 0; } } flush(rms.length - quiet);
+    bufs.delete(sr.a.id);
+  }
+  segs.sort((a, b) => a[0] - b[0]); const mg = [];
+  for (const sg of segs) { const l = mg[mg.length - 1]; if (l && sg[0] - l[1] < 0.8) l[1] = Math.max(l[1], sg[1]); else mg.push([sg[0], sg[1]]); }
+  const env = []; mg.forEach(([a, b]) => { env.push([Math.max(0, a - 0.35), 1], [Math.max(0, a - 0.05), amt], [b, amt], [b + 0.6, 1]); });
+  d.env = env.map(x => [+x[0].toFixed(2), +x[1].toFixed(3)]).filter((x, i, A) => i === 0 || x[0] > A[i - 1][0]); d.n = mg.length;
+  if (!silent) toast(mg.length ? '找到 ' + mg.length + ' 段有聲音的地方，配樂會自動壓低' : '沒有偵測到明顯的聲音，配樂不會壓低');
+  return mg.length;
+}
+
 /* ===== 音訊：每段音量與淡入淡出、波形 ===== */
 function clipGain(c, t, d) {   // t = 在這一段裡的時間（秒），d = 這一段長度；回傳 0~2
   let g = c.vol == null ? 1 : c.vol;
@@ -1618,7 +1648,7 @@ function syncMedia() {
   }
   if (state.music) {
     const m = assets.get(state.music.asset), el = m.el, mw = cur - state.music.offset;
-    el.volume = clamp(state.vol.music, 0, 1);
+    el.volume = clamp(state.vol.music * duckAt(cur), 0, 1);
     if (m.buf && musicBuf(m, mw)) { if (!el.paused) el.pause(); }   // 已解碼：用 WebAudio 播，不會斷斷續續
     else if (playing && mw >= 0 && mw < m.dur) { musicBufStop(); if (needSeek(el, mw, 0.6)) { el.currentTime = mw; } if (el.paused) el.play().catch(() => {}); }
     else { musicBufStop(); if (!el.paused) el.pause(); }
@@ -2133,6 +2163,9 @@ function renderCtx() {
     const m = assets.get(state.music.asset);
     h += `<h4>🎵 配樂：${esc(m.name)}</h4>
     <label>配樂音量 ${Math.round(state.vol.music * 100)}%</label><input type="range" id="vol-m" min="0" max="1" step="0.05" value="${state.vol.music}">
+    <label class="chk"><input type="checkbox" id="duck-on"${(state.duck || {}).on ? ' checked' : ''}> 🎚 影片有人說話（有聲音）時，配樂自動變小</label>
+    ${(state.duck || {}).on ? `<label>說話時配樂壓低到 <b id="duck-v">${Math.round(((state.duck.amt == null ? 0.35 : state.duck.amt)) * 100)}%</b></label><input type="range" id="duck-a" min="0.05" max="0.8" step="0.05" value="${state.duck.amt == null ? 0.35 : state.duck.amt}">
+    <div class="r2"><button class="sm" id="duck-re">🔄 重新分析（剪輯後按一下）</button></div><p class="hint">${state.duck.n ? '已找到 ' + state.duck.n + ' 段有聲音的地方。匯出時會自動重新分析一次。' : '還沒分析到有聲音的地方。'}</p>` : ''}
     <p class="hint">配樂從 ${state.music.offset.toFixed(1)} 秒開始播，總長 ${fmt(m.dur)}。</p>
     <div class="r2"><button class="sm" id="m-here">從目前位置開始播</button><button class="sm" id="m-zero">從頭開始播</button></div>
     <div class="r2" style="margin-top:8px"><button class="sm red" id="m-del">刪除配樂</button><button class="sm ok" id="m-ok">完成</button></div>`;
@@ -2185,6 +2218,10 @@ function renderCtx() {
     on('#tx-del', 'click', () => { commit(); state.texts = state.texts.filter(x => x !== t); selText = null; renderTimeline(); renderCtx(); dirty = true; });
     on('#tx-ok', 'click', () => { selText = null; renderTimeline(); renderCtx(); });
   } else if (selMusic && state.music) {
+    on('#duck-on', 'change', async e => { commit(); state.duck = state.duck || { amt: 0.35 }; state.duck.on = e.target.checked; if (state.duck.on) await duckAnalyze(); renderCtx(); syncMedia(); });
+    on('#duck-a', 'input', e => { touch('duck'); state.duck.amt = +e.target.value; const v = $('#duck-v'); if (v) v.textContent = Math.round(state.duck.amt * 100) + '%'; });
+    on('#duck-a', 'change', async () => { await duckAnalyze(true); syncMedia(); });
+    on('#duck-re', 'click', async () => { await duckAnalyze(); renderCtx(); syncMedia(); });
     on('#m-here', 'click', () => { commit(); state.music.offset = cur; renderTimeline(); renderCtx(); syncMedia(); });
     on('#m-zero', 'click', () => { commit(); state.music.offset = 0; renderTimeline(); renderCtx(); syncMedia(); });
     on('#m-del', 'click', () => { commit(); const a = assets.get(state.music.asset); if (a.el) a.el.pause(); state.music = null; selMusic = false; renderTimeline(); renderCtx(); });
@@ -3001,6 +3038,7 @@ async function fastVideo(LL, TT, W, H, S, audioBytes) {
 }
 let noFastOnce = false;
 $('#xp-go').onclick = async () => {
+  if (state.duck && state.duck.on && state.music) { try { await duckAnalyze(true); } catch (e) {} }
   const kind = $('#xp-fmt').value, S = +$('#xp-q').value, isMp3 = kind === 'mp3', compat = $('#xp-mode').value === 'compat' || noFastOnce; noFastOnce = false;
   const fast = !isMp3 && !compat && !!window.VideoEncoder && !state.clips.some(c => c.rev), audioOnly = isMp3 || fast;
   const [W, H] = exportDims(S), snap = JSON.parse(JSON.stringify(state)), LL = L.map(e => ({ ...e })), TT = total;
@@ -3181,7 +3219,7 @@ $('#xp-go').onclick = async () => {
         const aL = [];
         const afx = audFilters(aud); parts.push(`[0:a]${padT > 0 ? `apad=pad_dur=${padT.toFixed(3)},` : ''}${afx.length ? afx.join(',') + ',' : ''}volume=${V1}[a0]`); aL.push('[a0]');
         layerAudio.forEach(it => { const sp = spd(it.l); parts.push(`[${it.i}:a]${sp !== 1 ? atempoStr(sp) + ',' : ''}adelay=${Math.round(it.l.start * 1000)}:all=1,volume=${(V1 * ((snap.tv && snap.tv[it.l.trk || 0] != null) ? snap.tv[it.l.trk || 0] : 1)).toFixed(3)}[la${it.i}]`); aL.push(`[la${it.i}]`); });
-        if (music) { const ms = Math.round(music.offset * 1000); parts.push(`[${mi}:a]volume=${Vm}${ms > 0 ? `,adelay=${ms}:all=1` : ''}[am]`); aL.push('[am]'); }
+        if (music) { const ms = Math.round(music.offset * 1000); const dk = (snap.duck && snap.duck.on && snap.duck.env && snap.duck.env.length) ? `volume='${Vm}*(${kfExpr(snap.duck.env.map(q => ({ t: q[0], d: q[1] })), 'd', 1, -music.offset, 't')})':eval=frame` : `volume=${Vm}`; parts.push(`[${mi}:a]${dk}${ms > 0 ? `,adelay=${ms}:all=1` : ''}[am]`); aL.push('[am]'); }
         vos.forEach(v => { parts.push(`[${v.i}:a]aresample=44100,volume=${v.vol == null ? 1 : v.vol}${v.offset > 0 ? `,adelay=${Math.round(v.offset * 1000)}:all=1` : ''}[vo${v.i}]`); aL.push(`[vo${v.i}]`); });
         if (aL.length > 1) { parts.push(`${aL.join('')}amix=inputs=${aL.length}:duration=first:normalize=0[aout]`); amap = '[aout]'; } else amap = aL[0];
         if (aud && (aud.fi > 0 || aud.fo > 0)) { const fl = []; if (aud.fi > 0) fl.push(`afade=t=in:st=0:d=${aud.fi}`); if (aud.fo > 0) fl.push(`afade=t=out:st=${Math.max(0, TT - aud.fo).toFixed(3)}:d=${aud.fo}`); parts.push(`${amap}${fl.join(',')}[afo]`); amap = '[afo]'; }
@@ -3219,7 +3257,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1126-A';
+const VER_NOW = '1126-B';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3777,7 +3815,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1126-A', upd = document.getElementById('upd');
+  const VER = '1126-B', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
