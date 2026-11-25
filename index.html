@@ -54,6 +54,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 #row-v .clip.grab{z-index:60!important;transform:scale(1.06);box-shadow:0 8px 18px rgba(0,0,0,.55);opacity:.92;border-color:var(--hot);touch-action:none}
 .lblock.grab{transform:scale(1.04);box-shadow:0 8px 18px rgba(0,0,0,.55);opacity:.92}
 .dropmk{position:absolute;top:-2px;height:54px;width:4px;margin-left:-2px;background:var(--hot);border-radius:2px;z-index:70;pointer-events:none}
+.clip .wf{position:absolute;left:0;bottom:21px;height:18px;pointer-events:none;opacity:.9}
 .clip.mute::after{content:"🔇";position:absolute;right:3px;top:2px;font-size:12px}
 .tblock,.mblock{position:absolute;height:24px;border-radius:6px;font-size:12px;line-height:24px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tblock{background:#7a52d6;border:2px solid #7a52d6}
@@ -744,7 +745,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1124-A（服務社五大主題配樂）</div>
+  <div class="hfoot">版本 1125-A（音訊：每段音量、淡入淡出、波形）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -1528,11 +1529,40 @@ function needSeek(el, t, tol) {
   const now = performance.now(); if (el._sk && now - el._sk < 1200) return false;
   if (Math.abs(el.currentTime - t) > tol) { el._sk = now; return true; } return false;
 }
+/* ===== 音訊：每段音量與淡入淡出、波形 ===== */
+function clipGain(c, t, d) {   // t = 在這一段裡的時間（秒），d = 這一段長度；回傳 0~2
+  let g = c.vol == null ? 1 : c.vol;
+  if (c.fi > 0) g *= Math.min(1, t / c.fi);
+  if (c.fo > 0) g *= Math.min(1, Math.max(0, (d - t) / c.fo));
+  return Math.max(0, g);
+}
+function clipGainExpr(c, off, d) {   // 給 ffmpeg 的音量算式（t 是這一小段從 0 開始的時間）
+  const v = c.vol == null ? 1 : c.vol, fi = c.fi || 0, fo = c.fo || 0; if (v === 1 && !fi && !fo) return '';
+  let e = String(v); if (fi > 0) e += `*min(1,(t+${off.toFixed(3)})/${fi})`; if (fo > 0) e += `*min(1,max(0,(${(d - off).toFixed(3)}-t)/${fo}))`;
+  return `volume=volume='${e}':eval=frame`;
+}
+const PKR = 20;
+async function wavePeaks(a) {
+  if (a.pk !== undefined) return; a.pk = null; if (a.kind !== 'video' || !a.file || a.file.size > 80e6) return;
+  try {
+    const c = awCtx(), buf = await c.decodeAudioData(await a.file.arrayBuffer()), d = buf.getChannelData(0), n = Math.ceil(buf.duration * PKR), pk = new Uint8Array(n), w = Math.max(1, Math.floor(buf.sampleRate / PKR));
+    for (let i = 0; i < n; i++) { let m = 0; for (let j = i * w, e = Math.min(d.length, j + w); j < e; j += 4) { const v = d[j] < 0 ? -d[j] : d[j]; if (v > m) m = v; } pk[i] = Math.min(255, Math.round(Math.sqrt(m) * 255)); }
+    a.pk = pk; renderTimeline();
+  } catch (e) {}
+}
+function waveSvg(e, a, pps) {
+  if (!a.pk || e.c.mute) return ''; const c = e.c, sp = spd(c), W = Math.max(4, e.d * pps - 2); let d = '';
+  for (let x = 1; x < W; x += 3) {
+    const tc = x / pps, src = c.rev ? c.out - tc * sp : c.in + tc * sp, i = Math.floor(src * PKR); if (i < 0 || i >= a.pk.length) continue;
+    const h = Math.min(18, a.pk[i] / 255 * clipGain(c, tc, e.d) * 18); if (h >= 0.6) d += `M${x} 18v-${h.toFixed(1)}`;
+  }
+  return d ? `<svg class="wf" width="${W}" height="18" viewBox="0 0 ${W} 18"><path d="${d}" stroke="#fff" stroke-width="2"/></svg>` : '';
+}
 function syncMedia() {
   const act = activeEntries(), ts = transState(), want = new Map();
   act.forEach(e => {
     const a = assets.get(e.c.asset);
-    if (a && a.kind === 'video') { let f = 1; if (ts) f = e === ts.B ? ts.p : e === ts.A ? 1 - ts.p : 1; const sp = spd(e.c), lt = (cur - e.start) * sp; want.set(a.id, { t: e.c.rev ? e.c.out - lt : e.c.in + lt, mute: e.c.mute, f, sp, rev: !!e.c.rev }); }
+    if (a && a.kind === 'video') { let f = 1; if (ts) f = e === ts.B ? ts.p : e === ts.A ? 1 - ts.p : 1; const sp = spd(e.c), lt = (cur - e.start) * sp; want.set(a.id, { t: e.c.rev ? e.c.out - lt : e.c.in + lt, mute: e.c.mute, f: f * clipGain(e.c, cur - e.start, e.d), sp, rev: !!e.c.rev }); }
   });
   assets.forEach(a => { if (a.kind === 'video' && !want.has(a.id) && !a.el.paused) a.el.pause(); });
   if (playing) for (const e of L) {   // 預先跳到下一段影片的起點（還沒輪到它之前先把第一格準備好），換段時才不會卡一下
@@ -1692,7 +1722,7 @@ function renderTimeline() {
   const rv = $('#row-v'); rv.style.width = W + 'px';
   rv.innerHTML = L.map(e => {
     const a = assets.get(e.c.asset);
-    return `<div class="clip${e.c.mute ? ' mute' : ''}" data-i="${e.i}" style="z-index:${e.i + 1};left:${e.start * pps}px;width:${Math.max(4, e.d * pps - 2)}px;${a.thumb ? `background-image:url(${a.thumb})` : ''}"><span>${a.kind === 'image' ? '🖼 ' : ''}${e.i + 1}・${e.d.toFixed(1)}秒${e.c.sp && e.c.sp !== 1 ? ' ⚡' + e.c.sp + 'x' : ''}${e.c.rev ? ' ↺' : ''}${hasFx(e.c) ? ' 🎨' : ''}</span>${a.kind === 'image' ? '' : '<i class="hd l" data-h="l">‹</i>'}<i class="hd r" data-h="r">›</i></div>`;
+    return `<div class="clip${e.c.mute ? ' mute' : ''}" data-i="${e.i}" style="z-index:${e.i + 1};left:${e.start * pps}px;width:${Math.max(4, e.d * pps - 2)}px;${a.thumb ? `background-image:url(${a.thumb})` : ''}"><span>${a.kind === 'image' ? '🖼 ' : ''}${e.i + 1}・${e.d.toFixed(1)}秒${e.c.sp && e.c.sp !== 1 ? ' ⚡' + e.c.sp + 'x' : ''}${e.c.rev ? ' ↺' : ''}${hasFx(e.c) ? ' 🎨' : ''}</span>${a.kind === 'video' ? (wavePeaks(a), waveSvg(e, a, pps)) : ''}${a.kind === 'image' ? '' : '<i class="hd l" data-h="l">‹</i>'}<i class="hd r" data-h="r">›</i></div>`;
   }).join('') + L.slice(1).map(e => `<div class="tmark${e.td > 0 ? ' on' : ''}${selTr === e.i ? ' sel' : ''}" data-ti="${e.i}" style="left:${(e.start + e.td / 2) * pps}px">${e.td > 0 ? '⟷' : '＋'}</div>`).join('');
   // 疊加層軌
   const rl = $('#row-l'), nt = state.ntrk || 0, ty = t => (nt - 1 - t) * 54;   // 高的軌道在上面
@@ -2086,7 +2116,10 @@ function renderCtx() {
       h += `<div class="r2" style="margin:8px 0 2px"><button class="sm" id="fit-fill">🔍 畫面滿版</button><button class="sm" id="fit-reset">↺ 還原大小</button></div>`;
       h += `<div class="r2" style="margin:2px 0 2px"><button class="sm" id="cover-save">🖼 這一格存成封面圖</button></div>`;
       if (a.kind === 'image') h += `<label>這張照片顯示幾秒</label><div class="r2"><input type="number" id="img-d" min="0.5" max="30" step="0.5" value="${e.d.toFixed(1)}"></div>`;
-      else h += `<label class="chk"><input type="checkbox" id="clip-mute"${e.c.mute ? ' checked' : ''}> 這一段不要原本的聲音</label>`;
+      else h += `<label class="chk"><input type="checkbox" id="clip-mute"${e.c.mute ? ' checked' : ''}> 這一段不要原本的聲音</label>`
+        + `<label>這一段音量 <b id="cv-v">${Math.round((e.c.vol == null ? 1 : e.c.vol) * 100)}%</b></label><input type="range" id="cv" min="0" max="2" step="0.05" value="${e.c.vol == null ? 1 : e.c.vol}">`
+        + `<label>聲音淡入 <b id="cfi-v">${(e.c.fi || 0).toFixed(1)} 秒</b></label><input type="range" id="cfi" min="0" max="3" step="0.1" value="${e.c.fi || 0}">`
+        + `<label>聲音淡出 <b id="cfo-v">${(e.c.fo || 0).toFixed(1)} 秒</b></label><input type="range" id="cfo" min="0" max="3" step="0.1" value="${e.c.fo || 0}">`;
     } else h += `<h4>還沒有素材，請先按時間軸右邊的「＋」</h4>`;
     h += `<label class="chk"><input type="checkbox" id="kb"${state.kb ? ' checked' : ''}> 照片慢慢推近（較動感，匯出會比較慢）</label>`;
   }
@@ -2132,6 +2165,7 @@ function renderCtx() {
     on('#fit-fill', 'click', () => { const en = clipAt(cur); if (!en) return; const a = assets.get(en.c.asset), W = cv.width, H = cv.height; commit(); const rw = (en.c.rot || 0) % 180 ? a.h : a.w, rh = (en.c.rot || 0) % 180 ? a.w : a.h; en.c.z = Math.max(W / rw, H / rh) / Math.min(W / rw, H / rh); en.c.x = 0; en.c.y = 0; dirty = true; });
     on('#cover-save', 'click', () => { cv.toBlob(async b => { if (!b) return toast('存圖失敗'); const f = new File([b], '封面.jpg', { type: 'image/jpeg' }); try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f] }); return; } } catch (er) { if (er && er.name === 'AbortError') return; } const u = URL.createObjectURL(b), an = document.createElement('a'); an.href = u; an.download = '封面.jpg'; document.body.appendChild(an); an.click(); an.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); toast('封面圖已下載'); }, 'image/jpeg', 0.92); });
     on('#fit-reset', 'click', () => { const en = clipAt(cur); if (!en) return; commit(); en.c.z = 1; en.c.x = 0; en.c.y = 0; dirty = true; });
+    [['cv', 'vol', v => Math.round(v * 100) + '%'], ['cfi', 'fi', v => v.toFixed(1) + ' 秒'], ['cfo', 'fo', v => v.toFixed(1) + ' 秒']].forEach(([id, k, fm]) => on('#' + id, 'input', ev => { const en = clipAt(cur); if (!en) return; touch('cg' + k); en.c[k] = +ev.target.value; const lb = box.querySelector('#' + id + '-v'); if (lb) lb.textContent = fm(+ev.target.value); renderTimeline(); syncMedia(); }));
     on('#clip-mute', 'change', e => { const en = clipAt(cur); commit(); en.c.mute = e.target.checked; renderTimeline(); syncMedia(); });
     on('#vol-v', 'input', e => { touch('vv'); state.vol.video = +e.target.value; e.target.previousElementSibling.textContent = '影片原聲音量 ' + Math.round(state.vol.video * 100) + '%'; syncMedia(); });
   }
@@ -2815,6 +2849,7 @@ $('#xp-go').onclick = async () => {
       const fxl = []; if (hasFx(c)) { const q = fxP(c); if (q.r !== 1 || q.g !== 1 || q.bl !== 1) fxl.push(`colorchannelmixer=rr=${q.r}:gg=${q.g}:bb=${q.bl}`); fxl.push(`eq=brightness=${q.b.toFixed(3)}:contrast=${q.ct.toFixed(3)}:saturation=${q.sa.toFixed(3)}`); }
       const fxs = fxl.length ? fxl.join(',') + ',' : '';
       const af = []; if (hasA && sp !== 1) { let sv = sp; while (sv > 2.0001) { af.push('atempo=2'); sv /= 2; } while (sv < 0.4999) { af.push('atempo=0.5'); sv /= 0.5; } af.push(`atempo=${sv.toFixed(4)}`); }
+      if (hasA) { const ge = clipGainExpr(c, off, d); if (ge) af.push(ge); }
       const afA = af.length ? ['-af', af.join(',')] : [];
       if (!hasA) args.push('-f', 'lavfi', '-t', String(len), '-i', 'anullsrc=r=44100:cl=stereo');
       const am = hasA ? '0:a:0' : '1:a';   // 只取第一條音軌（iPhone 新機型的影片有第二條特殊音軌，ffmpeg 解不開會整個失敗）
@@ -2998,7 +3033,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1124-A';
+const VER_NOW = '1125-A';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3556,7 +3591,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1124-A', upd = document.getElementById('upd');
+  const VER = '1125-A', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
