@@ -753,7 +753,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1126-S（快捷鍵、配樂自動壓低）</div>
+  <div class="hfoot">版本 1126-T（快捷鍵、配樂自動壓低）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -3474,7 +3474,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1126-S';
+const VER_NOW = '1126-T';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3622,6 +3622,9 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
     { id: 'touch', n: '🥹 感動時刻', d: '慢慢推近、柔光淡入', tr: ['fade', 'fadewhite', 'fade'], dur: 1.2, cap: 5, ph: 3, c: '#ffffff', end: '#ffffff', kb: 1, pk: 'touch', tc: '#8a5a3c' },
     { id: 'retro', n: '📼 復古底片', d: '黑場過渡、撕紙感', tr: ['fadeblack', 'torn', 'fade'], dur: 0.8, cap: 3.5, ph: 2.8, c: '#ffd59a', end: '#ffd59a', kb: 1, pk: 'retro', tc: '#5a3a1e' },
     { id: 'util', n: '✂️ 實用轉場', d: '溶解、馬賽克、百葉窗、對開、翻頁、甩動', tr: ['dissolve', 'mosaic', 'blinds', 'split', 'pageturn', 'whip'], dur: 0.6, cap: 3.5, ph: 2.6, c: '#ffffff', end: '#ffffff' },
+    { id: 'cinema', n: '🎞️ 電影感', d: '黑場淡入淡出、慢推近，像電影預告', tr: ['fadeblack', 'fade', 'fadeblack'], dur: 1.1, cap: 4.5, ph: 3, c: '#000000', end: '#000000', kb: 1, pk: 'touch', tc: '#e8d9b0', ms: 'touch' },
+    { id: 'sport', n: '🏃 運動競技', d: '甩動、推擠，快節奏衝刺感', tr: ['whip', 'slideleft', 'zoom', 'wiperight'], dur: 0.4, cap: 2.8, ph: 2, c: '#4dd2ff', end: '#ffe14d', pk: 'beat', tc: '#ffffff', ms: 'beat' },
+    { id: 'vlog', n: '📱 日常 Vlog', d: '輕快推擠、放大，記錄生活', tr: ['slideup', 'zoom', 'slideleft', 'fade'], dur: 0.5, cap: 3, ph: 2.4, c: '#ffffff', end: '#ffffff', kb: 1, pk: 'travel', tc: '#2f5d8a', ms: 'travel' },
     { id: 'funny', n: '😂 搞笑整人', d: '放大衝進、撕紙、搞笑貼紙', tr: ['zoom', 'star', 'torn', 'slidedown'], dur: 0.5, cap: 2.6, ph: 2.2, c: '#ffe14d', end: '#ff6b6b', stk: 1, pk: 'funny', tc: '#c0392b' }
   ];
   const QSTK = ['太好玩了！', '來！', '讚！', '笑死', '好吃！', '開心', '超可愛', '耶！'];
@@ -3635,7 +3638,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
   const recRange = () => [Math.max(3, Math.round(Q.len / 6)), Math.max(6, Math.round(Q.len / 3))];
 
   function open() {
-    Object.assign(Q, { step: 1, files: [], busy: false, done: null, song: null, mus: 'auto', tBg: null, eBg: null }); Q.mstyle = QSTY[Q.sty].id;
+    Object.assign(Q, { step: 1, files: [], busy: false, done: null, song: null, mus: 'auto', tBg: null, eBg: null }); Q.mstyle = QSTY[Q.sty].ms || QSTY[Q.sty].id;
     qm.classList.add('on'); render();
   }
   function close() { stopPv(); qm.classList.remove('on'); clearUrls(); Q.files = []; }
@@ -3666,7 +3669,7 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
       const sv = () => { const t = document.getElementById('q-title'), e = document.getElementById('q-end'); if (t) Q.title = t.value; if (e) Q.end = e.value; };
       body.querySelectorAll('#q-len button').forEach(b => b.onclick = () => { sv(); Q.len = +b.dataset.v; render(); });
       body.querySelectorAll('#q-ratio button').forEach(b => b.onclick = () => { sv(); Q.ratio = b.dataset.v; render(); });
-      body.querySelectorAll('.qsty').forEach(b => b.onclick = () => { sv(); Q.sty = +b.dataset.i; Q.mstyle = QSTY[Q.sty].id; Q.song = null; render(); });
+      body.querySelectorAll('.qsty').forEach(b => b.onclick = () => { sv(); Q.sty = +b.dataset.i; Q.mstyle = QSTY[Q.sty].ms || QSTY[Q.sty].id; Q.song = null; render(); });
       [['title', 'tOn', 'tBg'], ['end', 'eOn', 'eBg']].forEach(([k, on, bg]) => {
         const inp = document.getElementById('q-' + k);
         document.getElementById('q-' + k + '-on').onclick = () => { sv(); Q[on] = !Q[on]; render(); };
@@ -4046,7 +4049,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1126-S', upd = document.getElementById('upd');
+  const VER = '1126-T', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
