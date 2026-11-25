@@ -745,7 +745,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1125-F（音效庫擴充到20種、BPM卡點）</div>
+  <div class="hfoot">版本 1125-G（新增4K匯出選項）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -849,7 +849,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <label>輸出種類</label>
     <select id="xp-fmt"><option value="mp4">影片（MP4）</option><option value="mp3">音訊（MP3）</option></select>
     <label id="xp-ql-l">畫質</label>
-    <select id="xp-q"><option value="480">省空間（480p，傳 LINE 用）</option><option value="720" selected>一般（720p，建議）</option><option value="1080">高畫質（1080p，最慢）</option></select>
+    <select id="xp-q"><option value="480">省空間（480p，傳 LINE 用）</option><option value="720" selected>一般（720p，建議）</option><option value="1080">高畫質（1080p，最慢）</option><option value="2160">超高畫質（4K，建議用電腦或新手機，很慢）</option></select>
     <label id="xp-mode-l">匯出方式</label>
     <select id="xp-mode"><option value="fast">快速（硬體加速，預設）</option><option value="compat">相容（較慢）</option></select>
     <p class="hint" id="xp-note"></p>
@@ -2835,7 +2835,7 @@ let exporting = false;
 async function fastVideo(LL, TT, W, H, S, audioBytes) {
   const MB = await import('./lib/mediabunny.min.mjs');
   const { Input, BlobSource, BufferSource, ALL_FORMATS, CanvasSink, Output, Mp4OutputFormat, BufferTarget, CanvasSource, EncodedAudioPacketSource, EncodedPacketSink, canEncodeVideo } = MB;
-  const FPS = 30, N = Math.max(1, Math.round(TT * FPS)), bitrate = Math.round(Math.min(14e6, Math.max(1.5e6, W * H * FPS * 0.12)));
+  const FPS = 30, N = Math.max(1, Math.round(TT * FPS)), bitrate = Math.round(Math.min(W * H > 2.5e6 ? 40e6 : 14e6, Math.max(1.5e6, W * H * FPS * 0.12)));
   if (!(await canEncodeVideo('avc', { width: W, height: H, bitrate }))) throw new Error('這支手機不能用快速匯出');
   const saveCur = cur, need = {}, inputs = new Map();
   const add = (key, a, t, k) => { const n = need[key] || (need[key] = { a, ts: [], ks: [] }); n.ts.push(t); n.ks.push(k); };
@@ -3097,7 +3097,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1125-F';
+const VER_NOW = '1125-G';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3655,7 +3655,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1125-F', upd = document.getElementById('upd');
+  const VER = '1125-G', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
