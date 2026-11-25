@@ -747,7 +747,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1126-I（快捷鍵、配樂自動壓低）</div>
+  <div class="hfoot">版本 1126-J（快捷鍵、配樂自動壓低）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -2205,6 +2205,26 @@ $('#ratio').onchange = e => { commit(); state.ratio = e.target.value; applyRatio
 
 /* ================= 下方設定面板 ================= */
 const COLORS = [['#ffffff', '白'], ['#ffe14d', '黃'], ['#ff6b6b', '紅'], ['#4dd2ff', '藍'], ['#000000', '黑']];
+/* ===== AI 去背（照片）：在瀏覽器裡用小型模型，把人物留下、背景拿掉。第一次要下載模型（約 25MB），之後會快取 ===== */
+let aiRm = null, aiBusy = false;
+async function aiCutout(a, flat) {
+  if (aiBusy) { toast('AI 去背還在處理上一張，請稍等'); return null; } aiBusy = true;
+  try {
+    if (!aiRm) {
+      toast('AI 去背：載入模型中…第一次要下載，請保持連網');
+      const tf = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6/+esm');
+      aiRm = await tf.pipeline('background-removal', 'Xenova/modnet', { progress_callback: p => { if (p.status === 'progress' && p.total > 1e6) toast('下載 AI 模型 ' + Math.round(p.progress) + '%'); } });
+    }
+    toast('AI 去背：處理中…'); const out = await aiRm(a.url), im = Array.isArray(out) ? out[0] : out;
+    const w = im.width, h = im.height, ch = im.channels || 4, rgba = new Uint8ClampedArray(w * h * 4);
+    for (let i = 0; i < w * h; i++) { rgba[i * 4] = im.data[i * ch]; rgba[i * 4 + 1] = im.data[i * ch + 1]; rgba[i * 4 + 2] = im.data[i * ch + 2]; rgba[i * 4 + 3] = ch === 4 ? im.data[i * 4 + 3] : 255; }
+    const t = document.createElement('canvas'); t.width = w; t.height = h; t.getContext('2d').putImageData(new ImageData(rgba, w, h), 0, 0);
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const g2 = c.getContext('2d'); if (flat) { g2.fillStyle = '#000'; g2.fillRect(0, 0, w, h); } g2.drawImage(t, 0, 0);
+    const blob = await new Promise(r => c.toBlob(r, 'image/png')); const na = await makeAsset(new File([blob], 'cut_' + a.name.replace(/\.[^.]+$/, '') + '.png', { type: 'image/png' }));
+    toast('去背完成'); return na;
+  } catch (e) { console.error(e); toast('AI 去背失敗：請確認有連網，或換一張照片再試'); return null; }
+  finally { aiBusy = false; }
+}
 /* ===== 剪輯點微調：滾動（兩段交界左右移，總長不變）／滑移（這一段在前後兩段之間位移，總長不變）===== */
 function shiftC(c, w, dl, apply) {   // w: 'e' 結尾、's' 開頭；dl>0＝結尾變長／開頭被吃掉
   const a = assets.get(c.asset), sp = spd(c), f = {};
@@ -2228,6 +2248,7 @@ function rlHtml() {
   <p class="hint" style="margin-top:8px"><b>滑移</b>：這一段（第 ${e ? e.i + 1 : '-'} 段）的內容往前或往後換，這一段長度和位置都不變，改變的是前後兩段的長度。</p><div class="r2 r4">${btn('slide')}</div>`;
 }
 function bindRl(on) { document.querySelectorAll('#ctx [data-rl]').forEach(b => b.onclick = () => rlGo(b.dataset.rl, +b.dataset.v)); }
+const c0o = c => c.orig ? '<button class="sm" id="ai-undo">↩ 還原原本的照片</button>' : '<button class="sm" id="ai-cut">✂ AI 去背（只留人物，背景變黑）</button>';
 function msMark() { document.querySelectorAll('#row-v .clip').forEach(d => { const en = L[+d.dataset.i]; d.classList.toggle('msel', !!(showMs && en && msSel.has(en.c.id))); }); }
 function msHtml() {
   const n = msSel.size;
@@ -2294,7 +2315,7 @@ function renderCtx() {
       h += `<h4>目前選取：第 ${e.i + 1} 段（時間軸上橘色框）・${a.kind === 'image' ? '照片' : '影片'}・${e.d.toFixed(1)} 秒</h4>`;
       h += `<div class="r2" style="margin:8px 0 2px"><button class="sm" id="fit-fill">🔍 畫面滿版</button><button class="sm" id="fit-reset">↺ 還原大小</button></div>`;
       h += `<div class="r2" style="margin:2px 0 2px"><button class="sm" id="cover-save">🖼 這一格存成封面圖</button></div>`;
-      if (a.kind === 'image') h += `<label>這張照片顯示幾秒</label><div class="r2"><input type="number" id="img-d" min="0.5" max="30" step="0.5" value="${e.d.toFixed(1)}"></div>`;
+      if (a.kind === 'image') h += `<div class="r2" style="margin:6px 0">${c0o(e.c)}</div>` + `<label>這張照片顯示幾秒</label><div class="r2"><input type="number" id="img-d" min="0.5" max="30" step="0.5" value="${e.d.toFixed(1)}"></div>`;
       else h += `<label class="chk"><input type="checkbox" id="clip-mute"${e.c.mute ? ' checked' : ''}> 這一段不要原本的聲音</label>`
         + `<label>這一段音量 <b id="cv-v">${Math.round((e.c.vol == null ? 1 : e.c.vol) * 100)}%</b></label><input type="range" id="cv" min="0" max="2" step="0.05" value="${e.c.vol == null ? 1 : e.c.vol}">`
         + `<label>聲音淡入 <b id="cfi-v">${(e.c.fi || 0).toFixed(1)} 秒</b></label><input type="range" id="cfi" min="0" max="3" step="0.1" value="${e.c.fi || 0}">`
@@ -2355,6 +2376,8 @@ function renderCtx() {
     on('#cover-save', 'click', () => { cv.toBlob(async b => { if (!b) return toast('存圖失敗'); const f = new File([b], '封面.jpg', { type: 'image/jpeg' }); try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f] }); return; } } catch (er) { if (er && er.name === 'AbortError') return; } const u = URL.createObjectURL(b), an = document.createElement('a'); an.href = u; an.download = '封面.jpg'; document.body.appendChild(an); an.click(); an.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); toast('封面圖已下載'); }, 'image/jpeg', 0.92); });
     on('#fit-reset', 'click', () => { const en = clipAt(cur); if (!en) return; commit(); en.c.z = 1; en.c.x = 0; en.c.y = 0; dirty = true; });
     [['cv', 'vol', v => Math.round(v * 100) + '%'], ['cfi', 'fi', v => v.toFixed(1) + ' 秒'], ['cfo', 'fo', v => v.toFixed(1) + ' 秒']].forEach(([id, k, fm]) => on('#' + id, 'input', ev => { const en = clipAt(cur); if (!en) return; touch('cg' + k); en.c[k] = +ev.target.value; const lb = box.querySelector('#' + id + '-v'); if (lb) lb.textContent = fm(+ev.target.value); renderTimeline(); syncMedia(); }));
+    on('#ai-cut', 'click', async () => { const en = clipAt(cur); if (!en) return; const na = await aiCutout(assets.get(en.c.asset), true); if (!na) return; commit(); en.c.orig = en.c.asset; en.c.asset = na.id; dirty = true; renderCtx(); renderTimeline(); });
+    on('#ai-undo', 'click', () => { const en = clipAt(cur); if (!en || !en.c.orig) return; commit(); en.c.asset = en.c.orig; delete en.c.orig; dirty = true; renderCtx(); renderTimeline(); });
     on('#clip-mute', 'change', e => { const en = clipAt(cur); commit(); en.c.mute = e.target.checked; renderTimeline(); syncMedia(); });
     on('#vol-v', 'input', e => { touch('vv'); state.vol.video = +e.target.value; e.target.previousElementSibling.textContent = '影片原聲音量 ' + Math.round(state.vol.video * 100) + '%'; syncMedia(); });
   }
@@ -2873,6 +2896,7 @@ function lyHtml() {
     h += `<div class="r2"><div><label>從第幾秒開始出現</label><input type="number" id="ly-s" step="0.1" min="0" value="${l.start.toFixed(1)}"></div><div><label>出現多久（秒）</label><input type="number" id="ly-d" step="0.1" min="0.3" value="${l.len.toFixed(1)}"></div></div>
     <div class="r2" style="margin-top:8px"><button class="sm" id="ly-ss">開始＝目前位置</button><button class="sm" id="ly-se">結束＝目前位置</button></div>
     ${isV ? `<label class="chk"><input type="checkbox" id="ly-snd"${l.mute === false ? ' checked' : ''}> 這一格要有原本的聲音（這一軌的音量按軌道左邊的 🔊 調）</label>` : ''}
+    ${(assets.get(l.asset) || {}).kind === 'image' ? `<div class="r2" style="margin-top:8px">${l.orig ? '<button class="sm" id="lai-undo">↩ 還原原本的照片</button>' : '<button class="sm" id="lai-cut">✂ AI 去背（只留人物，背景透明）</button>'}</div>` : ''}
     <div class="r2" style="margin-top:8px"><button class="sm" id="ly-up">⬆ 移到上一條軌道</button><button class="sm" id="ly-dn">⬇ 移到下一條軌道</button></div>
     <button class="sm red" id="ly-del" style="margin-top:8px;width:100%">刪除這一格</button>`;
   }
@@ -2919,6 +2943,8 @@ function bindLy(on) {
   on('#ly-snd', 'change', e => { commit(); l.mute = !e.target.checked; syncMedia(); });
   on('#ly-up', 'click', () => { if ((l.trk || 0) >= (state.ntrk || 1) - 1) return toast('已經在最上面的軌道'); commit(); l.trk = (l.trk || 0) + 1; relayout(); renderTimeline(); renderCtx(); dirty = true; });
   on('#ly-dn', 'click', () => { if ((l.trk || 0) < 1) return toast('已經在最下面的軌道'); commit(); l.trk = (l.trk || 0) - 1; relayout(); renderTimeline(); renderCtx(); dirty = true; });
+  on('#lai-cut', 'click', async () => { const na = await aiCutout(assets.get(l.asset), false); if (!na) return; commit(); l.orig = l.asset; l.asset = na.id; dirty = true; renderCtx(); renderTimeline(); });
+  on('#lai-undo', 'click', () => { if (!l.orig) return; commit(); l.asset = l.orig; delete l.orig; dirty = true; renderCtx(); renderTimeline(); });
   on('#ly-del', 'click', () => { commit(); state.layers = state.layers.filter(x => x !== l); const e0 = lyEls.get(l.id); if (e0) { e0.pause(); e0.remove(); lyEls.delete(l.id); } selLy = null; showLy = false; lyPick = false; re(); });
   on('#ly-back', 'click', () => { showLy = false; lyPick = true; renderTimeline(); renderCtx(); updateToolbar(); dirty = true; });
 }
@@ -3389,7 +3415,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1126-I';
+const VER_NOW = '1126-J';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3947,7 +3973,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1126-I', upd = document.getElementById('upd');
+  const VER = '1126-J', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
