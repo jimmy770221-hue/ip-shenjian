@@ -745,7 +745,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1125-G（新增4K匯出選項）</div>
+  <div class="hfoot">版本 1125-H（自動字幕、4K匯出）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -818,6 +818,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tb" data-a="music"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V6l10-2v11"/><ellipse cx="6.5" cy="17.5" rx="2.5" ry="2"/><ellipse cx="16.5" cy="15.5" rx="2.5" ry="2"/></svg></i>配樂</button>
     <button class="tb" data-a="au"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h3l2-5 4 10 3-8 2 3h4"/></svg></i>音訊與音效</button>
     <button class="tb" data-a="text"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7V5h14v2m-7-2v14m-4 0h8"/></svg></i>加文字</button>
+    <button class="tb" data-a="cap"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v10H9l-4 3v-3H4zM8 10h8M8 13h5"/></svg></i>自動字幕</button>
     <button class="tb" data-a="st"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13v-7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7zM13 20v-5a2 2 0 0 1 2-2h5M8 8h.1M15 8h.1M8 12q2 2 4 0"/></svg></i>貼圖</button>
     <button class="tb" data-a="ef"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3ZM20 3v4m-2-2h4"/></svg></i>特效包</button>
     <button class="tb" data-a="ly"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5zM3 12l9 5 9-5M3 16l9 5 9-5"/></svg></i>拼貼</button>
@@ -871,7 +872,7 @@ const assets = new Map();           // id -> {id,kind,file,url,el,img,w,h,dur,na
 let uid = 1;
 let state = { ratio: '9:16', clips: [], layers: [], texts: [], music: null, kb: false, vol: { video: 1, music: 0.6 } };
 let history = [], redoStack = [], lastTouch = null;
-let showClip = false, showAu = false, showSt = false, showEf = false, showKf = false, kfMode = 'clip', kfLyId = null, kfIdx = -1;
+let showCap = false, showClip = false, showAu = false, showSt = false, showEf = false, showKf = false, kfMode = 'clip', kfLyId = null, kfIdx = -1;
 let showFx = false, fxTab = 'f', fxIdx = -1, showLy = false, selLy = null, lyTab = 'p', pendingTpl = null;
 let cur = 0, playing = false, pps = 80, selText = null, selMusic = false, selTr = null, showAuto = false, dirty = true;
 let clipBd = null, mainDragged = false;   // 複製的素材 / 剛拖過主軌素材（避免放開時又觸發點選）
@@ -879,7 +880,7 @@ let selPic = null;   // 目前「鎖定」可以在畫面上拖移／縮放／�
 let lyPick = false;   // 點選第2軌（畫面軌道）的素材＝只選取、不跳選單（和主軌一樣）；要開版位等細項再按下面的工具
 const lyOn = () => !!(selLy && (showLy || lyPick));
 const tvOf = t => (state.tv && state.tv[t] != null) ? state.tv[t] : 1;   // 每一條畫面軌道自己的音量
-function clearSel() { lyPick = false; selPic = null; showClip = false; showAu = false; showSt = false; showEf = false; showKf = false; showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
+function clearSel() { showCap = false; lyPick = false; selPic = null; showClip = false; showAu = false; showSt = false; showEf = false; showKf = false; showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
 let L = [], total = 0;               // 排版結果
 const FXP = {
   none: { n: '原圖', b: 0, ct: 1, sa: 1, r: 1, g: 1, bl: 1 },
@@ -1993,6 +1994,7 @@ const ops = {
   ly() { clearSel(); showLy = true; renderTimeline(); renderCtx(); dirty = true; },   // （已選了第2軌素材時，會走 LYOPS.ly）
   kf() { const m = (showLy && selLy) ? 'ly' : 'clip', id = selLy; clearSel(); showKf = true; kfMode = m; kfLyId = id; renderTimeline(); renderCtx(); dirty = true; },
   au() { clearSel(); showAu = true; renderTimeline(); renderCtx(); dirty = true; },
+  cap() { clearSel(); showCap = true; renderTimeline(); renderCtx(); dirty = true; },
   st() { clearSel(); showSt = true; renderTimeline(); renderCtx(); dirty = true; },
   ef() { clearSel(); showEf = true; renderTimeline(); renderCtx(); dirty = true; },
   auto() { clearSel(); showAuto = true; autoMode = 'slide'; renderTimeline(); renderCtx(); },
@@ -2049,7 +2051,7 @@ document.addEventListener('click', e => { const b = e.target.closest('.tb'); if 
   { const ly0 = lyOn() && state.layers.find(x => x.id === selLy), f0 = ly0 && LYOPS[b.dataset.a]; if (f0) { f0(ly0); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); return; } }
   ops[b.dataset.a](); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); });
 /* ===== 底部浮出：分類面板＋設定面板（不擠壓預覽）===== */
-const CATS = { edit: ['編輯', ['split', 'freeze', 'trimL', 'trimR', 'copy', 'paste', 'del', 'mvL', 'mvR', 'fx', 'kf', 'clip']], music: ['音樂', ['lib', 'music', 'au']], text: ['文字', ['text', 'st']], fx: ['特效', ['ef', 'ly', 'auto', 'tpl']] };
+const CATS = { edit: ['編輯', ['split', 'freeze', 'trimL', 'trimR', 'copy', 'paste', 'del', 'mvL', 'mvR', 'fx', 'kf', 'clip']], music: ['音樂', ['lib', 'music', 'au']], text: ['文字', ['text', 'cap', 'st']], fx: ['特效', ['ef', 'ly', 'auto', 'tpl']] };
 let catKey = null;
 function closeCats() { const g = $('#cats-g'), pool = $('#tbpool'); [...g.children].forEach(b => pool.appendChild(b)); $('#cats').classList.remove('on'); catKey = null; }
 function openCat(k) {
@@ -2100,7 +2102,7 @@ const COLORS = [['#ffffff', '白'], ['#ffe14d', '黃'], ['#ff6b6b', '紅'], ['#4
 function renderCtx() {
   const box = $('#ctx'); let h = '';
   { const t0 = selText && state.texts.find(x => x.id === selText);
-    const editing0 = !!(showAuto || showAu || showSt || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t0 || (selMusic && state.music));
+    const editing0 = !!(showAuto || showAu || showSt || showCap || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t0 || (selMusic && state.music));
     if (!editing0 && !showClip) { box.innerHTML = ''; box.style.display = 'none'; box.classList.remove('edit'); layoutSheet(); return; }
     box.style.display = 'block'; }
   const t = selText && state.texts.find(x => x.id === selText);
@@ -2108,6 +2110,7 @@ function renderCtx() {
   else if (selTr !== null && L[selTr]) { h += trHtml(); }
   else if (showAu) { h += auHtml(); }
   else if (showSt) { h += stHtml(); }
+  else if (showCap) { h += capHtml(); }
   else if (showKf) { h += kfHtml(); }
   else if (showEf) { h += efHtml(); }
   else if (showLy) { h += lyHtml(); }
@@ -2152,13 +2155,14 @@ function renderCtx() {
   box.insertAdjacentHTML('afterbegin', '<button class="sh-x" id="ctx-x">✓</button>');
   box.querySelector('#ctx-x').onclick = () => { clearSel(); renderTimeline(); renderCtx(); };
   layoutSheet();
-  box.classList.toggle('edit', !!(showAuto || showAu || showSt || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
+  box.classList.toggle('edit', !!(showAuto || showAu || showSt || showCap || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
   const on = (id, ev, fn) => { const el = box.querySelector(id); if (el) el.addEventListener(ev, fn); };
   on('#kb', 'change', e => { commit(); state.kb = e.target.checked; dirty = true; });
   if (showAuto) bindAuto(on);
   else if (selTr !== null && L[selTr]) bindTr(on);
   else if (showAu) bindAu(on);
   else if (showSt) bindSt(on);
+  else if (showCap) bindCap(on);
   else if (showKf) bindKf(on);
   else if (showEf) bindEf(on);
   else if (showLy) bindLy(on);
@@ -2368,6 +2372,89 @@ function auHtml() {
   <div class="r2" style="margin-top:6px"><button class="sm" id="bt-cut">✂️ 依標記把影片切開</button><button class="sm red" id="bt-clr">清除標記</button></div>
   <div class="r2" style="margin-top:8px"><button class="sm ok" id="au-ok">完成</button></div>`;
 }
+
+/* ===== 自動字幕：在手機／電腦瀏覽器裡把人聲辨識成字幕（第一次要連網下載語音模型，影片不會上傳）===== */
+const CAP_MODELS = [['Xenova/whisper-base', '標準（約 80MB，較快）'], ['Xenova/whisper-small', '精準（約 250MB，較慢，建議電腦）']];
+const capOpt = { lang: 'chinese', model: 0, max: 14 };
+let capBusy = false, capAsr = null, capModelName = '', capConv = null;
+const capSt = m => { const e = document.getElementById('cap-st'); if (e) e.textContent = m; };
+function capHtml() {
+  const cs = state.texts.filter(t => t.cap), c0 = cs[0] || {};
+  return `<h4>💬 自動字幕</h4><label>把影片裡的人聲變成字幕。第一次要連網下載語音模型，之後不用；影片不會上傳到任何地方。</label>
+  <div class="r2"><div><label>語言</label><select id="cap-lang">${[['chinese', '中文'], ['english', 'English'], ['', '自動偵測']].map(o => `<option value="${o[0]}"${capOpt.lang === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></div>
+  <div><label>每行最多</label><select id="cap-max">${[[10, '10 個字'], [14, '14 個字'], [18, '18 個字']].map(o => `<option value="${o[0]}"${capOpt.max === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></div></div>
+  <label>辨識品質</label><select id="cap-model">${CAP_MODELS.map((m, i) => `<option value="${i}"${capOpt.model === i ? ' selected' : ''}>${m[1]}</option>`).join('')}</select>
+  <button class="sm ok" id="cap-go" style="width:100%;padding:12px;font-size:15px;margin:8px 0"${capBusy ? ' disabled' : ''}>${capBusy ? '辨識中，請稍等…' : '✨ 開始產生字幕'}</button>
+  <div id="cap-st" class="hint"></div>
+  ${cs.length ? `<label>目前有 ${cs.length} 句自動字幕（點時間軸上的字幕可以改字）</label>
+  <div class="r2"><div><label>顏色</label><select id="cap-color">${COLORS.map(c => `<option value="${c[0]}"${c0.color === c[0] ? ' selected' : ''}>${c[1]}</option>`).join('')}</select></div>
+  <div><label>位置</label><select id="cap-pos">${[['bottom', '下方'], ['middle', '中間'], ['top', '上方']].map(o => `<option value="${o[0]}"${c0.pos === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></div></div>
+  <label>字體大小</label><input type="range" id="cap-size" min="3" max="12" step="0.5" value="${c0.size || 6.5}">` : ''}
+  <div class="r2" style="margin-top:8px">${cs.length ? '<button class="sm red" id="cap-clr">清除自動字幕</button>' : ''}<button class="sm ok" id="cap-ok">完成</button></div>`;
+}
+async function capLoad() {
+  const name = CAP_MODELS[capOpt.model][0]; if (capAsr && capModelName === name) return capAsr;
+  capSt('載入語音模型中…第一次要下載，請保持連網');
+  const tf = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6/+esm');
+  capAsr = await tf.pipeline('automatic-speech-recognition', name, { progress_callback: p => { if (p.status === 'progress' && p.total > 1e6) capSt('下載語音模型 ' + Math.round(p.progress) + '%'); } });
+  capModelName = name; return capAsr;
+}
+async function capPcm(buf, from, len) {   // 取出一段聲音，轉成 16kHz 單聲道（語音模型要的格式）
+  const SR = 16000, oc = new OfflineAudioContext(1, Math.max(1, Math.ceil(len * SR)), SR), src = oc.createBufferSource(); src.buffer = buf; src.connect(oc.destination); src.start(0, Math.max(0, from), len);
+  return (await oc.startRendering()).getChannelData(0);
+}
+function capLines(chunks, maxc) {   // 把逐字時間合成一句一句：遇到標點、停頓、或太長就換行
+  const lines = []; let cu = null; const flush = () => { if (cu && cu.text.trim()) lines.push(cu); cu = null; };
+  for (const ch of chunks) {
+    const ts = ch.timestamp || []; let a = ts[0], b = ts[1]; if (a == null) continue; if (b == null || b < a) b = a + 0.4;
+    if (cu && a - cu.end > 0.7) flush();
+    if (!cu) cu = { text: '', start: a, end: b }; cu.text += ch.text; cu.end = b;
+    const t = cu.text.trim(), cjk = /[㐀-鿿]/.test(t), len = cjk ? t.replace(/\s/g, '').length : t.length / 2.4;
+    if ((/[，。！？、；：,.!?;:…]\s*$/.test(t) && len >= 3) || len >= maxc) flush();
+  }
+  flush(); return lines;
+}
+async function capRun() {
+  if (capBusy) return; if (!total) return toast('請先加入影片');
+  const srcs = [];   // 要辨識的聲音：每段有聲音的影片、加上錄的配音
+  L.forEach(e => { const a = assets.get(e.c.asset); if (a && a.kind === 'video' && !e.c.mute && !e.c.rev) srcs.push({ a, from: e.c.in, len: e.c.out - e.c.in, map: t => e.start + t / spd(e.c), end: e.end }); });
+  (state.vo || []).forEach(v => { const a = assets.get(v.asset); if (a) srcs.push({ a, from: 0, len: a.dur || 60, map: t => v.offset + t, end: v.offset + (a.dur || 60) }); });
+  if (!srcs.length) return toast('沒有可以辨識的聲音（影片都是靜音或照片）');
+  capBusy = true; if (showCap) renderCtx();
+  try {
+    const asr = await capLoad(); let conv = null;
+    if (capOpt.lang !== 'english') { try { if (!capConv) capConv = (await import('https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/esm/cn2t.js')).Converter({ from: 'cn', to: 'twp' }); conv = capConv; } catch (e) {} }
+    const bufs = new Map(), res = []; let k = 0;
+    for (const sr of srcs) {
+      k++; capSt(`辨識第 ${k} / ${srcs.length} 段聲音…`);
+      let buf = bufs.get(sr.a.id);
+      if (!buf) { const ac = new (window.AudioContext || window.webkitAudioContext)(); try { buf = await ac.decodeAudioData(await sr.a.file.arrayBuffer()); } catch (e) { ac.close && ac.close(); continue; } ac.close && ac.close(); bufs.set(sr.a.id, buf); }
+      const pcm = await capPcm(buf, sr.from, Math.min(sr.len, 600)); let ss = 0; for (let i = 0; i < pcm.length; i += 7) ss += pcm[i] * pcm[i]; if (Math.sqrt(ss / (pcm.length / 7)) < 0.003) continue;   // 幾乎沒聲音就跳過，避免模型亂寫
+      const o = await asr(pcm, { language: capOpt.lang || undefined, task: 'transcribe', return_timestamps: 'word', chunk_length_s: 30, stride_length_s: 5 });
+      for (const ln of capLines(o.chunks || [], capOpt.max)) {
+        let tx = ln.text.trim().replace(/[，。、；：,.;:]+$/, '').trim(); if (conv) tx = conv(tx); if (!tx) continue;
+        const st = sr.map(ln.start), en = Math.min(sr.end, sr.map(ln.end)); res.push({ text: tx, start: st, end: Math.max(en, st + 0.6) });
+      }
+      bufs.delete(sr.a.id);
+    }
+    if (!res.length) { toast('沒有辨識到人聲'); capSt('沒有辨識到人聲。請確認影片有說話、沒有被靜音，或換成「精準」品質再試。'); return; }
+    res.sort((a, b) => a.start - b.start); for (let i = 0; i < res.length - 1; i++) if (res[i].end > res[i + 1].start - 0.03) res[i].end = Math.max(res[i].start + 0.4, res[i + 1].start - 0.03);
+    commit(); state.texts = state.texts.filter(t => !t.cap);
+    res.forEach(r => state.texts.push({ id: uid++, cap: 1, text: r.text, start: +r.start.toFixed(2), dur: +Math.max(0.4, r.end - r.start).toFixed(2), color: '#ffffff', size: 6.5, pos: 'bottom', ty: -0.12, an: 'fade', sh: 1 }));
+    dirty = true; renderTimeline(); capSt(`完成！共 ${res.length} 句字幕。`); toast('字幕完成：' + res.length + ' 句');
+  } catch (e) { capSt('失敗：' + (e && e.message || e) + '（需要連網，或手機記憶體不夠，可改用「標準」品質）'); toast('字幕產生失敗'); }
+  capBusy = false; if (showCap) renderCtx();
+}
+function bindCap(on) {
+  on('#cap-lang', 'change', e => { capOpt.lang = e.target.value; }); on('#cap-max', 'change', e => { capOpt.max = +e.target.value; }); on('#cap-model', 'change', e => { capOpt.model = +e.target.value; });
+  on('#cap-go', 'click', capRun);
+  on('#cap-color', 'change', e => { commit(); state.texts.forEach(t => { if (t.cap) t.color = e.target.value; }); dirty = true; });
+  on('#cap-pos', 'change', e => { commit(); state.texts.forEach(t => { if (t.cap) { t.pos = e.target.value; t.ty = e.target.value === 'bottom' ? -0.12 : e.target.value === 'top' ? 0.12 : 0; } }); dirty = true; });
+  on('#cap-size', 'input', e => { touch('capsz'); state.texts.forEach(t => { if (t.cap) t.size = +e.target.value; }); dirty = true; });
+  on('#cap-clr', 'click', () => { commit(); state.texts = state.texts.filter(t => !t.cap); dirty = true; renderTimeline(); renderCtx(); });
+  on('#cap-ok', 'click', () => { showCap = false; renderTimeline(); renderCtx(); });
+}
+
 /* ===== 內建小音效（用程式即時合成，沒有版權問題）===== */
 const SFX = [
   ['ding', '🔔 叮', 0.9], ['gong', '🥁 登愣', 1.2], ['whoosh', '💨 嗖', 0.8], ['boom', '💥 砰', 1.0],
@@ -3097,7 +3184,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1125-G';
+const VER_NOW = '1125-H';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3655,7 +3742,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1125-G', upd = document.getElementById('upd');
+  const VER = '1125-H', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
