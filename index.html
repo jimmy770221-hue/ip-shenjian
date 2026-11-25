@@ -44,6 +44,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .row{position:relative;margin-top:4px}
 .row.v{height:78px}
 .clip{position:absolute;top:0;height:50px;border-radius:8px;overflow:hidden;background:#3a4166 center/auto 100% repeat-x;border:2px solid #4a5284;color:#fff;font-size:11px}
+.clip.msel{outline:3px solid #35d07f;outline-offset:-3px;filter:brightness(1.15)}
 .clip.active{border-color:var(--hot);box-shadow:0 0 0 1px var(--hot)}
 .clip span{position:absolute;left:0;right:0;bottom:0;padding:2px 5px;background:rgba(0,0,0,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #row-v .clip{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -746,7 +747,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1126-F（快捷鍵、配樂自動壓低）</div>
+  <div class="hfoot">版本 1126-I（快捷鍵、配樂自動壓低）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -819,6 +820,8 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tb" data-a="music"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V6l10-2v11"/><ellipse cx="6.5" cy="17.5" rx="2.5" ry="2"/><ellipse cx="16.5" cy="15.5" rx="2.5" ry="2"/></svg></i>配樂</button>
     <button class="tb" data-a="au"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h3l2-5 4 10 3-8 2 3h4"/></svg></i>音訊與音效</button>
     <button class="tb" data-a="text"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7V5h14v2m-7-2v14m-4 0h8"/></svg></i>加文字</button>
+    <button class="tb" data-a="ms"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12 3 3 5-6"/></svg></i>多選</button>
+    <button class="tb" data-a="rl"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M7 8l-4 4 4 4m10-8 4 4-4 4"/></svg></i>剪輯點微調</button>
     <button class="tb" data-a="cap"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v10H9l-4 3v-3H4zM8 10h8M8 13h5"/></svg></i>自動字幕</button>
     <button class="tb" data-a="st"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13v-7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7zM13 20v-5a2 2 0 0 1 2-2h5M8 8h.1M15 8h.1M8 12q2 2 4 0"/></svg></i>貼圖</button>
     <button class="tb" data-a="ef"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3ZM20 3v4m-2-2h4"/></svg></i>特效包</button>
@@ -876,7 +879,7 @@ const assets = new Map();           // id -> {id,kind,file,url,el,img,w,h,dur,na
 let uid = 1;
 let state = { ratio: '9:16', clips: [], layers: [], texts: [], music: null, kb: false, vol: { video: 1, music: 0.6 } };
 let history = [], redoStack = [], lastTouch = null;
-let showCap = false, showClip = false, showAu = false, showSt = false, showEf = false, showKf = false, kfMode = 'clip', kfLyId = null, kfIdx = -1;
+let showRl = false, showMs = false, msSel = new Set(), showCap = false, showClip = false, showAu = false, showSt = false, showEf = false, showKf = false, kfMode = 'clip', kfLyId = null, kfIdx = -1;
 let showFx = false, fxTab = 'f', fxIdx = -1, showLy = false, selLy = null, lyTab = 'p', pendingTpl = null;
 let cur = 0, playing = false, pps = 80, selText = null, selMusic = false, selTr = null, showAuto = false, dirty = true;
 let clipBd = null, mainDragged = false;   // 複製的素材 / 剛拖過主軌素材（避免放開時又觸發點選）
@@ -884,7 +887,7 @@ let selPic = null;   // 目前「鎖定」可以在畫面上拖移／縮放／�
 let lyPick = false;   // 點選第2軌（畫面軌道）的素材＝只選取、不跳選單（和主軌一樣）；要開版位等細項再按下面的工具
 const lyOn = () => !!(selLy && (showLy || lyPick));
 const tvOf = t => (state.tv && state.tv[t] != null) ? state.tv[t] : 1;   // 每一條畫面軌道自己的音量
-function clearSel() { showCap = false; lyPick = false; selPic = null; showClip = false; showAu = false; showSt = false; showEf = false; showKf = false; showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
+function clearSel() { showRl = false; showMs = false; msSel.clear(); showCap = false; lyPick = false; selPic = null; showClip = false; showAu = false; showSt = false; showEf = false; showKf = false; showLy = false; selLy = null; showFx = false; selText = null; selMusic = false; selTr = null; showAuto = false; }
 let L = [], total = 0;               // 排版結果
 const FXP = {
   none: { n: '原圖', b: 0, ct: 1, sa: 1, r: 1, g: 1, bl: 1 },
@@ -1855,6 +1858,7 @@ $('#row-v').addEventListener('click', e => {
   if (m) { const i = +m.dataset.ti; pause(); clearSel(); selTr = i; setCur(L[i].start + L[i].td / 2); renderTimeline(); renderCtx(); return; }
   if (mainDragged || e.target.closest('.hd')) return;
   const d = e.target.closest('.clip'); if (!d) return; const en = L[+d.dataset.i];
+  if (showMs) { const id = en.c.id; msSel.has(id) ? msSel.delete(id) : msSel.add(id); msMark(); renderCtx(); return; }
   const x = e.clientX - d.getBoundingClientRect().left; // 點到哪裡就跳到哪裡（轉場重疊的部分算在後一段，所以限制在自己的範圍內，才選得到這一段）
   const own = L[en.i + 1] ? Math.max(0.001, L[en.i + 1].start - en.start) : en.d;
   const keepFx = showFx; pause(); setCur(en.start + clamp(x / pps, 0, own - 0.001)); clearSel(); showFx = keepFx; renderTimeline(); renderCtx();
@@ -1870,7 +1874,7 @@ $('#row-v').addEventListener('click', e => {
   bar.addEventListener('pointerup', end); bar.addEventListener('pointercancel', end);
 })();
 let pendingTrk = null, lyDragged = false;
-const MAXTRK = 4;   // 主軌＋畫面軌道，總共最多 4 條（手機同時解碼太多段影片會卡）
+const MAXTRK = (!/iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent) && matchMedia('(pointer:fine)').matches) ? 8 : 4;   // 主軌＋畫面軌道，總共最多 4 條（手機同時解碼太多段影片會卡）
 function placeTrkBtns() {   // 每一條畫面軌道在左邊有自己的 🔊 音量、右邊有自己的 ＋ 加素材（和主軌一樣）
   const ov = $('#trkov'), rl = $('#row-l'), tl = $('#tlc'); if (!ov || !rl || !tl) return;
   const nt = state.ntrk || 0, y0 = rl.getBoundingClientRect().top - tl.getBoundingClientRect().top;
@@ -1997,7 +2001,7 @@ $('#row-l').addEventListener('click', e => {
 $('#row-t').addEventListener('click', e => { const d = e.target.closest('.tblock'); if (!d) return; clearSel(); selText = +d.dataset.tid; renderTimeline(); renderCtx(); });
 $('#row-m').addEventListener('click', e => { if (!e.target.closest('.mblock')) return; clearSel(); selMusic = true; renderTimeline(); renderCtx(); });
 function setPps(v) { pps = clamp(v, 12, 600); renderTimeline(); }
-$('#trk-add').onclick = () => { if ((state.ntrk || 0) + 1 >= MAXTRK) return toast('手機最多 4 條軌道（含主軌），再多會卡'); pause(); commit(); state.ntrk = (state.ntrk || 0) + 1; pendingTpl = null; pendingTrk = state.ntrk - 1; renderTimeline(); $('#f-layer').click(); };
+$('#trk-add').onclick = () => { if ((state.ntrk || 0) + 1 >= MAXTRK) return toast((MAXTRK > 4 ? '電腦' : '手機') + '最多 ' + MAXTRK + ' 條軌道（含主軌），再多會卡'); pause(); commit(); state.ntrk = (state.ntrk || 0) + 1; pendingTpl = null; pendingTrk = state.ntrk - 1; renderTimeline(); $('#f-layer').click(); };
 $('#z-in').onclick = () => setPps(pps * 1.5); $('#z-out').onclick = () => setPps(pps / 1.5);
 // 兩指縮放
 let pz = null;
@@ -2067,6 +2071,8 @@ const ops = {
   ly() { clearSel(); showLy = true; renderTimeline(); renderCtx(); dirty = true; },   // （已選了第2軌素材時，會走 LYOPS.ly）
   kf() { const m = (showLy && selLy) ? 'ly' : 'clip', id = selLy; clearSel(); showKf = true; kfMode = m; kfLyId = id; renderTimeline(); renderCtx(); dirty = true; },
   au() { clearSel(); showAu = true; renderTimeline(); renderCtx(); dirty = true; },
+  rl() { if (L.length < 2) return toast('要有兩段以上的片段才能微調剪輯點'); clearSel(); showRl = true; renderTimeline(); renderCtx(); },
+  ms() { clearSel(); showMs = true; renderTimeline(); renderCtx(); },
   cap() { clearSel(); showCap = true; renderTimeline(); renderCtx(); dirty = true; },
   st() { clearSel(); showSt = true; renderTimeline(); renderCtx(); dirty = true; },
   ef() { clearSel(); showEf = true; renderTimeline(); renderCtx(); dirty = true; },
@@ -2119,7 +2125,7 @@ const LYOPS = {
   ly(l) { showLy = true; lyTab = 'p'; renderTimeline(); renderCtx(); dirty = true; },
   kf(l) { const id = selLy; clearSel(); showKf = true; kfMode = 'ly'; kfLyId = id; renderTimeline(); renderCtx(); dirty = true; }
 };
-const PANEL_OPS = new Set(['lib', 'fx', 'ly', 'kf', 'au', 'st', 'ef', 'auto', 'tpl', 'clip', 'text', 'cam']);
+const PANEL_OPS = new Set(['rl', 'ms', 'lib', 'fx', 'ly', 'kf', 'au', 'st', 'ef', 'auto', 'tpl', 'clip', 'text', 'cam']);
 /* ===== 電腦快捷鍵（不影響手機）===== */
 document.addEventListener('keydown', e => {
   const t = e.target, tg = t && t.tagName; if (tg === 'TEXTAREA' || tg === 'SELECT' || (tg === 'INPUT' && t.type !== 'range' && t.type !== 'checkbox')) return;
@@ -2148,7 +2154,7 @@ document.addEventListener('click', e => { const b = e.target.closest('.tb'); if 
   { const ly0 = lyOn() && state.layers.find(x => x.id === selLy), f0 = ly0 && LYOPS[b.dataset.a]; if (f0) { f0(ly0); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); return; } }
   ops[b.dataset.a](); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); });
 /* ===== 底部浮出：分類面板＋設定面板（不擠壓預覽）===== */
-const CATS = { edit: ['編輯', ['split', 'freeze', 'trimL', 'trimR', 'copy', 'paste', 'del', 'mvL', 'mvR', 'fx', 'kf', 'clip']], music: ['音樂', ['lib', 'music', 'au']], text: ['文字', ['text', 'cap', 'st']], fx: ['特效', ['ef', 'ly', 'auto', 'tpl']] };
+const CATS = { edit: ['編輯', ['split', 'freeze', 'trimL', 'trimR', 'copy', 'paste', 'del', 'mvL', 'mvR', 'fx', 'kf', 'clip', 'ms', 'rl']], music: ['音樂', ['lib', 'music', 'au']], text: ['文字', ['text', 'cap', 'st']], fx: ['特效', ['ef', 'ly', 'auto', 'tpl']] };
 let catKey = null;
 function closeCats() { const g = $('#cats-g'), pool = $('#tbpool'); [...g.children].forEach(b => pool.appendChild(b)); $('#cats').classList.remove('on'); catKey = null; }
 function openCat(k) {
@@ -2199,11 +2205,50 @@ $('#ratio').onchange = e => { commit(); state.ratio = e.target.value; applyRatio
 
 /* ================= 下方設定面板 ================= */
 const COLORS = [['#ffffff', '白'], ['#ffe14d', '黃'], ['#ff6b6b', '紅'], ['#4dd2ff', '藍'], ['#000000', '黑']];
+/* ===== 剪輯點微調：滾動（兩段交界左右移，總長不變）／滑移（這一段在前後兩段之間位移，總長不變）===== */
+function shiftC(c, w, dl, apply) {   // w: 'e' 結尾、's' 開頭；dl>0＝結尾變長／開頭被吃掉
+  const a = assets.get(c.asset), sp = spd(c), f = {};
+  if (a.kind === 'image') { const nd = (c.out - c.in) + (w === 'e' ? dl : -dl); if (nd < 0.3 || nd > 30) return false; f.out = c.in + nd; }
+  else { const dd = dl * sp;
+    if ((w === 'e') !== !!c.rev) { f.out = c.out + (c.rev ? -dd : dd); if (f.out > a.dur + 1e-6 || f.out - c.in < 0.1) return false; }
+    else { f.in = c.in + (c.rev ? -dd : dd); if (f.in < -1e-6 || c.out - f.in < 0.1) return false; } }
+  if (apply) Object.assign(c, f); return true;
+}
+function rlCut() { let k = -1, bd = 1e9; for (let i = 1; i < L.length; i++) { const dd = Math.abs(L[i].start - cur); if (dd < bd) { bd = dd; k = i; } } return k; }
+function rlGo(kind, dl) {
+  const k = rlCut(), e = clipAt(cur); if (k < 1) return;
+  if (kind === 'roll') { const A = L[k - 1].c, B = L[k].c; if (!shiftC(A, 'e', dl) || !shiftC(B, 's', dl)) return toast('沒有足夠的原始影片可以再移了'); commit(); shiftC(A, 'e', dl, 1); shiftC(B, 's', dl, 1); afterEdit(L[k].start + dl); }
+  else { if (!e || e.i < 1 || e.i >= L.length - 1) return toast('滑移要這一段前後都有片段'); const P = L[e.i - 1].c, N = L[e.i + 1].c; if (!shiftC(P, 'e', dl) || !shiftC(N, 's', dl)) return toast('沒有足夠的原始影片可以再移了'); commit(); shiftC(P, 'e', dl, 1); shiftC(N, 's', dl, 1); afterEdit(cur + dl); }
+  showRl = true; renderCtx();
+}
+function rlHtml() {
+  const k = rlCut(), e = clipAt(cur), btn = (kind) => [[-1, '◀ 1秒'], [-1 / 30, '◀ 1格'], [1 / 30, '1格 ▶'], [1, '1秒 ▶']].map(([v, n]) => `<button class="sm" data-rl="${kind}" data-v="${v}">${n}</button>`).join('');
+  return `<h4>↔ 剪輯點微調</h4>
+  <p class="hint"><b>滾動</b>：把第 ${k} 段和第 ${k + 1} 段的交界往左或往右移，整支影片長度不變。</p><div class="r2 r4">${btn('roll')}</div>
+  <p class="hint" style="margin-top:8px"><b>滑移</b>：這一段（第 ${e ? e.i + 1 : '-'} 段）的內容往前或往後換，這一段長度和位置都不變，改變的是前後兩段的長度。</p><div class="r2 r4">${btn('slide')}</div>`;
+}
+function bindRl(on) { document.querySelectorAll('#ctx [data-rl]').forEach(b => b.onclick = () => rlGo(b.dataset.rl, +b.dataset.v)); }
+function msMark() { document.querySelectorAll('#row-v .clip').forEach(d => { const en = L[+d.dataset.i]; d.classList.toggle('msel', !!(showMs && en && msSel.has(en.c.id))); }); }
+function msHtml() {
+  const n = msSel.size;
+  return `<h4>☑ 多選片段</h4><p class="hint">在時間軸上點片段來選取或取消，已選 <b>${n}</b> 段。</p>
+  <div class="r2"><button class="sm" id="ms-all">全選</button><button class="sm" id="ms-none">全部取消選取</button></div>
+  <div class="r2" style="margin-top:6px"><button class="sm"${n ? '' : ' disabled'} id="ms-fx">🎨 把目前這段的濾鏡套用到選取</button><button class="sm"${n ? '' : ' disabled'} id="ms-mute">🔇 選取的靜音／取消靜音</button></div>
+  <div class="r2" style="margin-top:6px"><button class="sm red"${n ? '' : ' disabled'} id="ms-del">🗑 刪除選取的片段</button></div>`;
+}
+function bindMs(on) {
+  setTimeout(msMark, 0);
+  on('#ms-all', 'click', () => { L.forEach(e => msSel.add(e.c.id)); msMark(); renderCtx(); });
+  on('#ms-none', 'click', () => { msSel.clear(); msMark(); renderCtx(); });
+  on('#ms-fx', 'click', () => { const e = clipAt(cur); if (!e || !msSel.size) return; commit(); state.clips.forEach(x => { if (msSel.has(x.id) && x !== e.c) FXK.forEach(k => { if (e.c[k] == null) delete x[k]; else x[k] = e.c[k]; }); }); dirty = true; renderTimeline(); msMark(); toast('已套用濾鏡'); });
+  on('#ms-mute', 'click', () => { if (!msSel.size) return; commit(); const all = state.clips.filter(x => msSel.has(x.id)).every(x => x.mute); state.clips.forEach(x => { if (msSel.has(x.id)) { if (all) delete x.mute; else x.mute = true; } }); dirty = true; renderTimeline(); msMark(); toast(all ? '已取消靜音' : '已靜音'); });
+  on('#ms-del', 'click', () => { if (!msSel.size) return; const n = msSel.size; commit(); state.clips = state.clips.filter(x => !msSel.has(x.id)); msSel.clear(); afterEdit(0); renderCtx(); toast('已刪除 ' + n + ' 段'); });
+}
 let ctxSnap = null;
 function renderCtx() {
   const box = $('#ctx'); let h = '';
   { const t0 = selText && state.texts.find(x => x.id === selText);
-    const editing0 = !!(showAuto || showAu || showSt || showCap || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t0 || (selMusic && state.music));
+    const editing0 = !!(showAuto || showRl || showMs || showAu || showSt || showCap || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t0 || (selMusic && state.music));
     if (!editing0 && !showClip) { box.innerHTML = ''; box.style.display = 'none'; box.classList.remove('edit'); layoutSheet(); return; }
     box.style.display = 'block'; }
   const t = selText && state.texts.find(x => x.id === selText);
@@ -2211,6 +2256,8 @@ function renderCtx() {
   else if (selTr !== null && L[selTr]) { h += trHtml(); }
   else if (showAu) { h += auHtml(); }
   else if (showSt) { h += stHtml(); }
+  else if (showRl) { h += rlHtml(); }
+  else if (showMs) { h += msHtml(); }
   else if (showCap) { h += capHtml(); }
   else if (showKf) { h += kfHtml(); }
   else if (showEf) { h += efHtml(); }
@@ -2261,7 +2308,7 @@ function renderCtx() {
   box.querySelector('#ctx-x').onclick = () => { clearSel(); renderTimeline(); renderCtx(); };
   box.querySelector('#ctx-c').onclick = () => { if (ctxSnap && JSON.stringify(state) !== ctxSnap) { history.push(JSON.stringify(state)); redoStack = []; restore(ctxSnap); toast('已取消這次的修改（可按「復原」找回）'); } clearSel(); renderTimeline(); renderCtx(); };
   layoutSheet();
-  box.classList.toggle('edit', !!(showAuto || showAu || showSt || showCap || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
+  box.classList.toggle('edit', !!(showAuto || showRl || showMs || showAu || showSt || showCap || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
   if (!wasEdit && box.classList.contains('edit')) ctxSnap = JSON.stringify(state);
   const on = (id, ev, fn) => { const el = box.querySelector(id); if (el) el.addEventListener(ev, fn); };
   on('#kb', 'change', e => { commit(); state.kb = e.target.checked; dirty = true; });
@@ -2269,6 +2316,8 @@ function renderCtx() {
   else if (selTr !== null && L[selTr]) bindTr(on);
   else if (showAu) bindAu(on);
   else if (showSt) bindSt(on);
+  else if (showRl) bindRl(on);
+  else if (showMs) bindMs(on);
   else if (showCap) bindCap(on);
   else if (showKf) bindKf(on);
   else if (showEf) bindEf(on);
@@ -3340,7 +3389,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1126-F';
+const VER_NOW = '1126-I';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3898,7 +3947,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1126-F', upd = document.getElementById('upd');
+  const VER = '1126-I', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
