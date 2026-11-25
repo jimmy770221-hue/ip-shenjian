@@ -745,7 +745,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1125-D（調色：色溫、色調、褪色、陰影、亮部）</div>
+  <div class="hfoot">版本 1125-E（卡點：依速度標出規律節拍）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -2364,6 +2364,7 @@ function auHtml() {
   ${vos.length ? vos.map((v, i) => `<div class="r2" style="margin-top:6px;align-items:center"><span style="font-size:13px">🎙 ${esc((assets.get(v.asset) || {}).name || '')}（${v.offset.toFixed(1)}秒起）</span><button class="sm" data-voat="${i}">起點＝目前位置</button><button class="sm red" data-vodel="${i}">刪除</button></div><input type="range" data-vovol="${i}" min="0" max="1" step="0.05" value="${v.vol == null ? 1 : v.vol}">`).join('') : ''}
   <label>🥁 節拍標記（剪輯點，會顯示在時間尺上）${bt.length ? '：已標 ' + bt.length + ' 個' : ''}</label>
   <div class="r2"><button class="sm" id="bt-add">📍 在目前位置標記</button><button class="sm" id="bt-auto">🎵 從配樂自動找節拍</button></div>
+  <div class="r2" style="margin-top:6px"><button class="sm" id="bt-grid">🥁 依速度標出規律節拍（BPM）</button></div>
   <div class="r2" style="margin-top:6px"><button class="sm" id="bt-cut">✂️ 依標記把影片切開</button><button class="sm red" id="bt-clr">清除標記</button></div>
   <div class="r2" style="margin-top:8px"><button class="sm ok" id="au-ok">完成</button></div>`;
 }
@@ -2448,6 +2449,28 @@ async function recStart() {
   mr.start(); play(); renderCtx();
 }
 function recStop() { if (!rec) return; pause(); rec.mr.stop(); }
+async function detectGrid() {   // 抓出整首音樂的速度（BPM）和第一拍位置，標出規律的節拍格線（比「找打擊點」更穩，適合節奏固定的音樂）
+  if (!state.music) return toast('請先加入配樂');
+  const m = assets.get(state.music.asset); toast('分析速度中，請稍等…');
+  let buf; try { const ac = new (window.AudioContext || window.webkitAudioContext)(); buf = await ac.decodeAudioData(await m.file.arrayBuffer()); ac.close && ac.close(); } catch (e) { return toast('這個音樂檔分析不了'); }
+  const ch = buf.getChannelData(0), sr = buf.sampleRate, HOP = 0.01, win = Math.round(sr * HOP), n = Math.floor(ch.length / win), en = new Float32Array(n);
+  for (let i = 0; i < n; i++) { let sum = 0; for (let j = i * win, e = j + win; j < e; j++) sum += ch[j] * ch[j]; en[i] = Math.sqrt(sum / win); }
+  const fl = new Float32Array(n); for (let i = 1; i < n; i++) fl[i] = Math.max(0, en[i] - en[i - 1]);
+  let lo = 33, hi = 86, best = 0, bl = 0;   // 70～180 BPM
+  const lim = Math.min(n, 6000);   // 最多分析前 60 秒
+  for (let lag = lo; lag <= hi; lag++) { let sc = 0; for (let i = lag; i < lim; i++) sc += fl[i] * fl[i - lag]; sc /= (1 + 0.004 * Math.abs(lag - 50)); if (sc > best) { best = sc; bl = lag; } }
+  if (!bl) return toast('沒有找到明顯的節奏，可以自己手動標記');
+  let bs = -1, bP = bl, bPh = 0;
+  for (let P = bl * 0.97; P <= bl * 1.03; P += bl * 0.002) for (let ph = 0; ph < P; ph += 1) {
+    let sc = 0, c = 0; for (let t = ph; t < lim; t += P) { const k = Math.round(t); sc += fl[k] + 0.5 * (fl[k - 1] || 0) + 0.5 * (fl[k + 1] || 0); c++; }
+    sc /= Math.max(1, c); if (sc > bs) { bs = sc; bP = P; bPh = ph; }
+  }
+  const bpm = 60 / (bP * HOP), out = [];
+  for (let t = bPh; t < n; t += bP) { const tt = +(t * HOP + state.music.offset).toFixed(3); if (tt > 0.05 && tt < total - 0.05) out.push(tt); }
+  if (!out.length) return toast('沒有找到明顯的節奏，可以自己手動標記');
+  commit(); state.beats = out; renderTimeline(); if (showAu) renderCtx(); toast('速度約 ' + Math.round(bpm) + ' BPM，標了 ' + out.length + ' 個節拍');
+  return { bpm, first: out[0] };
+}
 async function detectBeats() {
   if (!state.music) return toast('請先加入配樂');
   const m = assets.get(state.music.asset); toast('分析中，請稍等…');
@@ -2481,6 +2504,7 @@ function bindAu(on) {
   document.querySelectorAll('#ctx [data-vovol]').forEach(el => el.addEventListener('input', () => { touch('vov' + el.dataset.vovol); state.vo[+el.dataset.vovol].vol = +el.value; syncVo(); }));
   on('#bt-add', 'click', () => { if (!total) return; commit(); const t = +cur.toFixed(2); state.beats = [...new Set([...(state.beats || []), t])].sort((x, y) => x - y); renderTimeline(); renderCtx(); });
   on('#bt-auto', 'click', detectBeats);
+  on('#bt-grid', 'click', detectGrid);
   on('#bt-cut', 'click', () => {
     const bt = (state.beats || []).slice().sort((x, y) => x - y); if (!bt.length) return toast('還沒有標記');
     commit(); let n = 0;
@@ -3061,7 +3085,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1125-D';
+const VER_NOW = '1125-E';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3619,7 +3643,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1125-D', upd = document.getElementById('upd');
+  const VER = '1125-E', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
