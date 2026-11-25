@@ -747,7 +747,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1126-L（快捷鍵、配樂自動壓低）</div>
+  <div class="hfoot">版本 1126-M（快捷鍵、配樂自動壓低）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -3444,7 +3444,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1126-L';
+const VER_NOW = '1126-M';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3543,6 +3543,10 @@ const pjAuto = () => pjSave(PJ.cur ? undefined : '自動儲存 ' + new Date().to
 setInterval(() => { if (pjDirty() && !playing && !exporting) pjAuto(); }, 10000);   // 每 10 秒檢查，有修改就自動存（沒存過的作品也會自動建立一份）
 document.addEventListener('visibilitychange', () => { if (document.hidden && pjDirty()) pjAuto(); });
 window.addEventListener('pagehide', () => { if (pjDirty()) pjAuto(); });
+/* 出了預料外的錯誤時：先把作品自動存起來，再用白話提醒一次（避免一直跳）*/
+let errN = 0; const errHandle = () => { try { if (pjDirty()) pjAuto(); if (++errN <= 2) toast('剛剛出了一個小狀況，作品已自動儲存，可以繼續操作；如果畫面不對，重新整理後點「繼續上次的作品」'); } catch (e) {} };
+window.addEventListener('error', e => { if (e && e.message && /ResizeObserver|Script error/i.test(e.message)) return; errHandle(); });
+window.addEventListener('unhandledrejection', e => { const r = e && e.reason, n = r && r.name, m = String((r && r.message) || r || ''); if (/AbortError|NotAllowedError|NotSupportedError|play\(\)|interrupted/i.test(n + ' ' + m)) return; errHandle(); });
 
 /* ================= 啟動 ================= */
 window.addEventListener('beforeunload', e => { if (state.clips.length && !exporting && pjDirty()) { e.preventDefault(); e.returnValue = ''; } });
@@ -4012,7 +4016,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1126-L', upd = document.getElementById('upd');
+  const VER = '1126-M', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
