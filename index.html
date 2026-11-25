@@ -83,11 +83,12 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 .ctx{position:fixed;left:0;right:0;bottom:0;max-width:760px;margin:0 auto;z-index:57;display:none;background:var(--panel);padding:12px 14px calc(14px + env(safe-area-inset-bottom));max-height:42vh;overflow-y:auto;border-radius:20px 20px 0 0;box-shadow:0 -10px 30px #000c;font-size:14px;animation:shup .18s ease-out}
 .ctx.edit{max-height:42vh}
 @keyframes shup{from{transform:translateY(40px);opacity:.3}to{transform:none;opacity:1}}
-.sh-x{position:sticky;top:0;float:right;z-index:3;width:40px;height:40px;border-radius:50%;background:var(--main);color:#fff;border:0;font-size:20px;margin:0 0 4px 8px}
+.sh-c{background:var(--panel2)!important;color:var(--ink)!important;border:1px solid var(--line)!important}
+.sh-x{position:sticky;top:0;float:right;z-index:3;width:auto;padding:0 14px;font-size:15px!important;height:40px;border-radius:20px;background:var(--main);color:#fff;border:0;font-size:20px;margin:0 0 4px 8px}
 #cats{overflow-y:auto;position:fixed;left:0;right:0;bottom:0;max-width:760px;margin:0 auto;z-index:57;display:none;background:var(--panel);padding:12px 12px calc(14px + env(safe-area-inset-bottom));border-radius:20px 20px 0 0;box-shadow:0 -10px 30px #000c;animation:shup .18s ease-out}
 #cats.on{display:block}
 #cats .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}#cats .hd b{font-size:15px}
-#cats-x{width:40px;height:40px;border-radius:50%;background:var(--main);color:#fff;border:0;font-size:20px}
+#cats-x{width:auto;padding:0 14px;font-size:15px!important;height:40px;border-radius:20px;background:var(--main);color:#fff;border:0;font-size:20px}
 #cats-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:8px}
 #cats-g .tb{min-width:0;width:100%;background:var(--panel2);border-radius:14px;padding:12px 2px 9px;font-size:12px;gap:5px}
 #cats-g .tb i{font-size:24px}
@@ -745,7 +746,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1126-D（快捷鍵、配樂自動壓低）</div>
+  <div class="hfoot">版本 1126-E（快捷鍵、配樂自動壓低）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -800,7 +801,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="cat" data-g="fx"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3ZM20 3v4m-2-2h4"/></svg></i>特效</button>
     <button class="cat" data-g="cam"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 10l5-3v10l-5-3"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg></i>拍攝</button>
   </div>
-  <div id="cats"><div class="hd"><b id="cats-t"></b><button id="cats-x">✓</button></div><div id="cats-g"></div></div>
+  <div id="cats"><div class="hd"><b id="cats-t"></b><button id="cats-x">✕ 關閉</button></div><div id="cats-g"></div></div>
   <div id="tbpool" hidden>
     <button class="tb" data-a="split"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8 8.5 20 19M8 15.5 20 5"/></svg></i>分割</button>
     <button class="tb" data-a="freeze"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M4 7l16 10M4 17 20 7M10 5l2 2 2-2m-4 14 2-2 2 2"/></svg></i>定格</button>
@@ -2196,6 +2197,7 @@ $('#ratio').onchange = e => { commit(); state.ratio = e.target.value; applyRatio
 
 /* ================= 下方設定面板 ================= */
 const COLORS = [['#ffffff', '白'], ['#ffe14d', '黃'], ['#ff6b6b', '紅'], ['#4dd2ff', '藍'], ['#000000', '黑']];
+let ctxSnap = null;
 function renderCtx() {
   const box = $('#ctx'); let h = '';
   { const t0 = selText && state.texts.find(x => x.id === selText);
@@ -2251,11 +2253,14 @@ function renderCtx() {
     } else h += `<h4>還沒有素材，請先按時間軸右邊的「＋」</h4>`;
     h += `<label class="chk"><input type="checkbox" id="kb"${state.kb ? ' checked' : ''}> 照片慢慢推近（較動感，匯出會比較慢）</label>`;
   }
+  const wasEdit = box.classList.contains('edit');
   box.innerHTML = h;
-  box.insertAdjacentHTML('afterbegin', '<button class="sh-x" id="ctx-x">✓</button>');
+  box.insertAdjacentHTML('afterbegin', '<button class="sh-x" id="ctx-x">✓ 完成</button><button class="sh-x sh-c" id="ctx-c">↩ 取消</button>');
   box.querySelector('#ctx-x').onclick = () => { clearSel(); renderTimeline(); renderCtx(); };
+  box.querySelector('#ctx-c').onclick = () => { if (ctxSnap && JSON.stringify(state) !== ctxSnap) { history.push(JSON.stringify(state)); redoStack = []; restore(ctxSnap); toast('已取消這次的修改（可按「復原」找回）'); } clearSel(); renderTimeline(); renderCtx(); };
   layoutSheet();
   box.classList.toggle('edit', !!(showAuto || showAu || showSt || showCap || showKf || showEf || showLy || (showFx && clipAt(cur)) || (selTr !== null && L[selTr]) || t || (selMusic && state.music)));
+  if (!wasEdit && box.classList.contains('edit')) ctxSnap = JSON.stringify(state);
   const on = (id, ev, fn) => { const el = box.querySelector(id); if (el) el.addEventListener(ev, fn); };
   on('#kb', 'change', e => { commit(); state.kb = e.target.checked; dirty = true; });
   if (showAuto) bindAuto(on);
@@ -3333,7 +3338,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1126-D';
+const VER_NOW = '1126-E';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3891,7 +3896,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1126-D', upd = document.getElementById('upd');
+  const VER = '1126-E', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
