@@ -747,7 +747,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1126-P（快捷鍵、配樂自動壓低）</div>
+  <div class="hfoot">版本 1126-Q（快捷鍵、配樂自動壓低）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -3231,11 +3231,23 @@ async function fastVideo(LL, TT, W, H, S, audioBytes) {
   }
 }
 let noFastOnce = false;
+// 匯出完自動檢查：能播、有畫面、長度差不多
+function verifyOut(blob, TT) {
+  return new Promise(res => {
+    const u = URL.createObjectURL(blob), v = document.createElement('video'); v.muted = true; v.preload = 'metadata';
+    const done = r => { clearTimeout(tm); URL.revokeObjectURL(u); v.src = ''; res(r); }, tm = setTimeout(() => done({ ok: true }), 8000);
+    v.onloadedmetadata = () => { if (!v.videoWidth) return done({ ok: false, why: '沒有畫面' }); if (isFinite(v.duration) && Math.abs(v.duration - TT) > Math.max(1, TT * 0.08)) return done({ ok: false, why: '長度不對 ' + v.duration.toFixed(1) + '/' + TT.toFixed(1) + ' 秒' }); done({ ok: true }); };
+    v.onerror = () => done({ ok: false, why: '檔案無法播放' }); v.src = u;
+  });
+}
 $('#xp-go').onclick = async () => {
   { const sz = pjUsed().reduce((n, id) => n + (assets.get(id).file.size || 0), 0), mob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent), q4 = ($('#xp-q') || {}).value === '4k' || ($('#xp-q') || {}).value === '2160';
     if ((sz > 9e8 || (mob && q4 && total > 60)) && !confirm('素材很大（約 ' + Math.round(sz / 1048576) + ' MB）' + (mob && q4 ? '，而且是手機匯出 4K' : '') + '，匯出可能很慢或失敗。\n\n建議：改選較低的畫質，或把影片分成幾段匯出。\n\n按「確定」＝照樣匯出　按「取消」＝回去調整')) return; }
   if (state.duck && state.duck.on && state.music) { try { await duckAnalyze(true); } catch (e) {} }
-  const kind = $('#xp-fmt').value, S = +$('#xp-q').value, isMp3 = kind === 'mp3', compat = $('#xp-mode').value === 'compat' || noFastOnce; noFastOnce = false;
+  let S = +$('#xp-q').value;
+  { const mob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent), mem = navigator.deviceMemory || (mob ? 4 : 8);
+    if (S > 1080 && (mob || mem <= 4) && total > 45 && confirm('作品有 ' + Math.round(total) + ' 秒，用 4K 匯出手機很容易記憶體不足而閃退。\n\n按「確定」＝自動改用 1080p（建議）\n按「取消」＝照 4K 匯出')) { S = 1080; $('#xp-q').value = '1080'; toast('已改用 1080p 匯出'); } }
+  const kind = $('#xp-fmt').value, isMp3 = kind === 'mp3', compat = $('#xp-mode').value === 'compat' || noFastOnce; noFastOnce = false;
   const fast = !isMp3 && !compat && !!window.VideoEncoder && !state.clips.some(c => c.rev), audioOnly = isMp3 || fast;
   const [W, H] = exportDims(S), snap = JSON.parse(JSON.stringify(state)), LL = L.map(e => ({ ...e })), TT = total;
   exporting = true; $('#xp-opts').style.display = 'none'; $('#xp-res').innerHTML = ''; xProg(0);
@@ -3434,6 +3446,7 @@ $('#xp-go').onclick = async () => {
     let blob;
     if (fast) { progMode = 2; try { blob = await fastVideo(LL, TT, W, H, S, data); } catch (er) { er.fast = true; throw er; } mime = 'video/mp4'; }
     else blob = new Blob([data.buffer], { type: mime });
+    if (!isMp3) { const chk = await verifyOut(blob, TT); if (!chk.ok) { if (fast) { const er = new Error('檢查失敗：' + chk.why); er.fast = true; throw er; } throw new Error('匯出的檔案檢查沒過（' + chk.why + '）'); } }
     const url = URL.createObjectURL(blob);
     const fname = (isMp3 ? 'IP神剪配樂' : 'IP神剪作品') + (isMp3 ? '.mp3' : '.mp4');
     xbar.style.display = 'none'; xStatus('完成！檔案大小 ' + (blob.size > 1048576 ? (blob.size / 1048576).toFixed(1) + ' MB' : Math.round(blob.size / 1024) + ' KB'), 'ok');
@@ -3454,7 +3467,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1126-P';
+const VER_NOW = '1126-Q';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -4026,7 +4039,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1126-P', upd = document.getElementById('upd');
+  const VER = '1126-Q', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
