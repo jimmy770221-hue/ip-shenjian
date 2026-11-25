@@ -745,7 +745,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1125-B（動畫：更多緩動曲線）</div>
+  <div class="hfoot">版本 1125-C（轉場新增6種、緩動曲線）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -1463,6 +1463,12 @@ function drawTrans(type, p, dA, dB) {
       let gr = g.createLinearGradient(xa(H / 2) - wd, 0, xa(H / 2), 0); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,0.5)'); g.fillStyle = gr; g.fillRect(0, 0, W, H); g.restore();
       g.save(); poly(0); g.clip(); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); dB();
       gr = g.createLinearGradient(xa(H / 2), 0, xa(H / 2) + wb, 0); gr.addColorStop(0, 'rgba(0,0,0,0.4)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, H); g.restore(); break; }
+    case 'wipedown': dA(); g.save(); g.beginPath(); g.rect(0, 0, W, H * p); g.clip(); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); dB(); g.restore(); break;
+    case 'wipeup': dA(); g.save(); g.beginPath(); g.rect(0, H * (1 - p), W, H * p); g.clip(); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); dB(); g.restore(); break;
+    case 'diag': dA(); g.save(); g.beginPath(); g.moveTo(0, 0); g.lineTo(2 * p * W, 0); g.lineTo(0, 2 * p * H); g.closePath(); g.clip(); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); dB(); g.restore(); break;
+    case 'diamond': { const q = p * 1.02; dA(); g.save(); g.beginPath(); g.moveTo(W / 2, H / 2 - q * H); g.lineTo(W / 2 + q * W, H / 2); g.lineTo(W / 2, H / 2 + q * H); g.lineTo(W / 2 - q * W, H / 2); g.closePath(); g.clip(); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); dB(); g.restore(); break; }
+    case 'vopen': dA(); g.save(); g.beginPath(); g.rect(0, H * (0.5 - p / 2), W, H * p); g.clip(); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); dB(); g.restore(); break;
+    case 'slices': { dA(); g.save(); g.beginPath(); const ny = 20, bh = H / ny; for (let j = 0; j < ny; j++) if (trCellV('dissolve', 0, j, 1, ny) < p * 1.02) g.rect(0, j * bh - 0.5, W, bh + 1); g.clip(); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); dB(); g.restore(); break; }
     case 'whip': {   // 快速甩動：很快的推擠（前慢、中間飛快、後慢）
       const q = trWhipE(p);
       g.save(); g.translate(-W * q, 0); dA(); g.restore();
@@ -1491,6 +1497,12 @@ function trFilter(type, td, W, H) {
     m = `lt(${v},${P}*${type === 'dissolve' ? 1 : 1.02})`;
   } else if (type === 'blinds') m = `lt(mod(Y/H*8,1),${P})`;
   else if (type === 'split') m = `lt(abs(X/W-0.5)*2,${P})`;
+  else if (type === 'wipedown') m = `lt(Y/H,${P})`;
+  else if (type === 'wipeup') m = `gt(Y/H,1-${P})`;
+  else if (type === 'diag') m = `lt(X/W+Y/H,2*${P})`;
+  else if (type === 'diamond') m = `lt(abs(X/W-0.5)+abs(Y/H-0.5),${P}*1.02)`;
+  else if (type === 'vopen') m = `lt(abs(Y/H-0.5)*2,${P})`;
+  else if (type === 'slices') m = `lt(mod(abs(sin(floor(Y/H*20)*78.233)*43758.5453),1),${P}*1.02)`;
   else if (type === 'pageturn') {
     const S = `(X/W*0.9+(1-Y/H)*0.1)`, E = `(1.12-1.3*${P})`;
     m = `gt(${S},${E})`;
@@ -2177,8 +2189,8 @@ function renderCtx() {
   }
   on('#vol-m', 'input', e => { touch('vm'); state.vol.music = +e.target.value; e.target.previousElementSibling.textContent = '配樂音量 ' + Math.round(state.vol.music * 100) + '%'; syncMedia(); });
 }
-const TRS = [['fade', '淡入淡出', '🌫'], ['fadeblack', '黑場過渡', '⬛'], ['fadewhite', '閃白', '⬜'], ['slideleft', '向左推', '⬅️'], ['slideright', '向右推', '➡️'], ['slideup', '向上推', '⬆️'], ['slidedown', '向下推', '⬇️'], ['wipeleft', '向左擦拭', '◀️'], ['wiperight', '向右擦拭', '▶️'], ['circleopen', '圓形展開', '⭕'], ['circleclose', '圓形收合', '🎯'], ['radial', '時鐘擦拭', '🕐'], ['star', '星星放大', '⭐'], ['heart', '愛心放大', '💗'], ['torn', '撕紙', '📄'], ['zoom', '放大衝入', '🔍'], ['dissolve', '溶解', '✨'], ['mosaic', '方塊馬賽克', '🟦'], ['blinds', '百葉窗', '🪟'], ['split', '對開', '🚪'], ['pageturn', '翻頁', '📖'], ['whip', '快速甩動', '💨']];
-const AUTO_STYLES = [['🎲 隨機混合', TRS.map(t => t[0])], ['🌫 柔和淡入淡出', ['fade']], ['➡️ 推擠換頁', ['slideleft', 'slideright', 'slideup', 'slidedown']], ['🧹 擦拭換頁', ['wipeleft', 'wiperight']], ['⭕ 圓形與時鐘', ['circleopen', 'circleclose', 'radial']], ['⚡ 閃光動感', ['fadewhite', 'fadeblack']], ['🎈 派對形狀', ['star', 'heart', 'torn', 'zoom']], ['✂️ 實用轉場', ['dissolve', 'mosaic', 'blinds', 'split', 'pageturn', 'whip']]];
+const TRS = [['fade', '淡入淡出', '🌫'], ['fadeblack', '黑場過渡', '⬛'], ['fadewhite', '閃白', '⬜'], ['slideleft', '向左推', '⬅️'], ['slideright', '向右推', '➡️'], ['slideup', '向上推', '⬆️'], ['slidedown', '向下推', '⬇️'], ['wipeleft', '向左擦拭', '◀️'], ['wiperight', '向右擦拭', '▶️'], ['circleopen', '圓形展開', '⭕'], ['circleclose', '圓形收合', '🎯'], ['radial', '時鐘擦拭', '🕐'], ['star', '星星放大', '⭐'], ['heart', '愛心放大', '💗'], ['torn', '撕紙', '📄'], ['zoom', '放大衝入', '🔍'], ['dissolve', '溶解', '✨'], ['mosaic', '方塊馬賽克', '🟦'], ['blinds', '百葉窗', '🪟'], ['split', '對開', '🚪'], ['pageturn', '翻頁', '📖'], ['whip', '快速甩動', '💨'], ['wipedown', '向下擦拭', '🔽'], ['wipeup', '向上擦拭', '🔼'], ['diag', '斜角擦拭', '◢'], ['diamond', '菱形展開', '🔶'], ['vopen', '上下對開', '↕️'], ['slices', '隨機切片', '🎞']];
+const AUTO_STYLES = [['🎲 隨機混合', TRS.map(t => t[0])], ['🌫 柔和淡入淡出', ['fade']], ['➡️ 推擠換頁', ['slideleft', 'slideright', 'slideup', 'slidedown']], ['🧹 擦拭換頁', ['wipeleft', 'wiperight', 'wipedown', 'wipeup', 'diag']], ['⭕ 圓形與時鐘', ['circleopen', 'circleclose', 'radial']], ['⚡ 閃光動感', ['fadewhite', 'fadeblack']], ['🎈 派對形狀', ['star', 'heart', 'torn', 'zoom']], ['✂️ 實用轉場', ['dissolve', 'mosaic', 'blinds', 'split', 'pageturn', 'whip', 'diamond', 'vopen', 'slices']]];
 const SPEEDS = [0.5, 0.75, 1, 1.5, 2, 3, 4];
 const RAMPS = [['up', '漸快', [0.5, 0.75, 1, 1.5, 2]], ['down', '漸慢', [2, 1.5, 1, 0.75, 0.5]], ['bullet', '慢快慢（子彈時間）', [1, 0.5, 0.25, 0.5, 1]], ['punch', '快慢快（重點放慢）', [2, 1, 0.5, 1, 2]], ['pulse', '忽快忽慢', [1, 0.5, 2, 0.5, 1]]];
 function fxHtml() {
@@ -3039,7 +3051,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1125-B';
+const VER_NOW = '1125-C';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3597,7 +3609,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1125-B', upd = document.getElementById('upd');
+  const VER = '1125-C', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
