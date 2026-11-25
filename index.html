@@ -745,7 +745,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1126-C（快捷鍵、配樂自動壓低）</div>
+  <div class="hfoot">版本 1126-D（快捷鍵、配樂自動壓低）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -830,6 +830,7 @@ html, body, .ip-tools { background-color: var(--bg); }
 <input type="file" id="f-media" accept="video/*,image/*" multiple hidden>
 <input type="file" id="f-layer" accept="video/*,image/*" multiple hidden>
 <input type="file" id="f-music" accept="audio/*,video/*" hidden>
+<input type="file" id="f-lut" accept=".cube,.txt" hidden>
 <input type="file" id="f-track" accept="audio/*,video/*" hidden>
 <div id="pool"></div>
 <div class="toast" id="toast"></div>
@@ -901,13 +902,50 @@ const FXP = {
   moon: { n: '月光', b: -.06, ct: 1.1, sa: .7, r: .85, g: .95, bl: 1.2 }
 };
 const FXE = [['ft', '色溫（冷←→暖）', -1, 1, 0.05], ['fg', '色調（綠←→洋紅）', -1, 1, 0.05], ['ff', '褪色（霧面底片感）', 0, 0.5, 0.02], ['fsh', '陰影（暗部提亮／壓暗）', -1, 1, 0.05], ['fhl', '亮部（亮部提亮／壓暗）', -1, 1, 0.05]];
-const FXK = ['fp', 'fb', 'fc', 'fs', 'ft', 'fg', 'ff', 'fsh', 'fhl'];
+const FXK = ['fp', 'fb', 'fc', 'fs', 'ft', 'fg', 'ff', 'fsh', 'fhl', 'fl', 'fli'];
+/* ===== LUT（.cube 調色檔）與一鍵匹配色調 ===== */
+const luts = new Map();   // id → {name, n, d:Float32Array(n^3*3)}，紅色變化最快
+let lutSeq = 0, matchRef = null;
+function parseCube(txt) {
+  let n = 0; const v = [];
+  for (const ln of txt.split(/\r?\n/)) { const t = ln.trim(); if (!t || t[0] === '#') continue; const w = t.split(/\s+/); if (w[0] === 'LUT_3D_SIZE') n = +w[1]; else if (w[0] === 'LUT_1D_SIZE') throw new Error('1D'); else if (/^[-+\d.]/.test(w[0]) && w.length >= 3) v.push(+w[0], +w[1], +w[2]); }
+  if (n < 2 || n > 65 || v.length !== n * n * n * 3 || v.some(x => !isFinite(x))) throw new Error('bad');
+  return { n, d: Float32Array.from(v) };
+}
+function lutSample(l, r, g, b, o) {
+  const n = l.n, s = n - 1, D = l.d; r = (r < 0 ? 0 : r > 1 ? 1 : r) * s; g = (g < 0 ? 0 : g > 1 ? 1 : g) * s; b = (b < 0 ? 0 : b > 1 ? 1 : b) * s;
+  const r0 = Math.min(s - 1, r | 0), g0 = Math.min(s - 1, g | 0), b0 = Math.min(s - 1, b | 0), fr = r - r0, fg = g - g0, fb = b - b0;
+  for (let k = 0; k < 3; k++) {
+    const i = (bb, gg, rr) => D[(((b0 + bb) * n + g0 + gg) * n + r0 + rr) * 3 + k];
+    const c00 = i(0, 0, 0) * (1 - fr) + i(0, 0, 1) * fr, c10 = i(0, 1, 0) * (1 - fr) + i(0, 1, 1) * fr, c01 = i(1, 0, 0) * (1 - fr) + i(1, 0, 1) * fr, c11 = i(1, 1, 0) * (1 - fr) + i(1, 1, 1) * fr;
+    o[k] = (c00 * (1 - fg) + c10 * fg) * (1 - fb) + (c01 * (1 - fg) + c11 * fg) * fb;
+  }
+}
+function lutCube(l, I) {   // 把強度直接算進去，輸出給 ffmpeg 用，預覽也是同一份算法
+  const n = l.n, s = n - 1, o = ['LUT_3D_SIZE ' + n]; let q = 0;
+  for (let b = 0; b < n; b++) for (let g = 0; g < n; g++) for (let r = 0; r < n; r++, q += 3) o.push([r / s, g / s, b / s].map((x, k) => (x + (l.d[q + k] - x) * I).toFixed(5)).join(' '));
+  return o.join('\n');
+}
+const lutOn = c => { const l = c.fl && luts.get(c.fl); return l && (c.fli == null ? 1 : c.fli) > 0.001 ? l : null; };
+const lutFile = c => `lut_${c.fl}_${Math.round((c.fli == null ? 1 : c.fli) * 100)}.cube`;
+function matchLut(src, ref) {   // 把「這段」的色彩平均與分散程度，調成跟參考一樣
+  const n = 17, d = new Float32Array(n * n * n * 3), sc = [0, 1, 2].map(k => clamp(ref.s[k] / Math.max(0.02, src.s[k]), 0.6, 1.6)); let q = 0;
+  for (let b = 0; b < n; b++) for (let g = 0; g < n; g++) for (let r = 0; r < n; r++) { [r, g, b].forEach((x, k) => { x /= n - 1; d[q++] = clamp((x - src.m[k]) * sc[k] + ref.m[k], 0, 1); }); }
+  return { name: '匹配色調', n, d };
+}
+function imgStats(src, sw, sh) {
+  const T = document.createElement('canvas'); T.width = 48; T.height = 80; const t = T.getContext('2d', { willReadFrequently: true }); t.drawImage(src, 0, 0, sw || src.width, sh || src.height, 0, 0, 48, 80);
+  const d = t.getImageData(0, 0, 48, 80).data, m = [0, 0, 0], v = [0, 0, 0], N = d.length / 4;
+  for (let i = 0; i < d.length; i += 4) for (let k = 0; k < 3; k++) m[k] += d[i + k] / 255; for (let k = 0; k < 3; k++) m[k] /= N;
+  for (let i = 0; i < d.length; i += 4) for (let k = 0; k < 3; k++) v[k] += (d[i + k] / 255 - m[k]) ** 2;
+  return { m, s: v.map(x => Math.sqrt(x / N)) };
+}
 const fxeHtml = (pre, c) => FXE.map(([k, n, mn, mx, st]) => `<label>${n}<b id="v-${pre}${k}">${Math.round((c[k] || 0) * 100)}</b></label><input type="range" id="${pre}-${k}" min="${mn}" max="${mx}" step="${st}" value="${c[k] || 0}">`).join('');
 const fxeBind = (on, pre, c, after) => FXE.forEach(([k]) => on('#' + pre + '-' + k, 'input', ev => { touch(pre + k + (c.id || '')); c[k] = +ev.target.value; const b = $('#v-' + pre + k); if (b) b.textContent = Math.round(c[k] * 100); dirty = true; if (after) after(); }));
 const fxP = c => { const p = FXP[c.fp] || FXP.none, ff = c.ff || 0, ft = c.ft || 0, fg = c.fg || 0;
-  return { b: (p.b + (c.fb || 0)) * (1 - ff) + ff / 2, ct: p.ct * (c.fc == null ? 1 : c.fc) * (1 - ff), sa: p.sa * (c.fs == null ? 1 : c.fs), r: p.r * (1 + 0.25 * ft), g: p.g * (1 - 0.15 * fg), bl: p.bl * (1 - 0.25 * ft), sh: c.fsh || 0, hl: c.fhl || 0 }; };
+  return { b: (p.b + (c.fb || 0)) * (1 - ff) + ff / 2, ct: p.ct * (c.fc == null ? 1 : c.fc) * (1 - ff), sa: p.sa * (c.fs == null ? 1 : c.fs), r: p.r * (1 + 0.25 * ft), g: p.g * (1 - 0.15 * fg), bl: p.bl * (1 - 0.25 * ft), sh: c.fsh || 0, hl: c.fhl || 0, lut: lutOn(c) }; };
 const fxToneF = q => { if (!q.sh && !q.hl) return []; const E = `clip(val+maxval*0.25*${q.sh.toFixed(3)}*pow(1-val/maxval,2)+maxval*0.25*${q.hl.toFixed(3)}*pow(val/maxval,2),0,maxval)`; return ['format=gbrp', `lutrgb=r='${E}':g='${E}':b='${E}'`, 'format=yuv420p']; };
-const hasFx = c => { const q = fxP(c); return Math.abs(q.b) > .001 || Math.abs(q.ct - 1) > .001 || Math.abs(q.sa - 1) > .001 || q.r !== 1 || q.g !== 1 || q.bl !== 1 || !!q.sh || !!q.hl; };
+const hasFx = c => { const q = fxP(c); return Math.abs(q.b) > .001 || Math.abs(q.ct - 1) > .001 || Math.abs(q.sa - 1) > .001 || q.r !== 1 || q.g !== 1 || q.bl !== 1 || !!q.sh || !!q.hl || !!q.lut; };
 const spd = c => c.sp || 1;
 const RATIO = { '9:16': [360, 640], '16:9': [640, 360], '1:1': [480, 480], '4:3': [640, 480], '3:4': [480, 640] };
 
@@ -1149,6 +1187,7 @@ function drawContain(T, src, sw, sh, c) {
 }
 let xsrc = null;   // 快速匯出時：每一格的影片畫面（key → canvas）
 const fxc = document.createElement('canvas'), fxg = fxc.getContext('2d', { willReadFrequently: true });
+const lo = [0, 0, 0];
 function applyFx(c, rx, ry, rw, rh) {
   const q = fxP(c), W = rw == null ? fxc.width : rw, H = rw == null ? fxc.height : rh, im = fxg.getImageData(rx || 0, ry || 0, W, H), d = im.data;
   for (let i = 0; i < d.length; i += 4) {
@@ -1159,6 +1198,7 @@ function applyFx(c, rx, ry, rw, rh) {
     const l2 = (l - .5) * q.ct + .5 + q.b;   // 對比只作用在亮度，和匯出一致
     r = l2 + (r - l) * q.sa; gr = l2 + (gr - l) * q.sa; b = l2 + (b - l) * q.sa;
     if (q.sh || q.hl) { r = r < 0 ? 0 : r > 1 ? 1 : r; gr = gr < 0 ? 0 : gr > 1 ? 1 : gr; b = b < 0 ? 0 : b > 1 ? 1 : b; r += .25 * q.sh * (1 - r) * (1 - r) + .25 * q.hl * r * r; gr += .25 * q.sh * (1 - gr) * (1 - gr) + .25 * q.hl * gr * gr; b += .25 * q.sh * (1 - b) * (1 - b) + .25 * q.hl * b * b; }
+    if (q.lut) { lutSample(q.lut, r, gr, b, lo); const I = c.fli == null ? 1 : c.fli; r = (r < 0 ? 0 : r > 1 ? 1 : r) * (1 - I) + lo[0] * I; gr = (gr < 0 ? 0 : gr > 1 ? 1 : gr) * (1 - I) + lo[1] * I; b = (b < 0 ? 0 : b > 1 ? 1 : b) * (1 - I) + lo[2] * I; }
     d[i] = r < 0 ? 0 : r > 1 ? 255 : r * 255; d[i + 1] = gr < 0 ? 0 : gr > 1 ? 255 : gr * 255; d[i + 2] = b < 0 ? 0 : b > 1 ? 255 : b * 255;
   }
   fxg.putImageData(im, rx || 0, ry || 0);
@@ -2145,6 +2185,9 @@ $('#tl-add').onclick = () => { pause(); ops.add(); };
 $('#tl-vol').onclick = () => volOpen();
 $('#h-cam').onclick = () => camOpen();
 $('#f-media').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; if (fs.length) { addMedia(fs); if (window.__hideHome) window.__hideHome(); } };
+$('#f-lut').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; const en = clipAt(cur); if (!en) return;
+  try { const l = parseCube(await f.text()); l.name = f.name; const id = 'l' + (++lutSeq); luts.set(id, l); commit(); en.c.fl = id; en.c.fli = 1; dirty = true; renderCtx(); renderTimeline(); toast('已套用調色檔'); }
+  catch (er) { toast(String(er.message) === '1D' ? '這是 1D 調色檔，目前只支援 3D 的 .cube' : '讀不到這個調色檔，請確認是 3D 的 .cube'); } };
 $('#f-music').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) addMusic(f); };
 $('#b-play').onclick = () => playing ? pause() : play();
 $('#b-prev').onclick = () => { pause(); setCur(cur - 1 / 30); };
@@ -2274,6 +2317,9 @@ function fxHtml() {
     h += `<label>對比<b id="v-fc">${Math.round((c.fc == null ? 1 : c.fc) * 100)}%</b></label><input type="range" id="fx-fc" min="0.5" max="1.6" step="0.05" value="${c.fc == null ? 1 : c.fc}">`;
     h += `<label>飽和<b id="v-fs">${Math.round((c.fs == null ? 1 : c.fs) * 100)}%</b></label><input type="range" id="fx-fs" min="0" max="2" step="0.05" value="${c.fs == null ? 1 : c.fs}">`;
     h += fxeHtml('fx', c);
+    const lt = c.fl && luts.get(c.fl);
+    h += `<h4 style="margin-top:10px">🎞 調色檔（LUT）</h4>` + (lt ? `<p class="hint">已套用：${esc(lt.name)}</p><label>強度<b id="v-fli">${Math.round((c.fli == null ? 1 : c.fli) * 100)}%</b></label><input type="range" id="fx-fli" min="0" max="1" step="0.05" value="${c.fli == null ? 1 : c.fli}"><div class="r2"><button class="sm" id="lut-del">移除調色檔</button></div>` : `<div class="r2"><button class="sm" id="lut-add">📂 匯入 .cube 調色檔</button></div>`);
+    h += `<h4 style="margin-top:10px">🎯 一鍵匹配色調</h4><div class="r2"><button class="sm" id="mt-ref">1. 目前畫面當參考</button><button class="sm" id="mt-go"${matchRef ? '' : ' disabled'}>2. 套用到這一段</button></div><p class="hint">先移到想模仿的畫面按 1，再移到要調的那一段按 2，讓兩段顏色看起來一致。</p>`;
     h += `<div class="r2" style="margin-top:8px"><button class="sm" id="fx-reset">重設濾鏡</button><button class="sm" id="fx-all">全部片段套用</button></div>`;
   } else if (fxTab === 's') {
     if (!isV) h += `<p class="hint">照片沒有速度可以調。想讓照片久一點，請在下面「這張照片顯示幾秒」設定。</p>`;
@@ -2298,6 +2344,11 @@ function bindFx(on) {
   document.querySelectorAll('#ctx [data-fp]').forEach(b => b.onclick = () => { commit(); c.fp = b.dataset.fp; if (c.fp === 'none') delete c.fp; dirty = true; renderCtx(); renderTimeline(); });
   [['fb', v => Math.round(v * 100)], ['fc', v => Math.round(v * 100) + '%'], ['fs', v => Math.round(v * 100) + '%']].forEach(([k, f]) => on('#fx-' + k, 'input', ev => { touch('fx' + k + c.id); c[k] = +ev.target.value; $('#v-' + k).textContent = f(c[k]); dirty = true; renderTimelineLight2(); }));
   fxeBind(on, 'fx', c, renderTimelineLight2);
+  on('#fx-fli', 'input', ev => { touch('fli' + c.id); c.fli = +ev.target.value; const b = $('#v-fli'); if (b) b.textContent = Math.round(c.fli * 100) + '%'; dirty = true; });
+  on('#lut-add', 'click', () => $('#f-lut').click());
+  on('#lut-del', 'click', () => { commit(); delete c.fl; delete c.fli; dirty = true; renderCtx(); renderTimeline(); });
+  on('#mt-ref', 'click', () => { try { matchRef = imgStats(cv); toast('已記住這個畫面的色調'); renderCtx(); } catch (er) { toast('抓不到畫面，請再試一次'); } });
+  on('#mt-go', 'click', () => { if (!matchRef) return; const a = assets.get(c.asset), src = a.kind === 'image' ? pvSrc(a) : (a.el && a.el.readyState >= 2 ? a.el : null); if (!src) return toast('這段還沒載入完，請稍等再按'); commit(); const id = 'm' + (++lutSeq); luts.set(id, matchLut(imgStats(src, a.kind === 'image' ? a.w : a.w, a.kind === 'image' ? a.h : a.h), matchRef)); c.fl = id; c.fli = 1; dirty = true; renderCtx(); renderTimeline(); toast('已套用，可用「強度」微調'); });
   on('#fx-reset', 'click', () => { commit(); FXK.forEach(k => delete c[k]); dirty = true; renderCtx(); renderTimeline(); });
   on('#fx-all', 'click', () => { commit(); state.clips.forEach(x => { FXK.forEach(k => { if (c[k] == null) delete x[k]; else x[k] = c[k]; }); }); dirty = true; renderTimeline(); toast('已套用到全部片段'); });
   document.querySelectorAll('#ctx [data-ramp]').forEach(b => b.onclick = () => {
@@ -3075,6 +3126,7 @@ $('#xp-go').onclick = async () => {
     const names = {}, audioMap = {};
     const usedIds = [...new Set(LL.map(e => e.c.asset))];
     for (const id of usedIds) { const a = assets.get(id); names[id] = `a${id}.${extOf(a.name)}`; await f.writeFile(names[id], await fetchFile(a.file)); files.push(names[id]); }
+    if (!audioOnly) for (const e of LL) { const c = e.c; if (lutOn(c) && !files.includes(lutFile(c))) { await f.writeFile(lutFile(c), lutCube(luts.get(c.fl), c.fli == null ? 1 : c.fli)); files.push(lutFile(c)); } }
     const segExt = audioOnly ? 'm4a' : 'mp4', kb = !!snap.kb, nClip = LL.length, segs = [], seq = [];
     const outTD = i => (i + 1 < nClip ? LL[i + 1].td : 0);
     let nSteps = 2; for (let i = 0; i < nClip; i++) { if (LL[i].td > 0) nSteps += 2; if (outTD(i) > 0) nSteps += 1; if (LL[i].d - LL[i].td - outTD(i) > 0.04) nSteps += 1; }
@@ -3094,7 +3146,7 @@ $('#xp-go').onclick = async () => {
       if (c.fh) geo.push('hflip'); if (c.fv) geo.push('vflip');
       const rr = c.rot || 0; if (rr === 90) geo.push('transpose=1'); else if (rr === 180) geo.push('hflip,vflip'); else if (rr === 270) geo.push('transpose=2');
       const pre = geo.length ? geo.join(',') + ',' : '';
-      const fxl = []; if (hasFx(c)) { const q = fxP(c); if (q.r !== 1 || q.g !== 1 || q.bl !== 1) fxl.push(`colorchannelmixer=rr=${q.r}:gg=${q.g}:bb=${q.bl}`); fxl.push(`eq=brightness=${q.b.toFixed(3)}:contrast=${q.ct.toFixed(3)}:saturation=${q.sa.toFixed(3)}`, ...fxToneF(q)); }
+      const fxl = []; if (hasFx(c)) { const q = fxP(c); if (q.r !== 1 || q.g !== 1 || q.bl !== 1) fxl.push(`colorchannelmixer=rr=${q.r}:gg=${q.g}:bb=${q.bl}`); fxl.push(`eq=brightness=${q.b.toFixed(3)}:contrast=${q.ct.toFixed(3)}:saturation=${q.sa.toFixed(3)}`, ...fxToneF(q)); if (q.lut) fxl.push('format=gbrp', `lut3d=file=${lutFile(c)}:interp=trilinear`, 'format=yuv420p'); }
       const fxs = fxl.length ? fxl.join(',') + ',' : '';
       const af = []; if (hasA && sp !== 1) { let sv = sp; while (sv > 2.0001) { af.push('atempo=2'); sv /= 2; } while (sv < 0.4999) { af.push('atempo=0.5'); sv /= 0.5; } af.push(`atempo=${sv.toFixed(4)}`); }
       if (hasA) { const ge = clipGainExpr(c, off, d); if (ge) af.push(ge); }
@@ -3281,7 +3333,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1126-C';
+const VER_NOW = '1126-D';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3839,7 +3891,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1126-C', upd = document.getElementById('upd');
+  const VER = '1126-D', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
