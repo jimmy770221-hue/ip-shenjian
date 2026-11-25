@@ -747,7 +747,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1126-O（快捷鍵、配樂自動壓低）</div>
+  <div class="hfoot">版本 1126-P（快捷鍵、配樂自動壓低）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -797,11 +797,14 @@ html, body, .ip-tools { background-color: var(--bg); }
   <div class="quick"><button id="q-text">🅣 添加文字</button><button id="q-music" class="m">🎵 添加音樂</button></div>
   <div class="toolbar" id="toolbar">
     <button class="cat" data-g="cut"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM8.1 8.1 20 19M8.1 15.9 20 5"/></svg></i>剪輯</button>
-    <button class="cat" data-g="arr"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3"/></svg></i>整理</button>
-    <button class="cat" data-g="adj"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6m6 4v6"/></svg></i>調整</button>
-    <button class="cat" data-g="music"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V6l10-2v11"/><ellipse cx="6.5" cy="17.5" rx="2.5" ry="2"/><ellipse cx="16.5" cy="15.5" rx="2.5" ry="2"/></svg></i>音樂</button>
+    <button class="cat" data-g="music"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V6l10-2v11"/><ellipse cx="6.5" cy="17.5" rx="2.5" ry="2"/><ellipse cx="16.5" cy="15.5" rx="2.5" ry="2"/></svg></i>音訊</button>
     <button class="cat" data-g="text"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7V5h14v2m-7-2v14m-4 0h8"/></svg></i>文字</button>
-    <button class="cat" data-g="fx"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3ZM20 3v4m-2-2h4"/></svg></i>特效</button>
+    <button class="cat" data-d="st"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18ZM8.5 14a4.5 4 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/></svg></i>貼圖</button>
+    <button class="cat" data-d="ef"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3ZM20 3v4m-2-2h4"/></svg></i>特效</button>
+    <button class="cat" data-d="fx"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12a4 4 0 1 0 0-.01M15 12a4 4 0 1 0 0-.01"/></svg></i>濾鏡</button>
+    <button class="cat" data-d="kf"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9z"/></svg></i>動畫</button>
+    <button class="cat" data-d="ly"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5ZM3 13l9 5 9-5"/></svg></i>疊層</button>
+    <button class="cat" data-g="tpl"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></i>範本</button>
     <button class="cat" data-g="cam"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 10l5-3v10l-5-3"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg></i>拍攝</button>
   </div>
   <div id="cats"><div class="hd"><b id="cats-t"></b><button id="cats-x">✕ 關閉</button></div><div id="cats-g"></div></div>
@@ -2156,7 +2159,7 @@ document.addEventListener('click', e => { const b = e.target.closest('.tb'); if 
   { const ly0 = lyOn() && state.layers.find(x => x.id === selLy), f0 = ly0 && LYOPS[b.dataset.a]; if (f0) { f0(ly0); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); return; } }
   ops[b.dataset.a](); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); });
 /* ===== 底部浮出：分類面板＋設定面板（不擠壓預覽）===== */
-const CATS = { cut: ['剪輯（切、裁、刪）', ['split', 'freeze', 'trimL', 'trimR', 'del', 'rl']], arr: ['整理（複製、移動、多選）', ['copy', 'paste', 'mvL', 'mvR', 'ms']], adj: ['調整（濾鏡、調色、動畫）', ['fx', 'clip', 'kf']], music: ['音樂', ['lib', 'music', 'au']], text: ['文字', ['text', 'cap', 'st']], fx: ['特效', ['ef', 'ly', 'auto', 'tpl']] };
+const CATS = { cut: ['剪輯', ['split', 'freeze', 'trimL', 'trimR', 'del', 'copy', 'paste', 'mvL', 'mvR', 'rl', 'ms', 'clip']], music: ['音訊', ['lib', 'music', 'au']], text: ['文字', ['text', 'cap']], tpl: ['範本', ['tpl', 'auto']] };
 let catKey = null;
 function closeCats() { const g = $('#cats-g'), pool = $('#tbpool'); [...g.children].forEach(b => pool.appendChild(b)); $('#cats').classList.remove('on'); catKey = null; }
 function openCat(k) {
@@ -2174,7 +2177,7 @@ function layoutSheet() {   // 時間軸固定不動；工具面板從下面蓋�
   if (ctx.style.maxHeight !== mh) ctx.style.maxHeight = mh;
   if (cats.style.maxHeight !== mh) cats.style.maxHeight = mh;
 }
-document.querySelectorAll('#toolbar .cat').forEach(b => b.onclick = () => { pause(); if (b.dataset.g === 'cam') { closeCats(); clearSel(); renderTimeline(); renderCtx(); layoutSheet(); camOpen(); } else openCat(b.dataset.g); });
+document.querySelectorAll('#toolbar .cat').forEach(b => b.onclick = () => { pause(); if (b.dataset.d) { closeCats(); const t = $('#tbpool').querySelector(`.tb[data-a="${b.dataset.d}"]`); layoutSheet(); if (t) t.click(); } else if (b.dataset.g === 'cam') { closeCats(); clearSel(); renderTimeline(); renderCtx(); layoutSheet(); camOpen(); } else openCat(b.dataset.g); });
 $('#cats-x').onclick = () => { closeCats(); layoutSheet(); };
 if (window.ResizeObserver) { const ro = new ResizeObserver(() => layoutSheet()); ro.observe($('#ctx')); ro.observe($('#cats')); }
 $('#b-full').onclick = () => { const a = $('#app'), f = a.classList.toggle('full'); $('#b-full').textContent = f ? '⤡ 回到編輯' : '⛶'; if (f) { closeCats(); } layoutSheet(); };
@@ -3451,7 +3454,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1126-O';
+const VER_NOW = '1126-P';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -4023,7 +4026,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1126-O', upd = document.getElementById('upd');
+  const VER = '1126-P', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
