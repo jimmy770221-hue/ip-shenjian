@@ -745,7 +745,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1125-H（自動字幕、4K匯出）</div>
+  <div class="hfoot">版本 1126-A（字幕進階：樣式、逐詞大字、SRT）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -2378,6 +2378,34 @@ const CAP_MODELS = [['Xenova/whisper-base', '標準（約 80MB，較快）'], ['
 const capOpt = { lang: 'chinese', model: 0, max: 14 };
 let capBusy = false, capAsr = null, capModelName = '', capConv = null;
 const capSt = m => { const e = document.getElementById('cap-st'); if (e) e.textContent = m; };
+const CAP_STYLES = {
+  classic: { n: '經典白字', color: '#ffffff', size: 6.5, ow: 1, sh: 1 },
+  yellow: { n: '黃字', color: '#ffe14d', size: 6.5, ow: 1.2, sh: 1 },
+  variety: { n: '綜藝粗體', color: '#ffe14d', c2: '#ff6b6b', size: 8, ow: 1.7, sh: 1 },
+  cool: { n: '冷色漸層', color: '#4dd2ff', c2: '#ffffff', size: 7, ow: 1.2, sh: 1 },
+  slim: { n: '簡約細邊', color: '#ffffff', size: 5.5, ow: 0.4, sh: 1 }
+};
+const CAP_KEYS = ['color', 'c2', 'size', 'ow', 'sh'];
+function capApplyStyle(t, sty) { CAP_KEYS.forEach(k => delete t[k]); Object.assign(t, sty); delete t.n; }
+function capBuild() {   // 依「顯示方式」把字幕資料排成時間軸上的文字（整句，或一次一個詞的大字跳出）
+  const cd = state.capData; if (!cd || !cd.length) return; const st = state.capStyle || { p: 'classic', m: 'line' }, sty = CAP_STYLES[st.p] || CAP_STYLES.classic, ov = st.o || {};
+  state.texts = state.texts.filter(t => !t.cap); const add = (text, s0, e0, extra) => state.texts.push({ id: uid++, cap: 1, text, start: +s0.toFixed(2), dur: +Math.max(0.25, e0 - s0).toFixed(2), ...extra });
+  for (const ln of cd) {
+    if (st.m === 'word' && ln.w && ln.w.length) {
+      const gs = []; let g = null;
+      for (const w of ln.w) { if (!g) g = { t: '', s: w[1], e: w[2], n: 0 }; g.t += (g.t && /[A-Za-z0-9]$/.test(g.t) && /^[A-Za-z0-9]/.test(w[0]) ? ' ' : '') + w[0]; g.e = w[2]; g.n += /[\u3400-\u9fff]/.test(w[0]) ? w[0].length : 1.6; if (g.n >= 2 || /[，。！？,.!?]$/.test(w[0])) { gs.push(g); g = null; } }
+      if (g) gs.push(g);
+      gs.forEach((q, i) => { const nx = gs[i + 1], e0 = nx && nx.s - q.e < 0.35 ? nx.s : q.e; add(q.t.replace(/[，。、；：,.;:]+$/, ''), q.s, Math.max(e0, q.s + 0.3), { ...sty, ...ov, size: (ov.size || sty.size) * 1.45, pos: ov.pos || 'middle', ty: ov.pos === 'bottom' ? -0.12 : ov.pos === 'top' ? 0.12 : 0.16, an: 'pop' }); });
+    } else add(ln.text, ln.start, ln.end, { ...sty, ...ov, pos: ov.pos || 'bottom', ty: (ov.pos || 'bottom') === 'bottom' ? -0.12 : ov.pos === 'top' ? 0.12 : 0, an: 'fade' });
+  }
+}
+const srtT = t => { t = Math.max(0, t); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = Math.floor(t % 60), ms = Math.round((t - Math.floor(t)) * 1000); return [h, m, s].map(v => String(v).padStart(2, '0')).join(':') + ',' + String(Math.min(999, ms)).padStart(3, '0'); };
+function capSrt() {
+  const lst = (state.capData && state.capData.length && (state.capStyle || {}).m === 'word') ? state.capData.map(l => ({ text: l.text, start: l.start, end: l.end })) : state.texts.filter(t => t.cap).map(t => ({ text: t.text, start: t.start, end: t.start + t.dur }));
+  if (!lst.length) return toast('還沒有字幕'); lst.sort((a, b) => a.start - b.start);
+  const txt = lst.map((l, i) => `${i + 1}\n${srtT(l.start)} --> ${srtT(l.end)}\n${l.text}\n`).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + txt], { type: 'text/plain;charset=utf-8' })); a.download = '字幕.srt'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast('已匯出 字幕.srt');
+}
 function capHtml() {
   const cs = state.texts.filter(t => t.cap), c0 = cs[0] || {};
   return `<h4>💬 自動字幕</h4><label>把影片裡的人聲變成字幕。第一次要連網下載語音模型，之後不用；影片不會上傳到任何地方。</label>
@@ -2389,7 +2417,10 @@ function capHtml() {
   ${cs.length ? `<label>目前有 ${cs.length} 句自動字幕（點時間軸上的字幕可以改字）</label>
   <div class="r2"><div><label>顏色</label><select id="cap-color">${COLORS.map(c => `<option value="${c[0]}"${c0.color === c[0] ? ' selected' : ''}>${c[1]}</option>`).join('')}</select></div>
   <div><label>位置</label><select id="cap-pos">${[['bottom', '下方'], ['middle', '中間'], ['top', '上方']].map(o => `<option value="${o[0]}"${c0.pos === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></div></div>
-  <label>字體大小</label><input type="range" id="cap-size" min="3" max="12" step="0.5" value="${c0.size || 6.5}">` : ''}
+  <label>字體大小</label><input type="range" id="cap-size" min="3" max="12" step="0.5" value="${c0.size || 6.5}">
+  <label>字幕樣式</label><div class="fchips">${Object.entries(CAP_STYLES).map(([k, v]) => `<button class="sm${(state.capStyle || {}).p === k || (!(state.capStyle || {}).p && k === 'classic') ? ' ok' : ''}" data-capst="${k}">${v.n}</button>`).join('')}</div>
+  <label>顯示方式（切換會重新排版，手動改過的字會還原）</label><select id="cap-mode"><option value="line"${(state.capStyle || {}).m !== 'word' ? ' selected' : ''}>整句顯示（一般字幕）</option><option value="word"${(state.capStyle || {}).m === 'word' ? ' selected' : ''}>逐詞大字跳出（短影音風）</option></select>
+  <div class="r2" style="margin-top:6px"><button class="sm" id="cap-srt">⬇ 匯出字幕檔（SRT）</button></div>` : ''}
   <div class="r2" style="margin-top:8px">${cs.length ? '<button class="sm red" id="cap-clr">清除自動字幕</button>' : ''}<button class="sm ok" id="cap-ok">完成</button></div>`;
 }
 async function capLoad() {
@@ -2408,7 +2439,7 @@ function capLines(chunks, maxc) {   // 把逐字時間合成一句一句：遇�
   for (const ch of chunks) {
     const ts = ch.timestamp || []; let a = ts[0], b = ts[1]; if (a == null) continue; if (b == null || b < a) b = a + 0.4;
     if (cu && a - cu.end > 0.7) flush();
-    if (!cu) cu = { text: '', start: a, end: b }; cu.text += ch.text; cu.end = b;
+    if (!cu) cu = { text: '', start: a, end: b, w: [] }; cu.text += ch.text; cu.end = b; cu.w.push([ch.text.trim(), a, b]);
     const t = cu.text.trim(), cjk = /[㐀-鿿]/.test(t), len = cjk ? t.replace(/\s/g, '').length : t.length / 2.4;
     if ((/[，。！？、；：,.!?;:…]\s*$/.test(t) && len >= 3) || len >= maxc) flush();
   }
@@ -2433,14 +2464,14 @@ async function capRun() {
       const o = await asr(pcm, { language: capOpt.lang || undefined, task: 'transcribe', return_timestamps: 'word', chunk_length_s: 30, stride_length_s: 5 });
       for (const ln of capLines(o.chunks || [], capOpt.max)) {
         let tx = ln.text.trim().replace(/[，。、；：,.;:]+$/, '').trim(); if (conv) tx = conv(tx); if (!tx) continue;
-        const st = sr.map(ln.start), en = Math.min(sr.end, sr.map(ln.end)); res.push({ text: tx, start: st, end: Math.max(en, st + 0.6) });
+        const st = sr.map(ln.start), en = Math.min(sr.end, sr.map(ln.end)); res.push({ text: tx, start: st, end: Math.max(en, st + 0.6), w: (ln.w || []).filter(x => x[0]).map(x => [conv ? conv(x[0]) : x[0], sr.map(x[1]), Math.min(sr.end, sr.map(x[2]))]) });
       }
       bufs.delete(sr.a.id);
     }
     if (!res.length) { toast('沒有辨識到人聲'); capSt('沒有辨識到人聲。請確認影片有說話、沒有被靜音，或換成「精準」品質再試。'); return; }
     res.sort((a, b) => a.start - b.start); for (let i = 0; i < res.length - 1; i++) if (res[i].end > res[i + 1].start - 0.03) res[i].end = Math.max(res[i].start + 0.4, res[i + 1].start - 0.03);
-    commit(); state.texts = state.texts.filter(t => !t.cap);
-    res.forEach(r => state.texts.push({ id: uid++, cap: 1, text: r.text, start: +r.start.toFixed(2), dur: +Math.max(0.4, r.end - r.start).toFixed(2), color: '#ffffff', size: 6.5, pos: 'bottom', ty: -0.12, an: 'fade', sh: 1 }));
+    commit(); state.capData = res.map(r => ({ text: r.text, start: +r.start.toFixed(2), end: +r.end.toFixed(2), w: r.w.map(x => [x[0], +x[1].toFixed(2), +x[2].toFixed(2)]) }));
+    state.capStyle = state.capStyle || { p: 'classic', m: 'line' }; capBuild();
     dirty = true; renderTimeline(); capSt(`完成！共 ${res.length} 句字幕。`); toast('字幕完成：' + res.length + ' 句');
   } catch (e) { capSt('失敗：' + (e && e.message || e) + '（需要連網，或手機記憶體不夠，可改用「標準」品質）'); toast('字幕產生失敗'); }
   capBusy = false; if (showCap) renderCtx();
@@ -2448,10 +2479,14 @@ async function capRun() {
 function bindCap(on) {
   on('#cap-lang', 'change', e => { capOpt.lang = e.target.value; }); on('#cap-max', 'change', e => { capOpt.max = +e.target.value; }); on('#cap-model', 'change', e => { capOpt.model = +e.target.value; });
   on('#cap-go', 'click', capRun);
-  on('#cap-color', 'change', e => { commit(); state.texts.forEach(t => { if (t.cap) t.color = e.target.value; }); dirty = true; });
-  on('#cap-pos', 'change', e => { commit(); state.texts.forEach(t => { if (t.cap) { t.pos = e.target.value; t.ty = e.target.value === 'bottom' ? -0.12 : e.target.value === 'top' ? 0.12 : 0; } }); dirty = true; });
-  on('#cap-size', 'input', e => { touch('capsz'); state.texts.forEach(t => { if (t.cap) t.size = +e.target.value; }); dirty = true; });
-  on('#cap-clr', 'click', () => { commit(); state.texts = state.texts.filter(t => !t.cap); dirty = true; renderTimeline(); renderCtx(); });
+  const ov = () => { state.capStyle = state.capStyle || { p: 'classic', m: 'line' }; return (state.capStyle.o = state.capStyle.o || {}); };
+  on('#cap-color', 'change', e => { commit(); ov().color = e.target.value; state.texts.forEach(t => { if (t.cap) { t.color = e.target.value; if (t.c2) delete t.c2; } }); dirty = true; });
+  document.querySelectorAll('#ctx [data-capst]').forEach(b => b.onclick = () => { commit(); const k = b.dataset.capst, sty = CAP_STYLES[k]; state.capStyle = state.capStyle || { m: 'line' }; state.capStyle.p = k; delete state.capStyle.o; const w = state.capStyle.m === 'word'; state.texts.forEach(t => { if (t.cap) { const sz = sty.size * (w ? 1.45 : 1); capApplyStyle(t, { ...sty, size: sz }); } }); dirty = true; renderCtx(); });
+  on('#cap-mode', 'change', e => { commit(); state.capStyle = state.capStyle || { p: 'classic' }; state.capStyle.m = e.target.value; capBuild(); dirty = true; renderTimeline(); renderCtx(); });
+  on('#cap-srt', 'click', capSrt);
+  on('#cap-pos', 'change', e => { commit(); ov().pos = e.target.value; state.texts.forEach(t => { if (t.cap) { t.pos = e.target.value; t.ty = e.target.value === 'bottom' ? -0.12 : e.target.value === 'top' ? 0.12 : 0; } }); dirty = true; });
+  on('#cap-size', 'input', e => { touch('capsz'); ov().size = +e.target.value / ((state.capStyle || {}).m === 'word' ? 1.45 : 1); state.texts.forEach(t => { if (t.cap) t.size = +e.target.value; }); dirty = true; });
+  on('#cap-clr', 'click', () => { commit(); state.texts = state.texts.filter(t => !t.cap); delete state.capData; dirty = true; renderTimeline(); renderCtx(); });
   on('#cap-ok', 'click', () => { showCap = false; renderTimeline(); renderCtx(); });
 }
 
@@ -3184,7 +3219,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1125-H';
+const VER_NOW = '1126-A';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3742,7 +3777,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1125-H', upd = document.getElementById('upd');
+  const VER = '1126-A', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
