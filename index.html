@@ -685,6 +685,11 @@ html, body, .ip-tools { background-color: var(--bg); }
 #home #h-quick .pl{flex:none;display:flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:50%;background:#fff;font-size:26px}
 #home #h-quick .lb{flex:1}#home #h-quick small{display:block;font-size:12px;font-weight:600;opacity:.92;letter-spacing:0;margin-top:2px}
 #home #h-quick:active{transform:scale(.97)}
+#gd{position:fixed;inset:0;z-index:90;background:rgba(5,5,12,.82);display:none;align-items:center;justify-content:center;padding:20px}
+#gd .gb{background:#1b1b2e;color:#fff;border-radius:18px;padding:22px 20px;max-width:340px;width:100%;text-align:center}
+#gd .gi{font-size:46px}#gd h3{margin:8px 0 6px}#gd p{color:#c9cbe6;line-height:1.6;margin:0 0 14px;font-size:15px}
+#gd .gd{display:flex;gap:6px;justify-content:center;margin-bottom:14px}#gd .gd i{width:8px;height:8px;border-radius:50%;background:#555a80}#gd .gd i.on{background:#a78bfa}
+#gd .gr{display:flex;gap:8px}#gd .gr button{flex:1;padding:12px;border-radius:12px;border:0;font-size:15px;font-weight:700;background:#2c2c48;color:#fff}#gd .gr button.ok{background:#7c5cff}
 #qm{position:fixed;inset:0;z-index:65;background:#0b0b14;color:#fff;display:none;flex-direction:column;font-family:inherit}
 #qm.on{display:flex}
 #qm .qt{display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 12px 8px}
@@ -724,6 +729,7 @@ html, body, .ip-tools { background-color: var(--bg); }
 </head>
 <body>
 <div id="upd">🔄 有新版本了，點這裡更新（更新後目前剪的內容會消失，請先匯出）</div>
+<div id="gd"><div class="gb"><div class="gi" id="gd-i"></div><h3 id="gd-t"></h3><p id="gd-p"></p><div class="gd" id="gd-d"></div><div class="gr"><button id="gd-s">略過</button><button class="ok" id="gd-n">下一步</button></div></div></div>
 <div id="home">
   <main class="home-shell">
   <div class="home-brand" aria-label="IP 神剪"><span class="hlogo"><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffffff" d="M4 4h7L8 7v13H4Z"/><path fill="#f4edff" fill-rule="evenodd" d="M13 4h4l4 4v4l-4 4h-3v4h-4V7Zm1 4v4h2l1-1V9l-1-1Z"/></svg></span></div>
@@ -747,7 +753,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1126-Q（快捷鍵、配樂自動壓低）</div>
+  <div class="hfoot">版本 1126-R（快捷鍵、配樂自動壓低）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -3467,7 +3473,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1126-Q';
+const VER_NOW = '1126-R';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -4039,7 +4045,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1126-Q', upd = document.getElementById('upd');
+  const VER = '1126-R', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
@@ -4079,6 +4085,20 @@ async function libOpen() {
 (function () {
   document.getElementById('q-text').addEventListener('click', () => { if (!L.length) return toast('請先按時間軸右邊的「＋」加入影片或照片'); pause(); ops.text(); });
   document.getElementById('q-music').addEventListener('click', () => { if (!L.length) return toast('請先按時間軸右邊的「＋」加入影片或照片'); pause(); ops.music(); });
+})();
+
+/* ===== 新手導覽：第一次進來顯示 4 步，可略過；首頁「❓ 使用導覽」可重看 ===== */
+(() => {
+  const G = [['🎬', '選素材', '按「開始剪輯」，從相簿選影片或照片。想快速做完，用「快速成片」一鍵生成。'], ['✂️', '剪一剪', '點時間軸上的片段，用下方「剪輯」工具分割、裁切、調順序。電腦可用空白鍵播放、S 分割。'], ['🎨', '加特效、文字、音樂', '下方工具列往左右滑動，有貼圖、特效、濾鏡、文字與音訊。不喜歡可按「↩ 取消」。'], ['📤', '匯出', '右上角「匯出」選畫質。完成後按分享，選「儲存影片」存進相簿。作品會自動存檔，不怕不小心關掉。']];
+  let i = 0; const box = document.getElementById('gd'); if (!box) return;
+  const show = n => { i = n; const g = G[i]; document.getElementById('gd-i').textContent = g[0]; document.getElementById('gd-t').textContent = (i + 1) + '／' + G.length + '　' + g[1]; document.getElementById('gd-p').textContent = g[2]; document.getElementById('gd-d').innerHTML = G.map((_, k) => '<i' + (k === i ? ' class="on"' : '') + '></i>').join(''); document.getElementById('gd-n').textContent = i === G.length - 1 ? '開始使用' : '下一步'; };
+  const open = () => { show(0); box.style.display = 'flex'; }, close = () => { box.style.display = 'none'; try { localStorage.setItem('ipsj_guide', '1'); } catch (e) {} };
+  document.getElementById('gd-n').onclick = () => { if (i >= G.length - 1) close(); else show(i + 1); };
+  document.getElementById('gd-s').onclick = close;
+  const hl = document.querySelector('.home-links');
+  if (hl) { const b = document.createElement('button'); b.className = 'hbtn sub'; b.id = 'h-guide'; b.textContent = '❓ 使用導覽'; b.onclick = open; hl.appendChild(b); }
+  let seen = false; try { seen = !!localStorage.getItem('ipsj_guide'); } catch (e) {}
+  if (!seen) setTimeout(open, 600);
 })();
 </script>
 </body>
