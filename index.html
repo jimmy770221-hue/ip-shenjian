@@ -745,7 +745,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1125-E（卡點：依速度標出規律節拍）</div>
+  <div class="hfoot">版本 1125-F（音效庫擴充到20種、BPM卡點）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -2372,7 +2372,9 @@ function auHtml() {
 const SFX = [
   ['ding', '🔔 叮', 0.9], ['gong', '🥁 登愣', 1.2], ['whoosh', '💨 嗖', 0.8], ['boom', '💥 砰', 1.0],
   ['clap', '👏 鼓掌', 2.0], ['coin', '🪙 得分', 0.6], ['fail', '😵 失敗', 1.1], ['shutter', '📸 喀嚓', 0.3],
-  ['pop', '🎈 啵', 0.2], ['tada', '🎉 噹噹', 1.5]
+  ['pop', '🎈 啵', 0.2], ['tada', '🎉 噹噹', 1.5],
+  ['dingdong', '🛎 叮咚', 1.0], ['sparkle', '✨ 閃亮', 1.2], ['boing', '🪀 彈簧', 0.7], ['riser', '🚀 上升蓄力', 1.6], ['hit', '🎬 電影重擊', 1.6],
+  ['scratch', '💿 唱片刮', 0.45], ['rimshot', '🥁 啪啪登', 1.1], ['heartbeat', '💓 心跳', 1.8], ['typing', '⌨️ 打字', 1.4], ['laser', '🔫 雷射', 0.4]
 ];
 function sfxMake(k) {
   const sr = 44100, dur = SFX.find(x => x[0] === k)[2], n = Math.floor(sr * dur), o = new Float32Array(n);
@@ -2388,6 +2390,16 @@ function sfxMake(k) {
   else if (k === 'fail') { [[392, 0], [370, 0.22], [349, 0.44], [330, 0.66]].forEach(([f, t], i) => tone(f, f * (i === 3 ? 0.8 : 0.97), t, i === 3 ? 0.45 : 0.22, 0.45, 'sq', i === 3 ? 3 : 1)); }
   else if (k === 'shutter') { noise(0, 0.05, 0.9, 5, 0.6); noise(0.12, 0.08, 0.7, 5, 0.4); }
   else if (k === 'pop') { tone(900, 250, 0, 0.12, 0.8, 's', 5); noise(0, 0.02, 0.4, 3, 0.8); }
+  else if (k === 'dingdong') { tone(988, 988, 0, 0.5, 0.5, 's', 4); tone(1976, 1976, 0, 0.5, 0.15, 's', 6); tone(784, 784, 0.4, 0.6, 0.5, 's', 4); tone(1568, 1568, 0.4, 0.6, 0.15, 's', 6); }
+  else if (k === 'sparkle') { const nt = [1568, 2093, 2637, 3136, 2637, 3520, 4186, 3136]; nt.forEach((f, i) => tone(f, f, i * 0.09, 0.45, 0.28, 's', 6)); }
+  else if (k === 'boing') { let ph = 0; for (let i = 0; i < n; i++) { const t = i / n, f = 140 + 420 * Math.sqrt(t) + 45 * Math.sin(2 * Math.PI * 13 * t * (1 + t)); ph += 2 * Math.PI * f / sr; o[i] = Math.sin(ph) * Math.exp(-t * 2.6) * Math.min(1, i / 60) * 0.8; } }
+  else if (k === 'riser') { let ph = 0, y = 0; for (let i = 0; i < n; i++) { const t = i / n, f = 180 + 1700 * t * t; ph += 2 * Math.PI * f / sr; y += (rnd() - y) * (0.02 + 0.5 * t * t); o[i] = (Math.sin(ph) * 0.35 + y * 1.2) * (0.15 + 0.85 * t) * Math.min(1, (n - i) / 400); } }
+  else if (k === 'hit') { tone(70, 28, 0, 1.6, 0.95, 's', 2.6); tone(140, 50, 0, 0.7, 0.4, 's', 5); noise(0, 0.5, 0.7, 5, 0.25); noise(0, 1.6, 0.25, 3, 0.08); }
+  else if (k === 'scratch') { let ph = 0, y = 0; for (let i = 0; i < n; i++) { const t = i / n, f = t < 0.5 ? 1400 - 2200 * t : 300 + 2600 * (t - 0.5); ph += 2 * Math.PI * Math.max(80, f) / sr; y += (rnd() - y) * 0.7; o[i] = ((Math.sin(ph) > 0 ? 0.5 : -0.5) + y * 0.5) * Math.sin(Math.PI * t) * 0.8; } }
+  else if (k === 'rimshot') { noise(0, 0.12, 0.8, 5, 0.5); tone(220, 180, 0, 0.12, 0.5, 's', 6); noise(0.16, 0.12, 0.8, 5, 0.5); tone(220, 180, 0.16, 0.12, 0.5, 's', 6); noise(0.48, 0.6, 0.55, 3.5, 0.85); tone(90, 60, 0.48, 0.25, 0.6, 's', 6); }
+  else if (k === 'heartbeat') { [0, 0.2, 0.9, 1.1].forEach((t, i) => tone(i % 2 ? 48 : 58, 38, t, 0.22, i % 2 ? 0.7 : 0.9, 's', 6)); }
+  else if (k === 'typing') { let t0 = 0.02; for (let c = 0; c < 14; c++) { noise(t0, 0.03, 0.55 + Math.random() * 0.3, 6, 0.6); tone(2200 + Math.random() * 600, 1800, t0, 0.02, 0.15, 's', 4); t0 += 0.06 + Math.random() * 0.07; } }
+  else if (k === 'laser') { tone(2400, 220, 0, 0.4, 0.5, 'sq', 3); tone(1200, 110, 0, 0.4, 0.2, 's', 3); }
   else if (k === 'tada') { [[523, 0, 0.14], [659, 0.14, 0.14], [784, 0.28, 0.14], [1047, 0.42, 1.0]].forEach(([f, t, l], i) => { tone(f, f, t, l, 0.35, 's', i === 3 ? 3 : 2); tone(f * 2, f * 2, t, l, 0.1, 's', 4); }); noise(0.42, 0.3, 0.15, 6, 0.7); }
   let mx = 0; for (let i = 0; i < n; i++) mx = Math.max(mx, Math.abs(o[i])); const g = mx > 0 ? 0.85 / mx : 1;
   const buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf), w = (off, str) => { for (let i = 0; i < str.length; i++) v.setUint8(off + i, str.charCodeAt(i)); };
@@ -3085,7 +3097,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1125-E';
+const VER_NOW = '1125-F';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3643,7 +3655,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1125-E', upd = document.getElementById('upd');
+  const VER = '1125-F', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
