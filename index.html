@@ -745,7 +745,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1125-C（轉場新增6種、緩動曲線）</div>
+  <div class="hfoot">版本 1125-D（調色：色溫、色調、褪色、陰影、亮部）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -899,8 +899,14 @@ const FXP = {
   sunset: { n: '夕陽', b: 0, ct: 1.1, sa: 1.3, r: 1.2, g: .95, bl: .8 },
   moon: { n: '月光', b: -.06, ct: 1.1, sa: .7, r: .85, g: .95, bl: 1.2 }
 };
-const fxP = c => { const p = FXP[c.fp] || FXP.none; return { b: p.b + (c.fb || 0), ct: p.ct * (c.fc == null ? 1 : c.fc), sa: p.sa * (c.fs == null ? 1 : c.fs), r: p.r, g: p.g, bl: p.bl }; };
-const hasFx = c => { const q = fxP(c); return Math.abs(q.b) > .001 || Math.abs(q.ct - 1) > .001 || Math.abs(q.sa - 1) > .001 || q.r !== 1 || q.g !== 1 || q.bl !== 1; };
+const FXE = [['ft', '色溫（冷←→暖）', -1, 1, 0.05], ['fg', '色調（綠←→洋紅）', -1, 1, 0.05], ['ff', '褪色（霧面底片感）', 0, 0.5, 0.02], ['fsh', '陰影（暗部提亮／壓暗）', -1, 1, 0.05], ['fhl', '亮部（亮部提亮／壓暗）', -1, 1, 0.05]];
+const FXK = ['fp', 'fb', 'fc', 'fs', 'ft', 'fg', 'ff', 'fsh', 'fhl'];
+const fxeHtml = (pre, c) => FXE.map(([k, n, mn, mx, st]) => `<label>${n}<b id="v-${pre}${k}">${Math.round((c[k] || 0) * 100)}</b></label><input type="range" id="${pre}-${k}" min="${mn}" max="${mx}" step="${st}" value="${c[k] || 0}">`).join('');
+const fxeBind = (on, pre, c, after) => FXE.forEach(([k]) => on('#' + pre + '-' + k, 'input', ev => { touch(pre + k + (c.id || '')); c[k] = +ev.target.value; const b = $('#v-' + pre + k); if (b) b.textContent = Math.round(c[k] * 100); dirty = true; if (after) after(); }));
+const fxP = c => { const p = FXP[c.fp] || FXP.none, ff = c.ff || 0, ft = c.ft || 0, fg = c.fg || 0;
+  return { b: (p.b + (c.fb || 0)) * (1 - ff) + ff / 2, ct: p.ct * (c.fc == null ? 1 : c.fc) * (1 - ff), sa: p.sa * (c.fs == null ? 1 : c.fs), r: p.r * (1 + 0.25 * ft), g: p.g * (1 - 0.15 * fg), bl: p.bl * (1 - 0.25 * ft), sh: c.fsh || 0, hl: c.fhl || 0 }; };
+const fxToneF = q => { if (!q.sh && !q.hl) return []; const E = `clip(val+maxval*0.25*${q.sh.toFixed(3)}*pow(1-val/maxval,2)+maxval*0.25*${q.hl.toFixed(3)}*pow(val/maxval,2),0,maxval)`; return ['format=gbrp', `lutrgb=r='${E}':g='${E}':b='${E}'`, 'format=yuv420p']; };
+const hasFx = c => { const q = fxP(c); return Math.abs(q.b) > .001 || Math.abs(q.ct - 1) > .001 || Math.abs(q.sa - 1) > .001 || q.r !== 1 || q.g !== 1 || q.bl !== 1 || !!q.sh || !!q.hl; };
 const spd = c => c.sp || 1;
 const RATIO = { '9:16': [360, 640], '16:9': [640, 360], '1:1': [480, 480], '4:3': [640, 480], '3:4': [480, 640] };
 
@@ -1151,6 +1157,7 @@ function applyFx(c, rx, ry, rw, rh) {
     const l = .299 * r + .587 * gr + .114 * b;
     const l2 = (l - .5) * q.ct + .5 + q.b;   // 對比只作用在亮度，和匯出一致
     r = l2 + (r - l) * q.sa; gr = l2 + (gr - l) * q.sa; b = l2 + (b - l) * q.sa;
+    if (q.sh || q.hl) { r = r < 0 ? 0 : r > 1 ? 1 : r; gr = gr < 0 ? 0 : gr > 1 ? 1 : gr; b = b < 0 ? 0 : b > 1 ? 1 : b; r += .25 * q.sh * (1 - r) * (1 - r) + .25 * q.hl * r * r; gr += .25 * q.sh * (1 - gr) * (1 - gr) + .25 * q.hl * gr * gr; b += .25 * q.sh * (1 - b) * (1 - b) + .25 * q.hl * b * b; }
     d[i] = r < 0 ? 0 : r > 1 ? 255 : r * 255; d[i + 1] = gr < 0 ? 0 : gr > 1 ? 255 : gr * 255; d[i + 2] = b < 0 ? 0 : b > 1 ? 255 : b * 255;
   }
   fxg.putImageData(im, rx || 0, ry || 0);
@@ -2201,6 +2208,7 @@ function fxHtml() {
     h += `<label>亮度<b id="v-fb">${Math.round((c.fb || 0) * 100)}</b></label><input type="range" id="fx-fb" min="-0.3" max="0.3" step="0.02" value="${c.fb || 0}">`;
     h += `<label>對比<b id="v-fc">${Math.round((c.fc == null ? 1 : c.fc) * 100)}%</b></label><input type="range" id="fx-fc" min="0.5" max="1.6" step="0.05" value="${c.fc == null ? 1 : c.fc}">`;
     h += `<label>飽和<b id="v-fs">${Math.round((c.fs == null ? 1 : c.fs) * 100)}%</b></label><input type="range" id="fx-fs" min="0" max="2" step="0.05" value="${c.fs == null ? 1 : c.fs}">`;
+    h += fxeHtml('fx', c);
     h += `<div class="r2" style="margin-top:8px"><button class="sm" id="fx-reset">重設濾鏡</button><button class="sm" id="fx-all">全部片段套用</button></div>`;
   } else if (fxTab === 's') {
     if (!isV) h += `<p class="hint">照片沒有速度可以調。想讓照片久一點，請在下面「這張照片顯示幾秒」設定。</p>`;
@@ -2224,8 +2232,9 @@ function bindFx(on) {
   document.querySelectorAll('#ctx [data-tab]').forEach(b => b.onclick = () => { fxTab = b.dataset.tab; renderCtx(); });
   document.querySelectorAll('#ctx [data-fp]').forEach(b => b.onclick = () => { commit(); c.fp = b.dataset.fp; if (c.fp === 'none') delete c.fp; dirty = true; renderCtx(); renderTimeline(); });
   [['fb', v => Math.round(v * 100)], ['fc', v => Math.round(v * 100) + '%'], ['fs', v => Math.round(v * 100) + '%']].forEach(([k, f]) => on('#fx-' + k, 'input', ev => { touch('fx' + k + c.id); c[k] = +ev.target.value; $('#v-' + k).textContent = f(c[k]); dirty = true; renderTimelineLight2(); }));
-  on('#fx-reset', 'click', () => { commit(); delete c.fp; delete c.fb; delete c.fc; delete c.fs; dirty = true; renderCtx(); renderTimeline(); });
-  on('#fx-all', 'click', () => { commit(); state.clips.forEach(x => { ['fp', 'fb', 'fc', 'fs'].forEach(k => { if (c[k] == null) delete x[k]; else x[k] = c[k]; }); }); dirty = true; renderTimeline(); toast('已套用到全部片段'); });
+  fxeBind(on, 'fx', c, renderTimelineLight2);
+  on('#fx-reset', 'click', () => { commit(); FXK.forEach(k => delete c[k]); dirty = true; renderCtx(); renderTimeline(); });
+  on('#fx-all', 'click', () => { commit(); state.clips.forEach(x => { FXK.forEach(k => { if (c[k] == null) delete x[k]; else x[k] = c[k]; }); }); dirty = true; renderTimeline(); toast('已套用到全部片段'); });
   document.querySelectorAll('#ctx [data-ramp]').forEach(b => b.onclick = () => {
     const r = RAMPS.find(q => q[0] === b.dataset.ramp), S = c.out - c.in, N = Math.min(10, Math.max(5, Math.floor(S / 0.4))); if (S < 2) return toast('這一段太短（要至少 2 秒），不能做變速曲線');
     const cp = r[2], spAt = k => { const x = (k + 0.5) / N * (cp.length - 1), i = Math.min(cp.length - 2, Math.floor(x)); return cp[i] + (cp[i + 1] - cp[i]) * (x - i); };
@@ -2255,9 +2264,10 @@ function tplSvg(t) { return `<svg viewBox="0 0 30 40">${t.c.map(([cx, cy, cw, ch
 function sliderHtml(pre, c) {
   return `<label>亮度<b id="v-${pre}b">${Math.round((c.fb || 0) * 100)}</b></label><input type="range" id="${pre}-fb" min="-0.3" max="0.3" step="0.02" value="${c.fb || 0}">
   <label>對比<b id="v-${pre}c">${Math.round((c.fc == null ? 1 : c.fc) * 100)}%</b></label><input type="range" id="${pre}-fc" min="0.5" max="1.6" step="0.05" value="${c.fc == null ? 1 : c.fc}">
-  <label>飽和<b id="v-${pre}s">${Math.round((c.fs == null ? 1 : c.fs) * 100)}%</b></label><input type="range" id="${pre}-fs" min="0" max="2" step="0.05" value="${c.fs == null ? 1 : c.fs}">`;
+  <label>飽和<b id="v-${pre}s">${Math.round((c.fs == null ? 1 : c.fs) * 100)}%</b></label><input type="range" id="${pre}-fs" min="0" max="2" step="0.05" value="${c.fs == null ? 1 : c.fs}">` + fxeHtml(pre, c);
 }
 function bindSliders(on, pre, c) {
+  fxeBind(on, pre, c);
   [['fb', 'b', v => Math.round(v * 100)], ['fc', 'c', v => Math.round(v * 100) + '%'], ['fs', 's', v => Math.round(v * 100) + '%']].forEach(([k, id, f]) =>
     on('#' + pre + '-' + k, 'input', ev => { touch(pre + k + (c.id || '')); c[k] = +ev.target.value; $('#v-' + pre + id).textContent = f(c[k]); dirty = true; }));
 }
@@ -2563,7 +2573,7 @@ function bindLy(on) {
   all('[data-pos]').forEach(b => b.onclick = () => { commit(); const r = lyRect(l), fw = r.cw / cv.width / 2, fh = r.ch / cv.height / 2, k = b.dataset.pos; if (k === 'c') { l.x = .5; l.y = .5; } else { l.x = k[1] === 'l' ? fw : 1 - fw; l.y = k[0] === 't' ? fh : 1 - fh; } dirty = true; });
   all('[data-lfp]').forEach(b => b.onclick = () => { commit(); if (b.dataset.lfp === 'none') delete l.fp; else l.fp = b.dataset.lfp; dirty = true; renderCtx(); });
   bindSliders(on, 'lf', l);
-  on('#lf-reset', 'click', () => { commit(); delete l.fp; delete l.fb; delete l.fc; delete l.fs; dirty = true; renderCtx(); });
+  on('#lf-reset', 'click', () => { commit(); FXK.forEach(k => delete l[k]); dirty = true; renderCtx(); });
   on('#ck-on', 'change', e => { commit(); if (e.target.checked) l.ck = { c: '#00ff00', s: 0.3, b: 0.1 }; else delete l.ck; dirty = true; renderCtx(); });
   if (l.ck) {
     on('#ck-c', 'input', e => { touch('ckc' + l.id); l.ck.c = e.target.value; dirty = true; });
@@ -2864,7 +2874,7 @@ $('#xp-go').onclick = async () => {
       if (c.fh) geo.push('hflip'); if (c.fv) geo.push('vflip');
       const rr = c.rot || 0; if (rr === 90) geo.push('transpose=1'); else if (rr === 180) geo.push('hflip,vflip'); else if (rr === 270) geo.push('transpose=2');
       const pre = geo.length ? geo.join(',') + ',' : '';
-      const fxl = []; if (hasFx(c)) { const q = fxP(c); if (q.r !== 1 || q.g !== 1 || q.bl !== 1) fxl.push(`colorchannelmixer=rr=${q.r}:gg=${q.g}:bb=${q.bl}`); fxl.push(`eq=brightness=${q.b.toFixed(3)}:contrast=${q.ct.toFixed(3)}:saturation=${q.sa.toFixed(3)}`); }
+      const fxl = []; if (hasFx(c)) { const q = fxP(c); if (q.r !== 1 || q.g !== 1 || q.bl !== 1) fxl.push(`colorchannelmixer=rr=${q.r}:gg=${q.g}:bb=${q.bl}`); fxl.push(`eq=brightness=${q.b.toFixed(3)}:contrast=${q.ct.toFixed(3)}:saturation=${q.sa.toFixed(3)}`, ...fxToneF(q)); }
       const fxs = fxl.length ? fxl.join(',') + ',' : '';
       const af = []; if (hasA && sp !== 1) { let sv = sp; while (sv > 2.0001) { af.push('atempo=2'); sv /= 2; } while (sv < 0.4999) { af.push('atempo=0.5'); sv /= 0.5; } af.push(`atempo=${sv.toFixed(4)}`); }
       if (hasA) { const ge = clipGainExpr(c, off, d); if (ge) af.push(ge); }
@@ -2929,7 +2939,7 @@ $('#xp-go').onclick = async () => {
     const music = snap.music && assets.get(snap.music.asset) && snap.music.offset < TT - 0.05 ? snap.music : null;
     const V1 = snap.vol.video, Vm = snap.vol.music, texts = audioOnly ? [] : snap.texts.filter(x => x.start < TT);
     const ev = n => { n = Math.round(n); return n % 2 ? n + 1 : n; };
-    const fxString = c => { const q = fxP(c), o = []; if (q.r !== 1 || q.g !== 1 || q.bl !== 1) o.push(`colorchannelmixer=rr=${q.r}:gg=${q.g}:bb=${q.bl}`); o.push(`eq=brightness=${q.b.toFixed(3)}:contrast=${q.ct.toFixed(3)}:saturation=${q.sa.toFixed(3)}`); return o.join(','); };
+    const fxString = c => { const q = fxP(c), o = []; if (q.r !== 1 || q.g !== 1 || q.bl !== 1) o.push(`colorchannelmixer=rr=${q.r}:gg=${q.g}:bb=${q.bl}`); o.push(`eq=brightness=${q.b.toFixed(3)}:contrast=${q.ct.toFixed(3)}:saturation=${q.sa.toFixed(3)}`, ...fxToneF(q)); return o.join(','); };
     const atempoStr = sp => { const o = []; let sv = sp; while (sv > 2.0001) { o.push('atempo=2'); sv /= 2; } while (sv < 0.4999) { o.push('atempo=0.5'); sv /= 0.5; } o.push(`atempo=${sv.toFixed(4)}`); return o.join(','); };
     const mainEnd = nClip ? LL[nClip - 1].end : TT, padT = TT - mainEnd > 0.05 ? TT - mainEnd : 0;
     const lyInfo = [];
@@ -3051,7 +3061,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1125-C';
+const VER_NOW = '1125-D';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3609,7 +3619,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1125-C', upd = document.getElementById('upd');
+  const VER = '1125-D', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
