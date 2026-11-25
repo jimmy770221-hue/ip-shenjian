@@ -747,7 +747,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1126-K（快捷鍵、配樂自動壓低）</div>
+  <div class="hfoot">版本 1126-L（快捷鍵、配樂自動壓低）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -3222,6 +3222,8 @@ async function fastVideo(LL, TT, W, H, S, audioBytes) {
 }
 let noFastOnce = false;
 $('#xp-go').onclick = async () => {
+  { const sz = pjUsed().reduce((n, id) => n + (assets.get(id).file.size || 0), 0), mob = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent), q4 = ($('#xp-q') || {}).value === '4k' || ($('#xp-q') || {}).value === '2160';
+    if ((sz > 9e8 || (mob && q4 && total > 60)) && !confirm('素材很大（約 ' + Math.round(sz / 1048576) + ' MB）' + (mob && q4 ? '，而且是手機匯出 4K' : '') + '，匯出可能很慢或失敗。\n\n建議：改選較低的畫質，或把影片分成幾段匯出。\n\n按「確定」＝照樣匯出　按「取消」＝回去調整')) return; }
   if (state.duck && state.duck.on && state.music) { try { await duckAnalyze(true); } catch (e) {} }
   const kind = $('#xp-fmt').value, S = +$('#xp-q').value, isMp3 = kind === 'mp3', compat = $('#xp-mode').value === 'compat' || noFastOnce; noFastOnce = false;
   const fast = !isMp3 && !compat && !!window.VideoEncoder && !state.clips.some(c => c.rev), audioOnly = isMp3 || fast;
@@ -3442,7 +3444,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1126-K';
+const VER_NOW = '1126-L';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3456,11 +3458,11 @@ const pjReq = (store, mode, fn) => pjOpen().then(db => new Promise((res, rej) =>
 const pjHas = () => state.clips.length || state.layers.length;
 const pjDirty = () => !!pjHas() && JSON.stringify(state) !== PJ.savedStr;
 function pjUsed() {
-  const u = new Set(); state.clips.forEach(c => u.add(c.asset)); state.layers.forEach(l => u.add(l.asset)); if (state.music) u.add(state.music.asset); (state.vo || []).forEach(v => u.add(v.asset));
+  const u = new Set(); state.clips.forEach(c => { u.add(c.asset); if (c.orig) u.add(c.orig); }); state.layers.forEach(l => { u.add(l.asset); if (l.orig) u.add(l.orig); }); if (state.music) u.add(state.music.asset); (state.vo || []).forEach(v => u.add(v.asset));
   return [...u].filter(id => assets.get(id));
 }
 function pjThumb() { try { const c = document.createElement('canvas'); c.width = 72; c.height = Math.round(72 * cv.height / cv.width); c.getContext('2d').drawImage(cv, 0, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.6); } catch (e) { return ''; } }
-let pjBusy = false;
+let pjBusy = false, pjWarned = false;
 async function pjSave(name, quiet) {
   if (pjBusy || exporting) return false; if (!pjHas()) { if (!quiet) toast('還沒有素材可以存'); return false; }
   pjBusy = true;
@@ -3474,11 +3476,12 @@ async function pjSave(name, quiet) {
     const keep = new Set(used.map(a => id + ':' + a)); const drop = (keys || []).filter(k => !keep.has(k));
     if (drop.length) await pjReq('blobs', 'readwrite', st => { drop.forEach(k => st.delete(k)); });
     const nm = (name || PJ.name || '').trim() || ('專案 ' + new Date().toLocaleDateString('zh-TW'));
-    await pjReq('projects', 'readwrite', st => st.put({ id, name: nm, updated: Date.now(), thumb: pjThumb(), state: str, uid, ver: (typeof VER_NOW !== 'undefined' ? VER_NOW : ''), assets: used, dur: total, ratio: state.ratio }));
+    await pjReq('projects', 'readwrite', st => st.put({ id, name: nm, updated: Date.now(), thumb: pjThumb(), state: str, uid, ver: (typeof VER_NOW !== 'undefined' ? VER_NOW : ''), luts: [...luts.entries()], assets: used, dur: total, ratio: state.ratio }));
     PJ.cur = id; PJ.name = nm; PJ.savedStr = str; try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
     if (!quiet) toast('已儲存「' + nm + '」');
     return true;
   } catch (e) {
+    if (quiet && !pjWarned) { pjWarned = true; toast('自動儲存失敗：手機儲存空間可能不夠（素材太大）'); }
     if (!quiet) toast(e && e.name === 'QuotaExceededError' ? '手機的儲存空間不夠，存不下（影片太大）' : '儲存失敗：' + (e.message || e));
     return false;
   } finally { pjBusy = false; }
@@ -3505,7 +3508,7 @@ async function pjLoad(id) {
     } catch (e) { miss++; continue; }
     assets.set(aid, a); stored.add(id + ':' + aid);
   }
-  state = JSON.parse(rec.state); uid = Math.max(uid, rec.uid || 1);
+  state = JSON.parse(rec.state); uid = Math.max(uid, rec.uid || 1); luts.clear(); (rec.luts || []).forEach(([k, v]) => { luts.set(k, v); lutSeq = Math.max(lutSeq, +String(k).slice(1) || 0); });
   { const d = { ratio: '9:16', clips: [], layers: [], texts: [], music: null, kb: false, vol: { video: 1, music: 0.6 } }; for (const k in d) if (state[k] === undefined) state[k] = d[k]; }   // 舊版專案補上新欄位，不影響舊作品
   state.clips = state.clips.filter(c => assets.get(c.asset)); state.layers = (state.layers || []).filter(l => assets.get(l.asset)); if (state.music && !assets.get(state.music.asset)) state.music = null; if (state.vo) state.vo = state.vo.filter(v => assets.get(v.asset));
   PJ.cur = id; PJ.name = rec.name; PJ.savedStr = JSON.stringify(state); PJ.stored = stored;
@@ -3536,8 +3539,10 @@ async function pjShow() { $('#pj-name').value = PJ.name; $('#pj').classList.add(
 $('#btn-pj').onclick = pjShow; $('#h-proj').onclick = pjShow; $('#pj-close').onclick = pjClose;
 $('#pj-save').onclick = async () => { const nm = $('#pj-name').value.trim(); if (await pjSave(nm || undefined)) { $('#pj-name').value = PJ.name; pjRender(); } };
 $('#pj-new').onclick = pjNew;
-setInterval(() => { if (PJ.cur && pjDirty() && !playing) pjSave(undefined, true); }, 30000);
-document.addEventListener('visibilitychange', () => { if (document.hidden && PJ.cur && pjDirty()) pjSave(undefined, true); });
+const pjAuto = () => pjSave(PJ.cur ? undefined : '自動儲存 ' + new Date().toLocaleString('zh-TW', { hour12: false }), true);
+setInterval(() => { if (pjDirty() && !playing && !exporting) pjAuto(); }, 10000);   // 每 10 秒檢查，有修改就自動存（沒存過的作品也會自動建立一份）
+document.addEventListener('visibilitychange', () => { if (document.hidden && pjDirty()) pjAuto(); });
+window.addEventListener('pagehide', () => { if (pjDirty()) pjAuto(); });
 
 /* ================= 啟動 ================= */
 window.addEventListener('beforeunload', e => { if (state.clips.length && !exporting && pjDirty()) { e.preventDefault(); e.returnValue = ''; } });
@@ -3557,6 +3562,13 @@ applyRatio(); renderAll(); requestAnimationFrame(tick);
   document.getElementById('h-cont').addEventListener('click', hideHome);
   window.__hideHome = hideHome;
   document.querySelector('.top .logo').addEventListener('click', showHome);
+  (async () => {   // 上次有存過的作品，首頁直接給一個「繼續上次的作品」
+    try {
+      const list = await pjReq('projects', 'readonly', st => st.getAll()); if (!list || !list.length) return; list.sort((a, b) => b.updated - a.updated); const r = list[0];
+      const b = document.createElement('button'); b.className = 'hbtn sub'; b.id = 'h-last'; b.style.gridColumn = '1 / -1'; b.textContent = '📂 繼續上次的作品：' + r.name;
+      b.onclick = async () => { await pjLoad(r.id); hideHome(); }; document.getElementById('h-cont').after(b);
+    } catch (e) {}
+  })();
 })();
 
 /* ===== 🎬 快速成片：選片長 → 選素材 → 選風格 → 選音樂 → 一鍵生成（不用 AI，影片用「畫面清楚＋有動作」自動挑精彩片段）===== */
@@ -4000,7 +4012,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1126-K', upd = document.getElementById('upd');
+  const VER = '1126-L', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
