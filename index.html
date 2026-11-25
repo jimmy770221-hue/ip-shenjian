@@ -745,7 +745,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1126-B（配樂自動壓低、字幕進階）</div>
+  <div class="hfoot">版本 1126-C（快捷鍵、配樂自動壓低）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -2077,6 +2077,30 @@ const LYOPS = {
   kf(l) { const id = selLy; clearSel(); showKf = true; kfMode = 'ly'; kfLyId = id; renderTimeline(); renderCtx(); dirty = true; }
 };
 const PANEL_OPS = new Set(['lib', 'fx', 'ly', 'kf', 'au', 'st', 'ef', 'auto', 'tpl', 'clip', 'text', 'cam']);
+/* ===== 電腦快捷鍵（不影響手機）===== */
+document.addEventListener('keydown', e => {
+  const t = e.target, tg = t && t.tagName; if (tg === 'TEXTAREA' || tg === 'SELECT' || (tg === 'INPUT' && t.type !== 'range' && t.type !== 'checkbox')) return;
+  const xp = $('#xp'); if (xp && getComputedStyle(xp).display !== 'none') return; if (!L.length || e.altKey) return;
+  const k = e.key, ctl = e.ctrlKey || e.metaKey, click = a => { const b = document.querySelector('.tb[data-a="' + a + '"]'); if (b && !b.disabled) b.click(); }, go = x => { pause(); setCur(clamp(x, 0, total)); }, F = 1 / 30;
+  let ok = true;
+  if (ctl && (k === 'z' || k === 'Z')) { pause(); e.shiftKey ? redo() : undo(); }
+  else if (ctl && (k === 'y' || k === 'Y')) { pause(); redo(); }
+  else if (ctl && (k === 'c' || k === 'C')) click('copy');
+  else if (ctl && (k === 'v' || k === 'V')) click('paste');
+  else if (ctl) ok = false;
+  else if (k === ' ') { playing ? pause() : play(); }
+  else if (k === 's' || k === 'S') click('split');
+  else if (k === 'Delete' || k === 'Backspace') click('del');
+  else if (k === 'q' || k === 'Q') click('trimL');
+  else if (k === 'w' || k === 'W') click('trimR');
+  else if (k === 'ArrowLeft') go(cur - (e.shiftKey ? 1 : F));
+  else if (k === 'ArrowRight') go(cur + (e.shiftKey ? 1 : F));
+  else if (k === 'Home') go(0);
+  else if (k === 'End') go(total);
+  else if (k === 'ArrowUp' || k === 'ArrowDown') { const pts = L.map(x => x.start).concat([total]); const eps = 0.02; if (k === 'ArrowUp') { const q = pts.filter(x => x < cur - eps); go(q.length ? q[q.length - 1] : 0); } else { const q = pts.filter(x => x > cur + eps); go(q.length ? q[0] : total); } }
+  else ok = false;
+  if (ok) e.preventDefault();
+});
 document.addEventListener('click', e => { const b = e.target.closest('.tb'); if (!b || b.disabled || !ops[b.dataset.a]) return; pause();
   { const ly0 = lyOn() && state.layers.find(x => x.id === selLy), f0 = ly0 && LYOPS[b.dataset.a]; if (f0) { f0(ly0); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); return; } }
   ops[b.dataset.a](); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); });
@@ -3257,7 +3281,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1126-B';
+const VER_NOW = '1126-C';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -3815,7 +3839,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1126-B', upd = document.getElementById('upd');
+  const VER = '1126-C', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
