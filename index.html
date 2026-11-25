@@ -94,7 +94,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 #cats-g .tb{min-width:0;width:100%;background:var(--panel2);border-radius:14px;padding:12px 2px 9px;font-size:12px;gap:5px}
 #cats-g .tb i{font-size:24px}
 #lower{position:relative;z-index:5;background:var(--bg);transition:transform .18s ease-out}
-.cat{flex:1;background:var(--panel2);border:0;color:var(--text);border-radius:14px;padding:9px 2px 7px;font-size:13px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px}
+.cat{flex:1 0 auto;min-width:62px;background:var(--panel2);border:0;color:var(--text);border-radius:14px;padding:9px 2px 7px;font-size:13px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px}
 .cat i{font-style:normal;font-size:22px;line-height:1}.cat:active{background:var(--line)}
 .zb{position:absolute;top:1px;right:6px;z-index:4;display:flex;gap:4px}
 .zb button{width:30px;height:20px;border-radius:6px;border:1px solid var(--line);background:#1d2030ee;color:#fff;font-size:13px;line-height:1;padding:0}
@@ -106,7 +106,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-famil
 #app.full .transport .tb,#app.full #b-prev,#app.full #b-next{display:none}
 #app.full .transport{padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
 .quick{display:none!important}
-.toolbar{display:flex;gap:8px;padding:8px 10px;background:var(--panel)}
+.toolbar{display:flex;gap:8px;padding:8px 10px;background:var(--panel);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}.toolbar::-webkit-scrollbar{display:none}
 
 .ctx h4{margin:4px 0 6px;font-size:13px;color:var(--sub);font-weight:600}
 .ctx label{display:block;font-size:12px;color:var(--sub);margin:8px 0 3px}
@@ -747,7 +747,7 @@ html, body, .ip-tools { background-color: var(--bg); }
     <button class="tile c6" id="h-chk"><i><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg></i>檢查更新</button>
   </div></div>
   <div id="h-chk-st" style="margin-top:10px;font-size:13px;color:var(--sub);min-height:18px"></div>
-  <div class="hfoot">版本 1126-N（快捷鍵、配樂自動壓低）</div>
+  <div class="hfoot">版本 1126-O（快捷鍵、配樂自動壓低）</div>
   </main>
 </div>
 <div id="qm"><div class="qt"><button id="qm-back" aria-label="上一步">‹</button><b id="qm-title">快速成片</b><span id="qm-step"></span><button id="qm-x" aria-label="關閉">✕</button></div><div class="qdots" id="qm-dots"></div><div class="qb" id="qm-body"></div><div class="qf" id="qm-foot"><button id="qm-next">下一步</button></div></div>
@@ -796,7 +796,9 @@ html, body, .ip-tools { background-color: var(--bg); }
   </div>
   <div class="quick"><button id="q-text">🅣 添加文字</button><button id="q-music" class="m">🎵 添加音樂</button></div>
   <div class="toolbar" id="toolbar">
-    <button class="cat" data-g="edit"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6m6 4v6"/></svg></i>編輯</button>
+    <button class="cat" data-g="cut"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM8.1 8.1 20 19M8.1 15.9 20 5"/></svg></i>剪輯</button>
+    <button class="cat" data-g="arr"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16m0 0-3-3m3 3 3-3M17 20V4m0 0-3 3m3-3 3 3"/></svg></i>整理</button>
+    <button class="cat" data-g="adj"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M9 4v6m6 4v6"/></svg></i>調整</button>
     <button class="cat" data-g="music"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V6l10-2v11"/><ellipse cx="6.5" cy="17.5" rx="2.5" ry="2"/><ellipse cx="16.5" cy="15.5" rx="2.5" ry="2"/></svg></i>音樂</button>
     <button class="cat" data-g="text"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7V5h14v2m-7-2v14m-4 0h8"/></svg></i>文字</button>
     <button class="cat" data-g="fx"><i><svg class="ip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3ZM20 3v4m-2-2h4"/></svg></i>特效</button>
@@ -2154,7 +2156,7 @@ document.addEventListener('click', e => { const b = e.target.closest('.tb'); if 
   { const ly0 = lyOn() && state.layers.find(x => x.id === selLy), f0 = ly0 && LYOPS[b.dataset.a]; if (f0) { f0(ly0); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); return; } }
   ops[b.dataset.a](); if (PANEL_OPS.has(b.dataset.a)) closeCats(); layoutSheet(); });
 /* ===== 底部浮出：分類面板＋設定面板（不擠壓預覽）===== */
-const CATS = { edit: ['編輯', ['split', 'freeze', 'trimL', 'trimR', 'copy', 'paste', 'del', 'mvL', 'mvR', 'fx', 'kf', 'clip', 'ms', 'rl']], music: ['音樂', ['lib', 'music', 'au']], text: ['文字', ['text', 'cap', 'st']], fx: ['特效', ['ef', 'ly', 'auto', 'tpl']] };
+const CATS = { cut: ['剪輯（切、裁、刪）', ['split', 'freeze', 'trimL', 'trimR', 'del', 'rl']], arr: ['整理（複製、移動、多選）', ['copy', 'paste', 'mvL', 'mvR', 'ms']], adj: ['調整（濾鏡、調色、動畫）', ['fx', 'clip', 'kf']], music: ['音樂', ['lib', 'music', 'au']], text: ['文字', ['text', 'cap', 'st']], fx: ['特效', ['ef', 'ly', 'auto', 'tpl']] };
 let catKey = null;
 function closeCats() { const g = $('#cats-g'), pool = $('#tbpool'); [...g.children].forEach(b => pool.appendChild(b)); $('#cats').classList.remove('on'); catKey = null; }
 function openCat(k) {
@@ -3449,7 +3451,7 @@ $('#xp-go').onclick = async () => {
 
 
 /* ===== 專案暫存（存在這支手機的瀏覽器裡，可以同時放好幾個專案）===== */
-const VER_NOW = '1126-N';
+const VER_NOW = '1126-O';
 const PJ = { db: null, cur: null, name: '', savedStr: '', stored: new Set() };
 function pjOpen() {
   return new Promise((res, rej) => {
@@ -4021,7 +4023,7 @@ async function libOpen() {
 
 // ===== 自動檢查新版本 =====
 (function () {
-  const VER = '1126-N', upd = document.getElementById('upd');
+  const VER = '1126-O', upd = document.getElementById('upd');
   const reloadNew = () => {
     try { const t = +sessionStorage.getItem('ipsj-rl') || 0; if (Date.now() - t < 60000) return; sessionStorage.setItem('ipsj-rl', String(Date.now())); } catch (e) {}
     location.replace(location.pathname + '?v=' + Date.now());
